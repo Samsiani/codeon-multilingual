@@ -65,6 +65,14 @@ final class Router {
 
 		CurrentLanguage::set( $lang );
 		self::$strategy->strip_from_request();
+
+		// We've virtually stripped the /code/ prefix from REQUEST_URI; WP's
+		// canonical-redirect logic compares the (modified) REQUEST_URI against
+		// the URL it thinks is canonical (built via home_url() which our filter
+		// prepends with /code/), sees a mismatch, and 301s back to the prefixed
+		// form — creating an infinite redirect loop. Suppress canonical entirely
+		// on language-prefixed requests.
+		add_filter( 'redirect_canonical', '__return_false' );
 	}
 
 	public static function filter_url( string $url ): string {
