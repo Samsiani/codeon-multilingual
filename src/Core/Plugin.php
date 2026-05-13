@@ -9,6 +9,10 @@ use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
+use Samsiani\CodeonMultilingual\Frontend\Hreflang;
+use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
+use Samsiani\CodeonMultilingual\Frontend\LanguageSwitcher;
+use Samsiani\CodeonMultilingual\Frontend\SitemapFilter;
 use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Query\TermsClauses;
 use Samsiani\CodeonMultilingual\Rest\LangParam;
@@ -69,6 +73,12 @@ final class Plugin {
 
 		// Strings.
 		StringTranslator::register();
+
+		// Frontend (switcher, hreflang, html lang, sitemap).
+		LanguageSwitcher::register();
+		Hreflang::register();
+		HtmlLangAttribute::register();
+		SitemapFilter::register();
 
 		// REST.
 		LangParam::register();
