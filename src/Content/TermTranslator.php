@@ -32,16 +32,16 @@ final class TermTranslator {
 		}
 		self::$registered = true;
 
-		add_action( 'init',                                  [ self::class, 'register_taxonomy_hooks' ], 99 );
-		add_filter( 'wp_unique_term_slug',                   [ self::class, 'filter_unique_slug' ], 10, 3 );
-		add_action( 'admin_post_' . self::ACTION_ADD,        [ self::class, 'handle_add_translation' ] );
+		add_action( 'init', array( self::class, 'register_taxonomy_hooks' ), 99 );
+		add_filter( 'wp_unique_term_slug', array( self::class, 'filter_unique_slug' ), 10, 3 );
+		add_action( 'admin_post_' . self::ACTION_ADD, array( self::class, 'handle_add_translation' ) );
 	}
 
 	public static function register_taxonomy_hooks(): void {
 		$taxonomies = self::translatable_taxonomies();
 		foreach ( $taxonomies as $tax ) {
-			add_action( "{$tax}_edit_form_fields", [ self::class, 'render_edit_form_panel' ], 99, 2 );
-			add_action( "created_{$tax}",          [ self::class, 'tag_new_term' ], 10, 2 );
+			add_action( "{$tax}_edit_form_fields", array( self::class, 'render_edit_form_panel' ), 99, 2 );
+			add_action( "created_{$tax}", array( self::class, 'tag_new_term' ), 10, 2 );
 		}
 	}
 
@@ -49,7 +49,7 @@ final class TermTranslator {
 	 * @return array<int, string>
 	 */
 	public static function translatable_taxonomies(): array {
-		$taxonomies = get_taxonomies( [ 'public' => true ], 'names' );
+		$taxonomies = get_taxonomies( array( 'public' => true ), 'names' );
 		$taxonomies = array_values( $taxonomies );
 
 		/** @var array<int, string> $taxonomies */
@@ -116,12 +116,12 @@ final class TermTranslator {
 	public static function add_translation_url( int $source_term_id, string $taxonomy, string $target_lang ): string {
 		return wp_nonce_url(
 			add_query_arg(
-				[
+				array(
 					'action'   => self::ACTION_ADD,
 					'source'   => $source_term_id,
 					'taxonomy' => $taxonomy,
 					'target'   => $target_lang,
-				],
+				),
 				admin_url( 'admin-post.php' )
 			),
 			self::NONCE . '_' . $source_term_id . '_' . $target_lang
@@ -133,9 +133,9 @@ final class TermTranslator {
 			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
 		}
 
-		$source   = isset( $_GET['source'] )   ? (int) $_GET['source']                                              : 0;
-		$taxonomy = isset( $_GET['taxonomy'] ) ? sanitize_key( wp_unslash( (string) $_GET['taxonomy'] ) )            : '';
-		$target   = isset( $_GET['target'] )   ? sanitize_key( wp_unslash( (string) $_GET['target'] ) )              : '';
+		$source   = isset( $_GET['source'] ) ? (int) $_GET['source'] : 0;
+		$taxonomy = isset( $_GET['taxonomy'] ) ? sanitize_key( wp_unslash( (string) $_GET['taxonomy'] ) ) : '';
+		$target   = isset( $_GET['target'] ) ? sanitize_key( wp_unslash( (string) $_GET['target'] ) ) : '';
 
 		check_admin_referer( self::NONCE . '_' . $source . '_' . $target );
 
@@ -163,7 +163,7 @@ final class TermTranslator {
 	 */
 	public static function duplicate( int $source_term_id, string $taxonomy, string $target_lang ): int {
 		$source = get_term( $source_term_id, $taxonomy );
-		if ( ! ( $source instanceof WP_Term ) || is_wp_error( $source ) ) {
+		if ( ! ( $source instanceof WP_Term ) ) {
 			return 0;
 		}
 
@@ -195,11 +195,11 @@ final class TermTranslator {
 		$inserted = wp_insert_term(
 			$source->name,
 			$taxonomy,
-			[
+			array(
 				'description' => $source->description,
 				'slug'        => $source->slug,
 				'parent'      => $target_parent,
-			]
+			)
 		);
 
 		if ( is_wp_error( $inserted ) ) {
@@ -240,12 +240,12 @@ final class TermTranslator {
 		global $wpdb;
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_term_language',
-			[
+			array(
 				'term_id'  => $source_term_id,
 				'group_id' => $source_term_id,
 				'language' => Languages::default_code(),
-			],
-			[ '%d', '%d', '%s' ]
+			),
+			array( '%d', '%d', '%s' )
 		);
 		TranslationGroups::invalidate_term( $source_term_id );
 		return $source_term_id;
@@ -287,6 +287,8 @@ final class TermTranslator {
 	 * Scope slug uniqueness by language. Same shape as PostTranslator's filter.
 	 *
 	 * @param string|null $slug
+	 * @param object|null $term
+	 * @param string|null $original_slug
 	 */
 	public static function filter_unique_slug( $slug, $term, $original_slug ): string {
 		$slug          = (string) $slug;
@@ -313,7 +315,7 @@ final class TermTranslator {
 
 		global $wpdb;
 		$where_taxonomy = '';
-		$prepare_args   = [ $original_slug, $term_id ];
+		$prepare_args   = array( $original_slug, $term_id );
 		if ( '' !== $taxonomy ) {
 			$where_taxonomy = ' AND tt.taxonomy = %s';
 			$prepare_args[] = $taxonomy;
@@ -345,12 +347,12 @@ final class TermTranslator {
 		global $wpdb;
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_term_language',
-			[
+			array(
 				'term_id'  => $term_id,
 				'group_id' => $term_id,
 				'language' => Languages::default_code(),
-			],
-			[ '%d', '%d', '%s' ]
+			),
+			array( '%d', '%d', '%s' )
 		);
 		TranslationGroups::invalidate_term( $term_id );
 	}

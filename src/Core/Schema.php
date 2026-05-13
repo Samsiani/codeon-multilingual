@@ -38,13 +38,13 @@ final class Schema {
 		global $wpdb;
 
 		// Order matters: child tables first so any FK semantics stay sane on engines that enforce them.
-		$tables = [
+		$tables = array(
 			$wpdb->prefix . 'cml_string_translations',
 			$wpdb->prefix . 'cml_strings',
 			$wpdb->prefix . 'cml_term_language',
 			$wpdb->prefix . 'cml_post_language',
 			$wpdb->prefix . 'cml_languages',
-		];
+		);
 
 		foreach ( $tables as $table ) {
 			$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
@@ -62,7 +62,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	private static function statements( string $prefix, string $charset_collate ): array {
-		return [
+		return array(
 			"CREATE TABLE {$prefix}cml_languages (
 				code VARCHAR(10) NOT NULL,
 				locale VARCHAR(20) NOT NULL,
@@ -115,7 +115,7 @@ final class Schema {
 				PRIMARY KEY  (string_id, language),
 				KEY language_idx (language)
 			) {$charset_collate};",
-		];
+		);
 	}
 
 	private static function seed_default_language(): void {
@@ -132,7 +132,7 @@ final class Schema {
 
 		$wpdb->insert(
 			$table,
-			[
+			array(
 				'code'       => $info['code'],
 				'locale'     => $locale,
 				'name'       => $info['name'],
@@ -142,8 +142,8 @@ final class Schema {
 				'active'     => 1,
 				'is_default' => 1,
 				'position'   => 0,
-			],
-			[ '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' ]
+			),
+			array( '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' )
 		);
 	}
 
@@ -151,31 +151,91 @@ final class Schema {
 	 * @return array{code:string,name:string,native:string,rtl:int}
 	 */
 	private static function locale_to_info( string $locale ): array {
-		static $map = [
-			'en_US' => [ 'code' => 'en', 'name' => 'English',   'native' => 'English',   'rtl' => 0 ],
-			'en_GB' => [ 'code' => 'en', 'name' => 'English',   'native' => 'English',   'rtl' => 0 ],
-			'ka_GE' => [ 'code' => 'ka', 'name' => 'Georgian',  'native' => 'ქართული',  'rtl' => 0 ],
-			'ru_RU' => [ 'code' => 'ru', 'name' => 'Russian',   'native' => 'Русский',   'rtl' => 0 ],
-			'de_DE' => [ 'code' => 'de', 'name' => 'German',    'native' => 'Deutsch',   'rtl' => 0 ],
-			'fr_FR' => [ 'code' => 'fr', 'name' => 'French',    'native' => 'Français',  'rtl' => 0 ],
-			'es_ES' => [ 'code' => 'es', 'name' => 'Spanish',   'native' => 'Español',   'rtl' => 0 ],
-			'it_IT' => [ 'code' => 'it', 'name' => 'Italian',   'native' => 'Italiano',  'rtl' => 0 ],
-			'pt_BR' => [ 'code' => 'pt', 'name' => 'Portuguese','native' => 'Português', 'rtl' => 0 ],
-			'tr_TR' => [ 'code' => 'tr', 'name' => 'Turkish',   'native' => 'Türkçe',    'rtl' => 0 ],
-			'ar'    => [ 'code' => 'ar', 'name' => 'Arabic',    'native' => 'العربية',   'rtl' => 1 ],
-			'he_IL' => [ 'code' => 'he', 'name' => 'Hebrew',    'native' => 'עברית',     'rtl' => 1 ],
-		];
+		static $map = array(
+			'en_US' => array(
+				'code'   => 'en',
+				'name'   => 'English',
+				'native' => 'English',
+				'rtl'    => 0,
+			),
+			'en_GB' => array(
+				'code'   => 'en',
+				'name'   => 'English',
+				'native' => 'English',
+				'rtl'    => 0,
+			),
+			'ka_GE' => array(
+				'code'   => 'ka',
+				'name'   => 'Georgian',
+				'native' => 'ქართული',
+				'rtl'    => 0,
+			),
+			'ru_RU' => array(
+				'code'   => 'ru',
+				'name'   => 'Russian',
+				'native' => 'Русский',
+				'rtl'    => 0,
+			),
+			'de_DE' => array(
+				'code'   => 'de',
+				'name'   => 'German',
+				'native' => 'Deutsch',
+				'rtl'    => 0,
+			),
+			'fr_FR' => array(
+				'code'   => 'fr',
+				'name'   => 'French',
+				'native' => 'Français',
+				'rtl'    => 0,
+			),
+			'es_ES' => array(
+				'code'   => 'es',
+				'name'   => 'Spanish',
+				'native' => 'Español',
+				'rtl'    => 0,
+			),
+			'it_IT' => array(
+				'code'   => 'it',
+				'name'   => 'Italian',
+				'native' => 'Italiano',
+				'rtl'    => 0,
+			),
+			'pt_BR' => array(
+				'code'   => 'pt',
+				'name'   => 'Portuguese',
+				'native' => 'Português',
+				'rtl'    => 0,
+			),
+			'tr_TR' => array(
+				'code'   => 'tr',
+				'name'   => 'Turkish',
+				'native' => 'Türkçe',
+				'rtl'    => 0,
+			),
+			'ar'    => array(
+				'code'   => 'ar',
+				'name'   => 'Arabic',
+				'native' => 'العربية',
+				'rtl'    => 1,
+			),
+			'he_IL' => array(
+				'code'   => 'he',
+				'name'   => 'Hebrew',
+				'native' => 'עברית',
+				'rtl'    => 1,
+			),
+		);
 
 		if ( isset( $map[ $locale ] ) ) {
 			return $map[ $locale ];
 		}
 
 		$code = '' !== $locale ? strtolower( substr( $locale, 0, 2 ) ) : 'en';
-		return [
+		return array(
 			'code'   => $code,
 			'name'   => ucfirst( $code ),
 			'native' => ucfirst( $code ),
 			'rtl'    => 0,
-		];
+		);
 	}
 }

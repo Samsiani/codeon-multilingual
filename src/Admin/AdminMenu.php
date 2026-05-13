@@ -23,7 +23,7 @@ final class AdminMenu {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_menu', [ self::class, 'on_admin_menu' ] );
+		add_action( 'admin_menu', array( self::class, 'on_admin_menu' ) );
 	}
 
 	public static function on_admin_menu(): void {
@@ -32,7 +32,7 @@ final class AdminMenu {
 			__( 'Multilingual', 'codeon-multilingual' ),
 			self::CAPABILITY,
 			self::PARENT_SLUG,
-			[ LanguagesPage::class, 'render' ],
+			array( LanguagesPage::class, 'render' ),
 			'dashicons-translation',
 			76
 		);
@@ -43,7 +43,7 @@ final class AdminMenu {
 			__( 'Languages', 'codeon-multilingual' ),
 			self::CAPABILITY,
 			self::PARENT_SLUG,
-			[ LanguagesPage::class, 'render' ]
+			array( LanguagesPage::class, 'render' )
 		);
 
 		add_submenu_page(
@@ -52,7 +52,7 @@ final class AdminMenu {
 			__( 'Strings', 'codeon-multilingual' ),
 			self::CAPABILITY,
 			StringsPage::PAGE_SLUG,
-			[ StringsPage::class, 'render' ]
+			array( StringsPage::class, 'render' )
 		);
 	}
 }

@@ -24,7 +24,7 @@ use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 final class ProductSync {
 
 	/** WC getter/setter names of props synced across translations. */
-	private const SYNCED_PROPS = [
+	private const SYNCED_PROPS = array(
 		'price',
 		'regular_price',
 		'sale_price',
@@ -45,10 +45,10 @@ final class ProductSync {
 		'downloadable',
 		'virtual',
 		'sku',
-	];
+	);
 
 	/** @var array<int, true> group_id => lock present */
-	private static array $active_locks = [];
+	private static array $active_locks = array();
 
 	private static bool $registered = false;
 
@@ -58,7 +58,7 @@ final class ProductSync {
 		}
 		self::$registered = true;
 
-		add_action( 'woocommerce_product_object_updated_props', [ self::class, 'on_props_updated' ], 10, 2 );
+		add_action( 'woocommerce_product_object_updated_props', array( self::class, 'on_props_updated' ), 10, 2 );
 	}
 
 	/**
@@ -69,12 +69,12 @@ final class ProductSync {
 		if ( ! is_object( $product ) || ! method_exists( $product, 'get_id' ) ) {
 			return;
 		}
-		if ( ! is_array( $updated_props ) || [] === $updated_props ) {
+		if ( ! is_array( $updated_props ) || array() === $updated_props ) {
 			return;
 		}
 
 		$synced_props = array_values( array_intersect( $updated_props, self::synced_props() ) );
-		if ( [] === $synced_props ) {
+		if ( array() === $synced_props ) {
 			return;
 		}
 

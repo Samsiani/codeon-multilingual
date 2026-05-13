@@ -24,13 +24,13 @@ final class TermLinkFilter {
 		}
 		self::$registered = true;
 
-		add_filter( 'term_link', [ self::class, 'filter' ], 10, 3 );
+		add_filter( 'term_link', array( self::class, 'filter' ), 10, 3 );
 	}
 
 	/**
-	 * @param string|null         $link
-	 * @param int|WP_Term|object  $term
-	 * @param string              $taxonomy
+	 * @param string|null        $link
+	 * @param int|WP_Term|object $term
+	 * @param string             $taxonomy
 	 */
 	public static function filter( $link, $term, $taxonomy ): string {
 		$link = (string) $link;

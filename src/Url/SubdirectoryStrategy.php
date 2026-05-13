@@ -75,13 +75,13 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 		}
 
 		if ( '' !== $home_path && str_starts_with( $path, $home_path ) ) {
-			$rest      = substr( $path, strlen( $home_path ) );
-			$new_path  = $home_path . '/' . $lang . $rest;
+			$rest     = substr( $path, strlen( $home_path ) );
+			$new_path = $home_path . '/' . $lang . $rest;
 		} else {
 			$new_path = '/' . $lang . $path;
 		}
 
-		$new_path     = (string) preg_replace( '#/+#', '/', $new_path );
+		$new_path      = (string) preg_replace( '#/+#', '/', $new_path );
 		$parts['path'] = $new_path;
 
 		return $this->unparse_url( $parts );
@@ -136,8 +136,8 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 		if ( null !== self::$home_path_cache ) {
 			return self::$home_path_cache;
 		}
-		$home = (string) get_option( 'home' );
-		$path = (string) wp_parse_url( $home, PHP_URL_PATH );
+		$home                  = (string) get_option( 'home' );
+		$path                  = (string) wp_parse_url( $home, PHP_URL_PATH );
 		self::$home_path_cache = rtrim( $path, '/' );
 		return self::$home_path_cache;
 	}
@@ -146,14 +146,14 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 	 * @param array<string,string|int> $parts
 	 */
 	private function unparse_url( array $parts ): string {
-		$scheme   = isset( $parts['scheme'] )   ? $parts['scheme'] . '://' : '';
-		$host     = $parts['host']   ?? '';
-		$port     = isset( $parts['port'] )     ? ':' . $parts['port']     : '';
-		$user     = $parts['user']   ?? '';
-		$pass     = isset( $parts['pass'] )     ? ':' . $parts['pass']     : '';
+		$scheme   = isset( $parts['scheme'] ) ? $parts['scheme'] . '://' : '';
+		$host     = $parts['host'] ?? '';
+		$port     = isset( $parts['port'] ) ? ':' . $parts['port'] : '';
+		$user     = $parts['user'] ?? '';
+		$pass     = isset( $parts['pass'] ) ? ':' . $parts['pass'] : '';
 		$auth     = ( '' !== $user || '' !== $pass ) ? $user . $pass . '@' : '';
-		$path     = $parts['path']   ?? '';
-		$query    = isset( $parts['query'] )    ? '?' . $parts['query']    : '';
+		$path     = $parts['path'] ?? '';
+		$query    = isset( $parts['query'] ) ? '?' . $parts['query'] : '';
 		$fragment = isset( $parts['fragment'] ) ? '#' . $parts['fragment'] : '';
 
 		return $scheme . $auth . $host . $port . $path . $query . $fragment;

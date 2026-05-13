@@ -67,8 +67,8 @@ if ( ! file_exists( $cml_autoload ) ) {
 
 require_once $cml_autoload;
 
-register_activation_hook( __FILE__, [ \Samsiani\CodeonMultilingual\Core\Activator::class, 'activate' ] );
-register_deactivation_hook( __FILE__, [ \Samsiani\CodeonMultilingual\Core\Deactivator::class, 'deactivate' ] );
+register_activation_hook( __FILE__, array( \Samsiani\CodeonMultilingual\Core\Activator::class, 'activate' ) );
+register_deactivation_hook( __FILE__, array( \Samsiani\CodeonMultilingual\Core\Deactivator::class, 'deactivate' ) );
 
 \Samsiani\CodeonMultilingual\Core\Plugin::instance()->boot();
 
@@ -78,9 +78,12 @@ if ( class_exists( '\\YahnisElsts\\PluginUpdateChecker\\v5\\PucFactory' ) ) {
 		__FILE__,
 		'codeon-multilingual'
 	);
-	$cml_update_checker->getVcsApi()->enableReleaseAssets();
+	$cml_vcs_api        = $cml_update_checker->getVcsApi();
+	if ( method_exists( $cml_vcs_api, 'enableReleaseAssets' ) ) {
+		$cml_vcs_api->enableReleaseAssets();
+	}
 	if ( defined( 'CML_GITHUB_TOKEN' ) && '' !== CML_GITHUB_TOKEN ) {
 		$cml_update_checker->setAuthentication( CML_GITHUB_TOKEN );
 	}
-	unset( $cml_update_checker );
+	unset( $cml_update_checker, $cml_vcs_api );
 }

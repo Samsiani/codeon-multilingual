@@ -29,7 +29,7 @@ final class VariationTranslator {
 		}
 		self::$registered = true;
 
-		add_action( 'cml_post_translation_created', [ self::class, 'on_translation_created' ], 10, 4 );
+		add_action( 'cml_post_translation_created', array( self::class, 'on_translation_created' ), 10, 4 );
 	}
 
 	public static function on_translation_created( int $new_id, int $source_id, string $target_lang, int $group_id ): void {
@@ -38,14 +38,14 @@ final class VariationTranslator {
 		}
 
 		$variation_ids = get_posts(
-			[
-				'post_parent'      => $source_id,
-				'post_type'        => 'product_variation',
-				'post_status'      => [ 'publish', 'private', 'draft' ],
-				'numberposts'      => -1,
-				'fields'           => 'ids',
-				'cml_skip_filter'  => true,
-			]
+			array(
+				'post_parent'     => $source_id,
+				'post_type'       => 'product_variation',
+				'post_status'     => array( 'publish', 'private', 'draft' ),
+				'numberposts'     => -1,
+				'fields'          => 'ids',
+				'cml_skip_filter' => true,
+			)
 		);
 
 		if ( empty( $variation_ids ) ) {

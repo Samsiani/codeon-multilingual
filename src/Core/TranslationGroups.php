@@ -19,16 +19,16 @@ namespace Samsiani\CodeonMultilingual\Core;
 final class TranslationGroups {
 
 	/** @var array<int, array{group_id:?int, language:?string}> */
-	private static array $post_cache = [];
+	private static array $post_cache = array();
 
 	/** @var array<int, array<int, string>> */
-	private static array $post_sibling_cache = [];
+	private static array $post_sibling_cache = array();
 
 	/** @var array<int, array{group_id:?int, language:?string}> */
-	private static array $term_cache = [];
+	private static array $term_cache = array();
 
 	/** @var array<int, array<int, string>> */
-	private static array $term_sibling_cache = [];
+	private static array $term_sibling_cache = array();
 
 	// ---- Posts ------------------------------------------------------------
 
@@ -57,11 +57,14 @@ final class TranslationGroups {
 		);
 
 		$result = null === $row
-			? [ 'group_id' => null, 'language' => null ]
-			: [
+			? array(
+				'group_id' => null,
+				'language' => null,
+			)
+			: array(
 				'group_id' => (int) $row->group_id,
 				'language' => (string) $row->language,
-			];
+			);
 
 		self::$post_cache[ $post_id ] = $result;
 		return $result;
@@ -71,14 +74,14 @@ final class TranslationGroups {
 	 * @param array<int> $post_ids
 	 */
 	public static function preload( array $post_ids ): void {
-		$unknown = [];
+		$unknown = array();
 		foreach ( $post_ids as $id ) {
 			$id = (int) $id;
 			if ( $id > 0 && ! isset( self::$post_cache[ $id ] ) ) {
 				$unknown[] = $id;
 			}
 		}
-		if ( [] === $unknown ) {
+		if ( array() === $unknown ) {
 			return;
 		}
 
@@ -92,14 +95,17 @@ final class TranslationGroups {
 		);
 
 		foreach ( $unknown as $id ) {
-			self::$post_cache[ $id ] = [ 'group_id' => null, 'language' => null ];
+			self::$post_cache[ $id ] = array(
+				'group_id' => null,
+				'language' => null,
+			);
 		}
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				self::$post_cache[ (int) $row->post_id ] = [
+				self::$post_cache[ (int) $row->post_id ] = array(
 					'group_id' => (int) $row->group_id,
 					'language' => (string) $row->language,
-				];
+				);
 			}
 		}
 	}
@@ -120,7 +126,7 @@ final class TranslationGroups {
 			)
 		);
 
-		$map = [];
+		$map = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
 				$map[ (int) $row->post_id ] = (string) $row->language;
@@ -169,11 +175,14 @@ final class TranslationGroups {
 		);
 
 		$result = null === $row
-			? [ 'group_id' => null, 'language' => null ]
-			: [
+			? array(
+				'group_id' => null,
+				'language' => null,
+			)
+			: array(
 				'group_id' => (int) $row->group_id,
 				'language' => (string) $row->language,
-			];
+			);
 
 		self::$term_cache[ $term_id ] = $result;
 		return $result;
@@ -195,7 +204,7 @@ final class TranslationGroups {
 			)
 		);
 
-		$map = [];
+		$map = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
 				$map[ (int) $row->term_id ] = (string) $row->language;
@@ -210,14 +219,14 @@ final class TranslationGroups {
 	 * @param array<int> $term_ids
 	 */
 	public static function preload_terms( array $term_ids ): void {
-		$unknown = [];
+		$unknown = array();
 		foreach ( $term_ids as $id ) {
 			$id = (int) $id;
 			if ( $id > 0 && ! isset( self::$term_cache[ $id ] ) ) {
 				$unknown[] = $id;
 			}
 		}
-		if ( [] === $unknown ) {
+		if ( array() === $unknown ) {
 			return;
 		}
 
@@ -231,14 +240,17 @@ final class TranslationGroups {
 		);
 
 		foreach ( $unknown as $id ) {
-			self::$term_cache[ $id ] = [ 'group_id' => null, 'language' => null ];
+			self::$term_cache[ $id ] = array(
+				'group_id' => null,
+				'language' => null,
+			);
 		}
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				self::$term_cache[ (int) $row->term_id ] = [
+				self::$term_cache[ (int) $row->term_id ] = array(
 					'group_id' => (int) $row->group_id,
 					'language' => (string) $row->language,
-				];
+				);
 			}
 		}
 	}
@@ -257,9 +269,9 @@ final class TranslationGroups {
 	// ---- Maintenance -----------------------------------------------------
 
 	public static function flush(): void {
-		self::$post_cache         = [];
-		self::$post_sibling_cache = [];
-		self::$term_cache         = [];
-		self::$term_sibling_cache = [];
+		self::$post_cache         = array();
+		self::$post_sibling_cache = array();
+		self::$term_cache         = array();
+		self::$term_sibling_cache = array();
 	}
 }

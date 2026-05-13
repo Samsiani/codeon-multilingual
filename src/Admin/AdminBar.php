@@ -26,7 +26,7 @@ final class AdminBar {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_bar_menu', [ self::class, 'on_admin_bar' ], 80 );
+		add_action( 'admin_bar_menu', array( self::class, 'on_admin_bar' ), 80 );
 	}
 
 	public static function on_admin_bar( WP_Admin_Bar $bar ): void {
@@ -42,12 +42,12 @@ final class AdminBar {
 		$label        = $current_lang ? $current_lang->native : $current_code;
 
 		$bar->add_node(
-			[
+			array(
 				'id'    => 'cml-lang',
 				'title' => '<span class="ab-icon dashicons dashicons-translation" style="margin-top:2px"></span>'
 					. '<span class="ab-label">' . esc_html( $label ) . '</span>',
 				'href'  => admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ),
-			]
+			)
 		);
 
 		$post_id = self::current_post_id();
@@ -75,7 +75,7 @@ final class AdminBar {
 				$icon  = 'dashicons-yes-alt';
 				$color = '#46b450';
 			} else {
-				$url   = PostTranslator::add_translation_url( $post_id, $code );
+				$url = PostTranslator::add_translation_url( $post_id, $code );
 
 				/* translators: %s: language native name */
 				$title = sprintf( __( 'Add %s translation', 'codeon-multilingual' ), $lang->native );
@@ -84,14 +84,14 @@ final class AdminBar {
 			}
 
 			$bar->add_node(
-				[
+				array(
 					'id'     => 'cml-lang-' . $code,
 					'parent' => 'cml-lang',
 					'title'  => '<span class="dashicons ' . esc_attr( $icon ) . '" style="color:' . esc_attr( $color ) . ';margin-right:6px"></span>'
 						. esc_html( $title ),
 					'href'   => $url,
-					'meta'   => [ 'html' => true ],
-				]
+					'meta'   => array( 'html' => true ),
+				)
 			);
 		}
 	}

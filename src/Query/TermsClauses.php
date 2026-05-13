@@ -30,13 +30,13 @@ final class TermsClauses {
 		}
 		self::$registered = true;
 
-		add_filter( 'terms_clauses', [ self::class, 'filter_clauses' ], 10, 3 );
+		add_filter( 'terms_clauses', array( self::class, 'filter_clauses' ), 10, 3 );
 	}
 
 	/**
-	 * @param array<string, string>            $clauses
-	 * @param array<int, string>               $taxonomies
-	 * @param array<string, mixed>             $args
+	 * @param array<string, string> $clauses
+	 * @param array<int, string>    $taxonomies
+	 * @param array<string, mixed>  $args
 	 * @return array<string, string>
 	 */
 	public static function filter_clauses( array $clauses, array $taxonomies, array $args ): array {
@@ -67,7 +67,7 @@ final class TermsClauses {
 			&& null !== self::$join_sql
 			&& null !== self::$where_sql
 		) {
-			return [ self::$join_sql, self::$where_sql ];
+			return array( self::$join_sql, self::$where_sql );
 		}
 
 		global $wpdb;
@@ -88,7 +88,7 @@ final class TermsClauses {
 		}
 
 		self::$cached_code = $code;
-		return [ self::$join_sql, self::$where_sql ];
+		return array( self::$join_sql, self::$where_sql );
 	}
 
 	/**

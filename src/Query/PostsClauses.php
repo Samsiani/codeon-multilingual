@@ -37,7 +37,7 @@ final class PostsClauses {
 		}
 		self::$registered = true;
 
-		add_filter( 'posts_clauses', [ self::class, 'filter_clauses' ], 10, 2 );
+		add_filter( 'posts_clauses', array( self::class, 'filter_clauses' ), 10, 2 );
 	}
 
 	/**
@@ -72,7 +72,7 @@ final class PostsClauses {
 			&& null !== self::$join_sql
 			&& null !== self::$where_sql
 		) {
-			return [ self::$join_sql, self::$where_sql ];
+			return array( self::$join_sql, self::$where_sql );
 		}
 
 		global $wpdb;
@@ -93,7 +93,7 @@ final class PostsClauses {
 		}
 
 		self::$cached_code = $code;
-		return [ self::$join_sql, self::$where_sql ];
+		return array( self::$join_sql, self::$where_sql );
 	}
 
 	private static function should_skip( WP_Query $query ): bool {

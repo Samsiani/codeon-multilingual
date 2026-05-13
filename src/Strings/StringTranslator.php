@@ -30,11 +30,11 @@ use Samsiani\CodeonMultilingual\Core\Languages;
  */
 final class StringTranslator {
 
-	private const CACHE_GROUP        = 'cml_strings';
-	private const COMPILED_TTL       = 12 * HOUR_IN_SECONDS;
-	private const KNOWN_TTL          = HOUR_IN_SECONDS;
-	private const SOURCE_MAX_LENGTH  = 2048;
-	private const FLUSH_LOCK_TTL     = 60;
+	private const CACHE_GROUP       = 'cml_strings';
+	private const COMPILED_TTL      = 12 * HOUR_IN_SECONDS;
+	private const KNOWN_TTL         = HOUR_IN_SECONDS;
+	private const SOURCE_MAX_LENGTH = 2048;
+	private const FLUSH_LOCK_TTL    = 60;
 
 	/** @var array<string, string>|null hash => translation */
 	private static ?array $compiled = null;
@@ -43,7 +43,7 @@ final class StringTranslator {
 	private static ?array $known = null;
 
 	/** @var array<string, array{domain:string,context:string,source:string}> */
-	private static array $seen_new = [];
+	private static array $seen_new = array();
 
 	private static bool $registered     = false;
 	private static bool $shutdown_armed = false;
@@ -54,8 +54,8 @@ final class StringTranslator {
 		}
 		self::$registered = true;
 
-		add_filter( 'gettext',              [ self::class, 'on_gettext' ], 10, 3 );
-		add_filter( 'gettext_with_context', [ self::class, 'on_gettext_with_context' ], 10, 4 );
+		add_filter( 'gettext', array( self::class, 'on_gettext' ), 10, 3 );
+		add_filter( 'gettext_with_context', array( self::class, 'on_gettext_with_context' ), 10, 4 );
 	}
 
 	// ---- Filters ---------------------------------------------------------
@@ -109,20 +109,20 @@ final class StringTranslator {
 			return;
 		}
 
-		self::$seen_new[ $hash ] = [
+		self::$seen_new[ $hash ] = array(
 			'domain'  => $domain,
 			'context' => $context,
 			'source'  => $text,
-		];
+		);
 
 		if ( ! self::$shutdown_armed ) {
 			self::$shutdown_armed = true;
-			add_action( 'shutdown', [ self::class, 'flush_discovered' ], 99 );
+			add_action( 'shutdown', array( self::class, 'flush_discovered' ), 99 );
 		}
 	}
 
 	public static function flush_discovered(): void {
-		if ( [] === self::$seen_new ) {
+		if ( array() === self::$seen_new ) {
 			return;
 		}
 		if ( get_transient( 'cml_strings_flush_lock' ) ) {
@@ -131,8 +131,8 @@ final class StringTranslator {
 		set_transient( 'cml_strings_flush_lock', 1, self::FLUSH_LOCK_TTL );
 
 		global $wpdb;
-		$values       = [];
-		$placeholders = [];
+		$values       = array();
+		$placeholders = array();
 		$now          = time();
 
 		foreach ( self::$seen_new as $hash => $info ) {
@@ -155,7 +155,7 @@ final class StringTranslator {
 				self::$known[ $hash ] = true;
 			}
 		}
-		self::$seen_new = [];
+		self::$seen_new = array();
 
 		wp_cache_delete( 'known_hashes', self::CACHE_GROUP );
 	}
@@ -190,7 +190,7 @@ final class StringTranslator {
 			)
 		);
 
-		$map = [];
+		$map = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
 				$map[ strtolower( (string) $row->hash ) ] = (string) $row->translation;
@@ -219,7 +219,7 @@ final class StringTranslator {
 		global $wpdb;
 		$hex_rows = $wpdb->get_col( "SELECT LOWER(HEX(hash)) FROM {$wpdb->prefix}cml_strings" );
 
-		$set = [];
+		$set = array();
 		if ( is_array( $hex_rows ) ) {
 			foreach ( $hex_rows as $h ) {
 				$set[ (string) $h ] = true;

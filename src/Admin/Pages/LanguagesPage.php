@@ -20,9 +20,9 @@ final class LanguagesPage {
 	private const ACTION_DELETE  = 'cml_delete_language';
 	private const ACTION_DEFAULT = 'cml_set_default_language';
 
-	private const NONCE_SAVE     = 'cml_save_language';
-	private const NONCE_DELETE   = 'cml_delete_language';
-	private const NONCE_DEFAULT  = 'cml_set_default_language';
+	private const NONCE_SAVE    = 'cml_save_language';
+	private const NONCE_DELETE  = 'cml_delete_language';
+	private const NONCE_DEFAULT = 'cml_set_default_language';
 
 	private static bool $registered = false;
 
@@ -32,9 +32,9 @@ final class LanguagesPage {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_post_' . self::ACTION_SAVE,    [ self::class, 'handle_save' ] );
-		add_action( 'admin_post_' . self::ACTION_DELETE,  [ self::class, 'handle_delete' ] );
-		add_action( 'admin_post_' . self::ACTION_DEFAULT, [ self::class, 'handle_set_default' ] );
+		add_action( 'admin_post_' . self::ACTION_SAVE, array( self::class, 'handle_save' ) );
+		add_action( 'admin_post_' . self::ACTION_DELETE, array( self::class, 'handle_delete' ) );
+		add_action( 'admin_post_' . self::ACTION_DEFAULT, array( self::class, 'handle_set_default' ) );
 	}
 
 	public static function render(): void {
@@ -55,7 +55,7 @@ final class LanguagesPage {
 		$languages = Languages::all();
 		$default   = Languages::default_code();
 		$backfill  = Backfill::status();
-		$add_url   = self::admin_page_url( [ 'action' => 'new' ] );
+		$add_url   = self::admin_page_url( array( 'action' => 'new' ) );
 		?>
 		<div class="wrap">
 			<h1 class="wp-heading-inline"><?php esc_html_e( 'Languages', 'codeon-multilingual' ); ?></h1>
@@ -67,18 +67,18 @@ final class LanguagesPage {
 			<table class="wp-list-table widefat fixed striped">
 				<thead>
 					<tr>
-						<th scope="col"><?php esc_html_e( 'Code',     'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Name',     'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Native',   'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Locale',   'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Default',  'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Active',   'codeon-multilingual' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'RTL',      'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Code', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Name', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Native', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Locale', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Default', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Active', 'codeon-multilingual' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'RTL', 'codeon-multilingual' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Position', 'codeon-multilingual' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
-					<?php if ( [] === $languages ) : ?>
+					<?php if ( array() === $languages ) : ?>
 						<tr><td colspan="8"><?php esc_html_e( 'No languages configured.', 'codeon-multilingual' ); ?></td></tr>
 					<?php else : ?>
 						<?php foreach ( $languages as $lang ) : ?>
@@ -99,7 +99,7 @@ final class LanguagesPage {
 									<?php endif; ?>
 								</td>
 								<td><?php echo (int) $lang->active ? '✓' : '—'; ?></td>
-								<td><?php echo (int) $lang->rtl    ? '✓' : '—'; ?></td>
+								<td><?php echo (int) $lang->rtl ? '✓' : '—'; ?></td>
 								<td><?php echo (int) $lang->position; ?></td>
 							</tr>
 						<?php endforeach; ?>
@@ -143,17 +143,28 @@ final class LanguagesPage {
 	}
 
 	private static function render_row_actions( object $lang, string $default ): void {
-		$edit_url    = self::admin_page_url( [ 'action' => 'edit', 'code' => $lang->code ] );
+		$edit_url    = self::admin_page_url(
+			array(
+				'action' => 'edit',
+				'code'   => $lang->code,
+			)
+		);
 		$delete_url  = wp_nonce_url(
 			add_query_arg(
-				[ 'action' => self::ACTION_DELETE, 'code' => $lang->code ],
+				array(
+					'action' => self::ACTION_DELETE,
+					'code'   => $lang->code,
+				),
 				admin_url( 'admin-post.php' )
 			),
 			self::NONCE_DELETE . '_' . $lang->code
 		);
 		$default_url = wp_nonce_url(
 			add_query_arg(
-				[ 'action' => self::ACTION_DEFAULT, 'code' => $lang->code ],
+				array(
+					'action' => self::ACTION_DEFAULT,
+					'code'   => $lang->code,
+				),
 				admin_url( 'admin-post.php' )
 			),
 			self::NONCE_DEFAULT . '_' . $lang->code
@@ -174,7 +185,7 @@ final class LanguagesPage {
 		$editing   = '' !== $edit_code ? Languages::get( $edit_code ) : null;
 		$is_edit   = null !== $editing;
 
-		$values = $is_edit ? [
+		$values = $is_edit ? array(
 			'code'       => $editing->code,
 			'locale'     => $editing->locale,
 			'name'       => $editing->name,
@@ -184,7 +195,7 @@ final class LanguagesPage {
 			'active'     => (int) $editing->active,
 			'is_default' => (int) $editing->is_default,
 			'position'   => (int) $editing->position,
-		] : [
+		) : array(
 			'code'       => '',
 			'locale'     => '',
 			'name'       => '',
@@ -194,13 +205,15 @@ final class LanguagesPage {
 			'active'     => 1,
 			'is_default' => 0,
 			'position'   => 10,
-		];
+		);
 		?>
 		<div class="wrap">
 			<h1>
-				<?php echo $is_edit
+				<?php
+				echo $is_edit
 					? esc_html__( 'Edit Language', 'codeon-multilingual' )
-					: esc_html__( 'Add Language', 'codeon-multilingual' ); ?>
+					: esc_html__( 'Add Language', 'codeon-multilingual' );
+				?>
 			</h1>
 
 			<?php self::render_notices(); ?>
@@ -351,13 +364,13 @@ final class LanguagesPage {
 		$position   = isset( $_POST['position'] ) ? (int) $_POST['position'] : 0;
 
 		if ( ! preg_match( '/^[a-z]{2,3}(-[a-z0-9]+)?$/', $code ) ) {
-			self::redirect_with( [ 'error' => 'invalid_code' ] );
+			self::redirect_with( array( 'error' => 'invalid_code' ) );
 		}
 		if ( '' === $locale || '' === $name || '' === $native ) {
-			self::redirect_with( [ 'error' => 'missing_fields' ] );
+			self::redirect_with( array( 'error' => 'missing_fields' ) );
 		}
 		if ( ! $is_edit && Languages::exists( $code ) ) {
-			self::redirect_with( [ 'error' => 'duplicate_code' ] );
+			self::redirect_with( array( 'error' => 'duplicate_code' ) );
 		}
 
 		global $wpdb;
@@ -365,10 +378,10 @@ final class LanguagesPage {
 
 		// Only one row may be default. Strip any current default before writing.
 		if ( 1 === $is_default ) {
-			$wpdb->update( $table, [ 'is_default' => 0 ], [ 'is_default' => 1 ], [ '%d' ], [ '%d' ] );
+			$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
 		}
 
-		$data    = [
+		$data    = array(
 			'locale'     => $locale,
 			'name'       => $name,
 			'native'     => $native,
@@ -377,11 +390,11 @@ final class LanguagesPage {
 			'active'     => $active,
 			'is_default' => $is_default,
 			'position'   => $position,
-		];
-		$formats = [ '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' ];
+		);
+		$formats = array( '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' );
 
 		if ( $is_edit ) {
-			$wpdb->update( $table, $data, [ 'code' => $code ], $formats, [ '%s' ] );
+			$wpdb->update( $table, $data, array( 'code' => $code ), $formats, array( '%s' ) );
 		} else {
 			$data['code'] = $code;
 			$formats[]    = '%s';
@@ -390,7 +403,7 @@ final class LanguagesPage {
 
 		Languages::flush_cache();
 
-		self::redirect_with( [ 'saved' => '1' ] );
+		self::redirect_with( array( 'saved' => '1' ) );
 	}
 
 	public static function handle_delete(): void {
@@ -402,17 +415,17 @@ final class LanguagesPage {
 
 		$lang = Languages::get( $code );
 		if ( null === $lang ) {
-			self::redirect_with( [ 'error' => 'not_found' ] );
+			self::redirect_with( array( 'error' => 'not_found' ) );
 		}
 		if ( 1 === (int) $lang->is_default ) {
-			self::redirect_with( [ 'error' => 'cannot_delete_default' ] );
+			self::redirect_with( array( 'error' => 'cannot_delete_default' ) );
 		}
 
 		global $wpdb;
-		$wpdb->delete( $wpdb->prefix . 'cml_languages', [ 'code' => $code ], [ '%s' ] );
+		$wpdb->delete( $wpdb->prefix . 'cml_languages', array( 'code' => $code ), array( '%s' ) );
 		Languages::flush_cache();
 
-		self::redirect_with( [ 'deleted' => '1' ] );
+		self::redirect_with( array( 'deleted' => '1' ) );
 	}
 
 	public static function handle_set_default(): void {
@@ -424,24 +437,24 @@ final class LanguagesPage {
 
 		$lang = Languages::get( $code );
 		if ( null === $lang ) {
-			self::redirect_with( [ 'error' => 'not_found' ] );
+			self::redirect_with( array( 'error' => 'not_found' ) );
 		}
 
 		global $wpdb;
 		$table = $wpdb->prefix . 'cml_languages';
-		$wpdb->update( $table, [ 'is_default' => 0 ], [ 'is_default' => 1 ], [ '%d' ], [ '%d' ] );
-		$wpdb->update( $table, [ 'is_default' => 1 ], [ 'code' => $code ], [ '%d' ], [ '%s' ] );
+		$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
+		$wpdb->update( $table, array( 'is_default' => 1 ), array( 'code' => $code ), array( '%d' ), array( '%s' ) );
 		Languages::flush_cache();
 
-		self::redirect_with( [ 'default_set' => '1' ] );
+		self::redirect_with( array( 'default_set' => '1' ) );
 	}
 
 	/**
 	 * @param array<string, string> $args
 	 */
-	private static function admin_page_url( array $args = [] ): string {
+	private static function admin_page_url( array $args = array() ): string {
 		return add_query_arg(
-			array_merge( [ 'page' => AdminMenu::PARENT_SLUG ], $args ),
+			array_merge( array( 'page' => AdminMenu::PARENT_SLUG ), $args ),
 			admin_url( 'admin.php' )
 		);
 	}

@@ -23,14 +23,14 @@ use Samsiani\CodeonMultilingual\Core\Languages;
 final class Router {
 
 	private static ?RoutingStrategy $strategy = null;
-	private static bool $registered = false;
-	private static bool $filtering  = false;
+	private static bool $registered           = false;
+	private static bool $filtering            = false;
 
 	/** @var array<string, string> */
-	private static array $build_cache = [];
+	private static array $build_cache = array();
 
 	/** @var array<string, string> */
-	private static array $strip_cache = [];
+	private static array $strip_cache = array();
 
 	public static function register(): void {
 		if ( self::$registered ) {
@@ -40,14 +40,14 @@ final class Router {
 
 		self::$strategy = new SubdirectoryStrategy();
 
-		add_action( 'plugins_loaded', [ self::class, 'on_request' ], 1 );
+		add_action( 'plugins_loaded', array( self::class, 'on_request' ), 1 );
 
-		add_filter( 'home_url',    [ self::class, 'filter_url' ], 10, 1 );
-		add_filter( 'day_link',    [ self::class, 'filter_url' ], 10, 1 );
-		add_filter( 'month_link',  [ self::class, 'filter_url' ], 10, 1 );
-		add_filter( 'year_link',   [ self::class, 'filter_url' ], 10, 1 );
-		add_filter( 'feed_link',   [ self::class, 'filter_url' ], 10, 1 );
-		add_filter( 'search_link', [ self::class, 'filter_url' ], 10, 1 );
+		add_filter( 'home_url', array( self::class, 'filter_url' ), 10, 1 );
+		add_filter( 'day_link', array( self::class, 'filter_url' ), 10, 1 );
+		add_filter( 'month_link', array( self::class, 'filter_url' ), 10, 1 );
+		add_filter( 'year_link', array( self::class, 'filter_url' ), 10, 1 );
+		add_filter( 'feed_link', array( self::class, 'filter_url' ), 10, 1 );
+		add_filter( 'search_link', array( self::class, 'filter_url' ), 10, 1 );
 	}
 
 	public static function on_request(): void {

@@ -41,7 +41,7 @@ final class Languages {
 		$table = $wpdb->prefix . 'cml_languages';
 		$rows  = $wpdb->get_results( "SELECT * FROM {$table} ORDER BY position ASC, code ASC" );
 
-		$map = [];
+		$map = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
 				$map[ $row->code ] = $row;
@@ -81,7 +81,7 @@ final class Languages {
 			}
 		}
 		$all = self::all();
-		return [] === $all ? null : reset( $all );
+		return array() === $all ? null : reset( $all );
 	}
 
 	public static function default_code(): string {

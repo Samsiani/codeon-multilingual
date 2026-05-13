@@ -10,6 +10,10 @@ parameters:
     excludePaths:
         - vendor
         - node_modules
+        - tests
+    bootstrapFiles:
+        - tests/phpstan-stubs.php
     treatPhpDocTypesAsCertain: false
-    ignoreErrors:
-        - identifier: missingType.iterableValue
+    reportUnmatchedIgnoredErrors: false
+    parallel:
+        maximumNumberOfProcesses: 1

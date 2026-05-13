@@ -29,8 +29,8 @@ final class LangParam {
 		}
 		self::$registered = true;
 
-		add_filter( 'rest_pre_dispatch', [ self::class, 'detect_language' ], 10, 3 );
-		add_action( 'rest_api_init',     [ self::class, 'register_collection_params' ], 99 );
+		add_filter( 'rest_pre_dispatch', array( self::class, 'detect_language' ), 10, 3 );
+		add_action( 'rest_api_init', array( self::class, 'register_collection_params' ), 99 );
 	}
 
 	/**
@@ -49,16 +49,16 @@ final class LangParam {
 	}
 
 	public static function register_collection_params(): void {
-		$post_types = get_post_types( [ 'show_in_rest' => true ], 'objects' );
+		$post_types = get_post_types( array( 'show_in_rest' => true ), 'objects' );
 		foreach ( $post_types as $pt ) {
 			$rest_base = is_string( $pt->rest_base ) && '' !== $pt->rest_base ? $pt->rest_base : $pt->name;
-			add_filter( "rest_{$pt->name}_collection_params", [ self::class, 'add_lang_param' ] );
+			add_filter( "rest_{$pt->name}_collection_params", array( self::class, 'add_lang_param' ) );
 			unset( $rest_base );
 		}
 
-		$taxonomies = get_taxonomies( [ 'show_in_rest' => true ], 'objects' );
+		$taxonomies = get_taxonomies( array( 'show_in_rest' => true ), 'objects' );
 		foreach ( $taxonomies as $tax ) {
-			add_filter( "rest_{$tax->name}_collection_params", [ self::class, 'add_lang_param' ] );
+			add_filter( "rest_{$tax->name}_collection_params", array( self::class, 'add_lang_param' ) );
 		}
 	}
 
@@ -67,11 +67,11 @@ final class LangParam {
 	 * @return array<string, array<string, mixed>>
 	 */
 	public static function add_lang_param( array $params ): array {
-		$params['lang'] = [
+		$params['lang'] = array(
 			'description' => __( 'Filter results by language code (e.g. en, ka). Defaults to the site default language.', 'codeon-multilingual' ),
 			'type'        => 'string',
 			'required'    => false,
-		];
+		);
 		return $params;
 	}
 }

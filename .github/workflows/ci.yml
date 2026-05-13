@@ -10,7 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
@@ -24,8 +24,7 @@ jobs:
           php -l codeon-multilingual.php > /dev/null
           php -l uninstall.php > /dev/null
       - name: PHPStan
-        run: vendor/bin/phpstan analyse --no-progress --error-format=github
-        continue-on-error: true
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G --error-format=github
       - name: PHPCS
         run: vendor/bin/phpcs -n --report=summary
         continue-on-error: true
@@ -36,7 +35,7 @@ jobs:
       matrix:
         php-version: [ '8.1', '8.2', '8.3' ]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}

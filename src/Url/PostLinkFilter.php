@@ -27,10 +27,10 @@ final class PostLinkFilter {
 		}
 		self::$registered = true;
 
-		add_filter( 'post_link',       [ self::class, 'filter' ], 10, 2 );
-		add_filter( 'page_link',       [ self::class, 'filter' ], 10, 2 );
-		add_filter( 'post_type_link',  [ self::class, 'filter' ], 10, 2 );
-		add_filter( 'attachment_link', [ self::class, 'filter' ], 10, 2 );
+		add_filter( 'post_link', array( self::class, 'filter' ), 10, 2 );
+		add_filter( 'page_link', array( self::class, 'filter' ), 10, 2 );
+		add_filter( 'post_type_link', array( self::class, 'filter' ), 10, 2 );
+		add_filter( 'attachment_link', array( self::class, 'filter' ), 10, 2 );
 	}
 
 	/**

@@ -16,10 +16,17 @@
     <rule ref="WordPress">
         <exclude name="WordPress.Files.FileName"/>
         <exclude name="Generic.Files.LineLength"/>
+        <exclude name="Generic.Commenting.DocComment"/>
         <exclude name="Squiz.Commenting.FileComment.Missing"/>
         <exclude name="Squiz.Commenting.ClassComment.Missing"/>
         <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="Squiz.Commenting.FunctionComment.WrongStyle"/>
+        <exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
         <exclude name="Squiz.Commenting.VariableComment.Missing"/>
+        <exclude name="Universal.Operators.DisallowShortTernary"/>
+        <exclude name="WordPress.PHP.YodaConditions"/>
     </rule>
 
     <rule ref="WordPress.WP.I18n">

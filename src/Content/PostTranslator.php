@@ -31,7 +31,7 @@ final class PostTranslator {
 	private const LOCK_TTL               = 30;
 
 	/** Meta keys we never copy from source to translation. */
-	private const META_BLACKLIST = [
+	private const META_BLACKLIST = array(
 		'_edit_lock',
 		'_edit_last',
 		'_wp_old_slug',
@@ -39,7 +39,7 @@ final class PostTranslator {
 		'_wp_trash_meta_status',
 		'_wp_trash_meta_time',
 		'_wp_desired_post_slug',
-	];
+	);
 
 	private static bool $registered = false;
 
@@ -49,18 +49,18 @@ final class PostTranslator {
 		}
 		self::$registered = true;
 
-		add_action( 'add_meta_boxes',                            [ self::class, 'register_meta_box' ] );
-		add_action( 'save_post',                                 [ self::class, 'tag_new_post' ], 10, 2 );
-		add_action( 'admin_post_' . self::ACTION_ADD_TRANSLATION, [ self::class, 'handle_add_translation' ] );
+		add_action( 'add_meta_boxes', array( self::class, 'register_meta_box' ) );
+		add_action( 'save_post', array( self::class, 'tag_new_post' ), 10, 2 );
+		add_action( 'admin_post_' . self::ACTION_ADD_TRANSLATION, array( self::class, 'handle_add_translation' ) );
 
-		add_filter( 'wp_unique_post_slug', [ self::class, 'filter_unique_slug' ], 10, 6 );
+		add_filter( 'wp_unique_post_slug', array( self::class, 'filter_unique_slug' ), 10, 6 );
 	}
 
 	/**
 	 * @return array<int, string>
 	 */
 	public static function translatable_post_types(): array {
-		$types   = get_post_types( [ 'public' => true ], 'names' );
+		$types   = get_post_types( array( 'public' => true ), 'names' );
 		$types[] = 'attachment';
 		$types   = array_values( array_unique( $types ) );
 
@@ -74,7 +74,7 @@ final class PostTranslator {
 			add_meta_box(
 				self::META_BOX_ID,
 				__( 'Translations', 'codeon-multilingual' ),
-				[ self::class, 'render_meta_box' ],
+				array( self::class, 'render_meta_box' ),
 				$post_type,
 				'side',
 				'high'
@@ -105,7 +105,7 @@ final class PostTranslator {
 						/* translators: %s: admin URL for the Languages page */
 						wp_kses(
 							__( 'Only one language is configured. <a href="%s">Add more languages</a> to enable translations.', 'codeon-multilingual' ),
-							[ 'a' => [ 'href' => [] ] ]
+							array( 'a' => array( 'href' => array() ) )
 						),
 						esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
 					);
@@ -114,9 +114,12 @@ final class PostTranslator {
 			<?php else : ?>
 				<ul class="cml-translation-list" style="margin-top:8px">
 					<?php foreach ( $languages as $code => $lang ) : ?>
-						<?php if ( $code === $current_lang ) { continue; } ?>
 						<?php
-						$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
+						if ( $code === $current_lang ) {
+							continue; }
+						?>
+						<?php
+						$sibling_id  = (int) ( array_search( $code, $siblings, true ) ?: 0 );
 						$has_sibling = $sibling_id > 0 && $sibling_id !== $post->ID;
 						?>
 						<li style="margin-bottom:6px">
@@ -148,11 +151,11 @@ final class PostTranslator {
 	public static function add_translation_url( int $source_id, string $target_lang ): string {
 		return wp_nonce_url(
 			add_query_arg(
-				[
+				array(
 					'action' => self::ACTION_ADD_TRANSLATION,
 					'source' => $source_id,
 					'target' => $target_lang,
-				],
+				),
 				admin_url( 'admin-post.php' )
 			),
 			self::NONCE_ACTION . '_' . $source_id . '_' . $target_lang
@@ -235,8 +238,8 @@ final class PostTranslator {
 			$target_lang
 		);
 
-		$now      = current_time( 'mysql' );
-		$now_gmt  = current_time( 'mysql', true );
+		$now     = current_time( 'mysql' );
+		$now_gmt = current_time( 'mysql', true );
 
 		// Attachments must stay as 'inherit' or media library breaks; everything
 		// else starts as draft so the translator can review before publishing.
@@ -244,7 +247,7 @@ final class PostTranslator {
 
 		$insert = $wpdb->insert(
 			$wpdb->posts,
-			[
+			array(
 				'post_author'           => get_current_user_id() ?: $source->post_author,
 				'post_date'             => $now,
 				'post_date_gmt'         => $now_gmt,
@@ -267,8 +270,8 @@ final class PostTranslator {
 				'post_type'             => $source->post_type,
 				'post_mime_type'        => $source->post_mime_type,
 				'comment_count'         => 0,
-			],
-			[ '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%d' ]
+			),
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%d' )
 		);
 
 		if ( false === $insert ) {
@@ -280,10 +283,10 @@ final class PostTranslator {
 		// guid is built off ID, so update post-insert.
 		$wpdb->update(
 			$wpdb->posts,
-			[ 'guid' => get_permalink( $new_id ) ?: home_url( '/?p=' . $new_id ) ],
-			[ 'ID' => $new_id ],
-			[ '%s' ],
-			[ '%d' ]
+			array( 'guid' => get_permalink( $new_id ) ?: home_url( '/?p=' . $new_id ) ),
+			array( 'ID' => $new_id ),
+			array( '%s' ),
+			array( '%d' )
 		);
 
 		self::clone_postmeta( (int) $source->ID, $new_id );
@@ -291,12 +294,12 @@ final class PostTranslator {
 
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_post_language',
-			[
+			array(
 				'post_id'  => $new_id,
 				'group_id' => $group_id,
 				'language' => $target_lang,
-			],
-			[ '%d', '%d', '%s' ]
+			),
+			array( '%d', '%d', '%s' )
 		);
 
 		clean_post_cache( $new_id );
@@ -321,12 +324,12 @@ final class PostTranslator {
 		global $wpdb;
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_post_language',
-			[
+			array(
 				'post_id'  => (int) $source->ID,
 				'group_id' => (int) $source->ID,
 				'language' => Languages::default_code(),
-			],
-			[ '%d', '%d', '%s' ]
+			),
+			array( '%d', '%d', '%s' )
 		);
 		TranslationGroups::invalidate( (int) $source->ID );
 		return (int) $source->ID;
@@ -357,8 +360,8 @@ final class PostTranslator {
 			return;
 		}
 
-		$values       = [];
-		$placeholders = [];
+		$values       = array();
+		$placeholders = array();
 		foreach ( $rows as $row ) {
 			$key = (string) $row->meta_key;
 			if ( in_array( $key, self::META_BLACKLIST, true ) ) {
@@ -372,7 +375,7 @@ final class PostTranslator {
 			$values[]       = (string) $row->meta_value;
 			$placeholders[] = '(%d, %s, %s)';
 		}
-		if ( [] === $placeholders ) {
+		if ( array() === $placeholders ) {
 			return;
 		}
 
@@ -386,7 +389,7 @@ final class PostTranslator {
 			return;
 		}
 		foreach ( $taxonomies as $tax ) {
-			$term_ids = wp_get_object_terms( $source_id, $tax, [ 'fields' => 'ids' ] );
+			$term_ids = wp_get_object_terms( $source_id, $tax, array( 'fields' => 'ids' ) );
 			if ( is_wp_error( $term_ids ) || empty( $term_ids ) ) {
 				continue;
 			}
@@ -402,9 +405,9 @@ final class PostTranslator {
 	private static function generate_unique_slug( string $slug, string $post_type, int $parent, string $lang ): string {
 		global $wpdb;
 
-		$original = '' !== $slug ? $slug : 'translation';
+		$original  = '' !== $slug ? $slug : 'translation';
 		$candidate = $original;
-		$i = 2;
+		$i         = 2;
 
 		while ( true ) {
 			$exists = (int) $wpdb->get_var(
@@ -426,7 +429,7 @@ final class PostTranslator {
 				return $candidate;
 			}
 			$candidate = $original . '-' . $i;
-			$i++;
+			++$i;
 			if ( $i > 100 ) {
 				return $original . '-' . wp_generate_password( 4, false, false );
 			}
@@ -490,12 +493,12 @@ final class PostTranslator {
 		global $wpdb;
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_post_language',
-			[
+			array(
 				'post_id'  => $post_id,
 				'group_id' => $post_id,
 				'language' => Languages::default_code(),
-			],
-			[ '%d', '%d', '%s' ]
+			),
+			array( '%d', '%d', '%s' )
 		);
 		TranslationGroups::invalidate( $post_id );
 	}

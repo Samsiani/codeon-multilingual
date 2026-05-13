@@ -13,13 +13,13 @@ namespace Samsiani\CodeonMultilingual\Core;
  */
 final class Backfill {
 
-	public const HOOK             = 'cml_backfill_run';
-	public const OPTION_STATUS    = 'cml_backfill_status';
-	public const OPTION_LAST_ID   = 'cml_backfill_last_id';
+	public const HOOK           = 'cml_backfill_run';
+	public const OPTION_STATUS  = 'cml_backfill_status';
+	public const OPTION_LAST_ID = 'cml_backfill_last_id';
 
-	private const BATCH_SIZE      = 500;
-	private const LOCK_TTL        = 60;
-	private const TRANSIENT_LOCK  = 'cml_backfill_lock';
+	private const BATCH_SIZE     = 500;
+	private const LOCK_TTL       = 60;
+	private const TRANSIENT_LOCK = 'cml_backfill_lock';
 
 	private static bool $registered = false;
 
@@ -29,7 +29,7 @@ final class Backfill {
 		}
 		self::$registered = true;
 
-		add_action( self::HOOK, [ self::class, 'run' ] );
+		add_action( self::HOOK, array( self::class, 'run' ) );
 	}
 
 	public static function schedule(): void {
@@ -86,8 +86,8 @@ final class Backfill {
 			return;
 		}
 
-		$values       = [];
-		$placeholders = [];
+		$values       = array();
+		$placeholders = array();
 		foreach ( $ids as $id ) {
 			$id_int         = (int) $id;
 			$values[]       = $id_int;
@@ -123,11 +123,11 @@ final class Backfill {
 			   AND p.post_type != 'revision'"
 		);
 
-		return [
+		return array(
 			'status'    => (string) get_option( self::OPTION_STATUS, 'idle' ),
 			'last_id'   => (int) get_option( self::OPTION_LAST_ID, 0 ),
 			'remaining' => $remaining,
-		];
+		);
 	}
 
 	public static function reset(): void {

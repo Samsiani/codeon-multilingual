@@ -19,11 +19,11 @@ final class StringsPage {
 
 	public const PAGE_SLUG = 'cml-strings';
 
-	private const ACTION_SAVE = 'cml_save_string';
+	private const ACTION_SAVE  = 'cml_save_string';
 	private const ACTION_PURGE = 'cml_purge_strings';
-	private const NONCE_SAVE  = 'cml_save_string';
-	private const NONCE_PURGE = 'cml_purge_strings';
-	private const PER_PAGE    = 50;
+	private const NONCE_SAVE   = 'cml_save_string';
+	private const NONCE_PURGE  = 'cml_purge_strings';
+	private const PER_PAGE     = 50;
 
 	private static bool $registered = false;
 
@@ -33,8 +33,8 @@ final class StringsPage {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_post_' . self::ACTION_SAVE,  [ self::class, 'handle_save' ] );
-		add_action( 'admin_post_' . self::ACTION_PURGE, [ self::class, 'handle_purge' ] );
+		add_action( 'admin_post_' . self::ACTION_SAVE, array( self::class, 'handle_save' ) );
+		add_action( 'admin_post_' . self::ACTION_PURGE, array( self::class, 'handle_purge' ) );
 	}
 
 	public static function render(): void {
@@ -58,7 +58,7 @@ final class StringsPage {
 		$offset = ( $paged - 1 ) * self::PER_PAGE;
 
 		$where        = '1=1';
-		$prepare_args = [];
+		$prepare_args = array();
 		if ( '' !== $search ) {
 			$where         .= ' AND (s.source LIKE %s OR s.domain LIKE %s)';
 			$prepare_args[] = '%' . $wpdb->esc_like( $search ) . '%';
@@ -73,8 +73,8 @@ final class StringsPage {
 			)
 		);
 
-		$list_args   = array_merge( $prepare_args, [ self::PER_PAGE, $offset ] );
-		$rows        = $wpdb->get_results(
+		$list_args = array_merge( $prepare_args, array( self::PER_PAGE, $offset ) );
+		$rows      = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT s.id, s.domain, s.context, s.source,
 				        (SELECT COUNT(*) FROM {$wpdb->prefix}cml_string_translations st WHERE st.string_id = s.id) AS translated_count
@@ -89,7 +89,7 @@ final class StringsPage {
 		$total_pages = max( 1, (int) ceil( $total / self::PER_PAGE ) );
 		$lang_count  = count( Languages::active() ) - 1;
 		$purge_url   = wp_nonce_url(
-			add_query_arg( [ 'action' => self::ACTION_PURGE ], admin_url( 'admin-post.php' ) ),
+			add_query_arg( array( 'action' => self::ACTION_PURGE ), admin_url( 'admin-post.php' ) ),
 			self::NONCE_PURGE
 		);
 		?>
@@ -128,10 +128,14 @@ final class StringsPage {
 						<?php foreach ( $rows as $row ) : ?>
 							<?php
 							$edit_url = add_query_arg(
-								[ 'page' => self::PAGE_SLUG, 'action' => 'edit', 'id' => (int) $row->id ],
+								array(
+									'page'   => self::PAGE_SLUG,
+									'action' => 'edit',
+									'id'     => (int) $row->id,
+								),
 								admin_url( 'admin.php' )
 							);
-							$preview = mb_strimwidth( (string) $row->source, 0, 200, '…' );
+							$preview  = mb_strimwidth( (string) $row->source, 0, 200, '…' );
 							?>
 							<tr>
 								<td>
@@ -160,22 +164,22 @@ final class StringsPage {
 						<?php
 						$base = add_query_arg(
 							array_filter(
-								[
+								array(
 									'page' => self::PAGE_SLUG,
 									's'    => '' !== $search ? $search : null,
-								]
+								)
 							),
 							admin_url( 'admin.php' )
 						);
 						echo paginate_links(
-							[
+							array(
 								'base'      => $base . '%_%',
 								'format'    => '&paged=%#%',
 								'total'     => $total_pages,
 								'current'   => $paged,
 								'prev_text' => '&laquo;',
 								'next_text' => '&raquo;',
-							]
+							)
 						);
 						?>
 					</div>
@@ -226,7 +230,7 @@ final class StringsPage {
 				$id
 			)
 		);
-		$existing = [];
+		$existing          = array();
 		if ( is_array( $translations_rows ) ) {
 			foreach ( $translations_rows as $t ) {
 				$existing[ (string) $t->language ] = (string) $t->translation;
@@ -235,7 +239,7 @@ final class StringsPage {
 
 		$languages = Languages::active();
 		$default   = Languages::default_code();
-		$back_url  = add_query_arg( [ 'page' => self::PAGE_SLUG ], admin_url( 'admin.php' ) );
+		$back_url  = add_query_arg( array( 'page' => self::PAGE_SLUG ), admin_url( 'admin.php' ) );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Translate string', 'codeon-multilingual' ); ?></h1>
@@ -268,7 +272,10 @@ final class StringsPage {
 
 				<table class="form-table" role="presentation">
 					<?php foreach ( $languages as $code => $lang ) : ?>
-						<?php if ( $code === $default ) { continue; } ?>
+						<?php
+						if ( $code === $default ) {
+							continue; }
+						?>
 						<tr>
 							<th scope="row">
 								<label for="cml-translation-<?php echo esc_attr( $code ); ?>">
@@ -314,7 +321,7 @@ final class StringsPage {
 
 		$raw_translations = isset( $_POST['translations'] ) && is_array( $_POST['translations'] )
 			? wp_unslash( (array) $_POST['translations'] )
-			: [];
+			: array();
 
 		global $wpdb;
 		$now = time();
@@ -329,8 +336,11 @@ final class StringsPage {
 			if ( '' === trim( $translation ) ) {
 				$wpdb->delete(
 					$wpdb->prefix . 'cml_string_translations',
-					[ 'string_id' => $string_id, 'language' => $lang ],
-					[ '%d', '%s' ]
+					array(
+						'string_id' => $string_id,
+						'language'  => $lang,
+					),
+					array( '%d', '%s' )
 				);
 				continue;
 			}
@@ -351,7 +361,12 @@ final class StringsPage {
 
 		wp_safe_redirect(
 			add_query_arg(
-				[ 'page' => self::PAGE_SLUG, 'action' => 'edit', 'id' => $string_id, 'saved' => '1' ],
+				array(
+					'page'   => self::PAGE_SLUG,
+					'action' => 'edit',
+					'id'     => $string_id,
+					'saved'  => '1',
+				),
 				admin_url( 'admin.php' )
 			)
 		);
@@ -373,7 +388,10 @@ final class StringsPage {
 
 		wp_safe_redirect(
 			add_query_arg(
-				[ 'page' => self::PAGE_SLUG, 'purged' => '1' ],
+				array(
+					'page'   => self::PAGE_SLUG,
+					'purged' => '1',
+				),
 				admin_url( 'admin.php' )
 			)
 		);
