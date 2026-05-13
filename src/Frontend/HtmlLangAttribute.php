@@ -10,7 +10,12 @@ use Samsiani\CodeonMultilingual\Core\Languages;
  * Overrides the <html lang="..."> attribute via the language_attributes filter
  * so it reflects the language of the current view rather than the site locale.
  *
- * Skipped in admin — admin always uses the user's WP locale.
+ * The regex must NOT require whitespace before `lang=` — WP's typical output
+ * is just `lang="xx-XX"` with no leading space when no other attributes are
+ * present. \b (word boundary) handles both lead-of-string and mid-string.
+ *
+ * Admin context preserves WP's lang attribute (it follows admin locale, not
+ * the current frontend view).
  */
 final class HtmlLangAttribute {
 
@@ -38,31 +43,33 @@ final class HtmlLangAttribute {
 
 		$bcp = Hreflang::locale_to_hreflang( (string) $lang->locale, $code );
 
-		$replaced = preg_replace(
-			'/(\s)lang="[^"]*"/',
-			'$1lang="' . esc_attr( $bcp ) . '"',
-			$output,
-			1
-		);
-
-		if ( null === $replaced ) {
-			return $output;
+		// Replace any existing lang="..." attribute, regardless of leading whitespace.
+		if ( preg_match( '/\blang="[^"]*"/', $output ) ) {
+			$output = (string) preg_replace(
+				'/\blang="[^"]*"/',
+				'lang="' . esc_attr( $bcp ) . '"',
+				$output,
+				1
+			);
+		} else {
+			$trimmed = trim( $output );
+			$output  = ( '' === $trimmed ? '' : $trimmed . ' ' ) . 'lang="' . esc_attr( $bcp ) . '"';
 		}
 
-		// If there was no lang attribute at all (rare), append one.
-		if ( false === strpos( $replaced, 'lang=' ) ) {
-			$replaced = trim( $replaced ) . ' lang="' . esc_attr( $bcp ) . '"';
-		}
-
-		// Update the dir attribute to honour RTL languages.
+		// Mirror RTL via dir attribute. Same regex shape, same boundary handling.
 		if ( 1 === (int) $lang->rtl ) {
-			if ( false !== strpos( $replaced, 'dir=' ) ) {
-				$replaced = preg_replace( '/(\s)dir="[^"]*"/', '$1dir="rtl"', $replaced );
+			if ( preg_match( '/\bdir="[^"]*"/', $output ) ) {
+				$output = (string) preg_replace(
+					'/\bdir="[^"]*"/',
+					'dir="rtl"',
+					$output,
+					1
+				);
 			} else {
-				$replaced = trim( (string) $replaced ) . ' dir="rtl"';
+				$output = trim( $output ) . ' dir="rtl"';
 			}
 		}
 
-		return (string) $replaced;
+		return $output;
 	}
 }
