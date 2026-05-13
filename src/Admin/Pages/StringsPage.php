@@ -68,15 +68,17 @@ final class StringsPage {
 				'restUrl'   => esc_url_raw( rest_url( StringsApi::NAMESPACE . '/strings' ) ),
 				'restNonce' => wp_create_nonce( 'wp_rest' ),
 				'i18n'      => array(
-					'save'              => __( 'Save', 'codeon-multilingual' ),
-					'cancel'            => __( 'Cancel', 'codeon-multilingual' ),
-					'saving'            => __( 'Saving…', 'codeon-multilingual' ),
-					'error'             => __( 'Failed to save', 'codeon-multilingual' ),
-					'source'            => __( 'Source', 'codeon-multilingual' ),
-					'translateTo'       => __( 'Translate to', 'codeon-multilingual' ),
-					'placeholder'       => __( 'Enter translation (Ctrl/⌘+Enter to save, Esc to cancel)', 'codeon-multilingual' ),
-					'addTranslation'    => __( 'Add translation', 'codeon-multilingual' ),
-					'editTranslation'   => __( 'Edit translation', 'codeon-multilingual' ),
+					'save'            => __( 'Save', 'codeon-multilingual' ),
+					'cancel'          => __( 'Cancel', 'codeon-multilingual' ),
+					'saving'          => __( 'Saving…', 'codeon-multilingual' ),
+					'error'           => __( 'Failed to save', 'codeon-multilingual' ),
+					'original'        => __( 'Original:', 'codeon-multilingual' ),
+					'translateTo'     => __( 'Translation to:', 'codeon-multilingual' ),
+					'copySource'      => __( 'Copy source to translation', 'codeon-multilingual' ),
+					'placeholder'     => __( 'Enter translation…', 'codeon-multilingual' ),
+					'hint'            => __( 'Click outside to save · Esc to cancel · Shift+Enter for newline', 'codeon-multilingual' ),
+					'addTranslation'  => __( 'Add translation', 'codeon-multilingual' ),
+					'editTranslation' => __( 'Edit translation', 'codeon-multilingual' ),
 				),
 			)
 		);
@@ -99,13 +101,11 @@ final class StringsPage {
 		$paged         = max( 1, isset( $_GET['paged'] ) ? (int) $_GET['paged'] : 1 );
 		$offset        = ( $paged - 1 ) * self::PER_PAGE;
 
-		$all_languages     = Languages::active();
-		$default_code      = Languages::default_code();
-		$translation_langs = array_filter(
-			$all_languages,
-			static fn( $l ): bool => $l->code !== $default_code
-		);
-		$needed_count = count( $translation_langs );
+		$all_languages = Languages::active();
+		$active_count  = count( $all_languages );
+		// "Needed" is per-row (active minus that row's source language). For
+		// status-filter SQL we use the most common case (1 source out of active).
+		$needed_count = max( 0, $active_count - 1 );
 
 		// Build WHERE + HAVING.
 		$where        = '1=1';
@@ -242,14 +242,15 @@ final class StringsPage {
 				</span>
 			</form>
 
-			<table class="wp-list-table widefat fixed striped cml-strings-table">
+			<table class="wp-list-table widefat fixed cml-strings-table">
 				<thead>
 					<tr>
-						<th scope="col" class="cml-col-source"><?php esc_html_e( 'Source', 'codeon-multilingual' ); ?></th>
 						<th scope="col" class="cml-col-domain"><?php esc_html_e( 'Domain', 'codeon-multilingual' ); ?></th>
 						<th scope="col" class="cml-col-progress"><?php esc_html_e( 'Progress', 'codeon-multilingual' ); ?></th>
-						<?php foreach ( $translation_langs as $code => $lang ) : ?>
-							<th scope="col" class="cml-col-lang" title="<?php echo esc_attr( $lang->native ); ?>">
+						<th scope="col" class="cml-col-source"><?php esc_html_e( 'Source', 'codeon-multilingual' ); ?></th>
+						<th scope="col" class="cml-col-lang"><?php esc_html_e( 'Lang', 'codeon-multilingual' ); ?></th>
+						<?php foreach ( $all_languages as $code => $lang ) : ?>
+							<th scope="col" class="cml-col-flag" title="<?php echo esc_attr( $lang->native ); ?>">
 								<?php echo esc_html( strtoupper( $code ) ); ?>
 							</th>
 						<?php endforeach; ?>
@@ -258,49 +259,59 @@ final class StringsPage {
 				<tbody>
 					<?php if ( empty( $rows ) ) : ?>
 						<tr>
-							<td colspan="<?php echo 3 + count( $translation_langs ); ?>">
+							<td colspan="<?php echo 4 + $active_count; ?>">
 								<?php esc_html_e( 'No strings match the current filters.', 'codeon-multilingual' ); ?>
 							</td>
 						</tr>
 					<?php else : ?>
 						<?php foreach ( $rows as $row ) :
-							$id     = (int) $row->id;
-							$preview = mb_strimwidth( (string) $row->source, 0, 200, '…' );
+							$id            = (int) $row->id;
+							$preview       = mb_strimwidth( (string) $row->source, 0, 200, '…' );
+							$source_lang   = isset( $row->source_language ) ? (string) $row->source_language : 'en';
+							$source_native = isset( $all_languages[ $source_lang ] ) ? (string) $all_languages[ $source_lang ]->native : strtoupper( $source_lang );
+							$row_needed    = max( 0, $active_count - ( isset( $all_languages[ $source_lang ] ) ? 1 : 0 ) );
+							$row_done      = (int) $row->translated_count;
 							?>
 							<tr class="cml-string-row"
 								data-string-id="<?php echo (int) $id; ?>"
 								data-source="<?php echo esc_attr( (string) $row->source ); ?>"
 								data-domain="<?php echo esc_attr( (string) $row->domain ); ?>"
-								data-context="<?php echo esc_attr( (string) $row->context ); ?>">
-								<?php
-								$source_lang   = isset( $row->source_language ) ? (string) $row->source_language : 'en';
-								$source_lang_native = '';
-								$slang_obj    = Languages::get( $source_lang );
-								if ( $slang_obj ) {
-									$source_lang_native = (string) $slang_obj->native;
-								}
-								?>
-								<td class="cml-col-source">
-									<span class="cml-source-text"><?php echo esc_html( $preview ); ?></span>
-									<span class="cml-source-lang cml-source-lang-<?php echo esc_attr( $source_lang ); ?>"
-										title="<?php echo esc_attr( '' !== $source_lang_native ? sprintf( /* translators: %s: language native name */ __( 'Source language: %s', 'codeon-multilingual' ), $source_lang_native ) : __( 'Source language', 'codeon-multilingual' ) ); ?>">
-										<?php echo esc_html( strtoupper( $source_lang ) ); ?>
-									</span>
-								</td>
+								data-context="<?php echo esc_attr( (string) $row->context ); ?>"
+								data-source-language="<?php echo esc_attr( $source_lang ); ?>"
+								data-source-language-native="<?php echo esc_attr( $source_native ); ?>">
 								<td class="cml-col-domain">
 									<code><?php echo esc_html( (string) $row->domain ); ?></code>
 								</td>
 								<td class="cml-col-progress">
-									<span class="cml-progress-badge<?php echo (int) $row->translated_count >= $needed_count ? ' cml-fully-translated' : ''; ?>"
-										data-total="<?php echo (int) $needed_count; ?>">
-										<?php echo (int) $row->translated_count . ' / ' . (int) $needed_count; ?>
+									<span class="cml-progress-badge<?php echo $row_done >= $row_needed && $row_needed > 0 ? ' cml-fully-translated' : ''; ?>"
+										data-total="<?php echo (int) $row_needed; ?>">
+										<?php echo (int) $row_done . ' / ' . (int) $row_needed; ?>
 									</span>
 								</td>
-								<?php foreach ( $translation_langs as $code => $lang ) :
+								<td class="cml-col-source">
+									<span class="cml-source-text"><?php echo esc_html( $preview ); ?></span>
+								</td>
+								<td class="cml-col-lang">
+									<span class="cml-source-lang cml-source-lang-<?php echo esc_attr( $source_lang ); ?>"
+										title="<?php echo esc_attr( sprintf( /* translators: %s: source language native name */ __( 'Source language: %s', 'codeon-multilingual' ), $source_native ) ); ?>">
+										<?php echo esc_html( strtoupper( $source_lang ) ); ?>
+									</span>
+								</td>
+								<?php foreach ( $all_languages as $code => $lang ) :
+									if ( $code === $source_lang ) :
+										?>
+										<td class="cml-col-flag-cell cml-col-source-cell">
+											<span class="cml-icon-source dashicons dashicons-admin-site"
+												title="<?php echo esc_attr( sprintf( /* translators: %s: source language native name */ __( 'Source: %s', 'codeon-multilingual' ), $lang->native ) ); ?>"
+												aria-hidden="true"></span>
+										</td>
+										<?php
+										continue;
+									endif;
 									$existing = $translations_map[ $id ][ $code ] ?? null;
 									$is_set   = null !== $existing && '' !== $existing;
 									?>
-									<td class="cml-col-lang">
+									<td class="cml-col-flag-cell">
 										<a href="#"
 											class="cml-translate-btn <?php echo $is_set ? 'cml-translated' : 'cml-missing'; ?>"
 											data-string-id="<?php echo (int) $id; ?>"
@@ -313,11 +324,12 @@ final class StringsPage {
 									</td>
 								<?php endforeach; ?>
 							</tr>
-							<tr class="cml-edit-row" id="cml-edit-<?php echo (int) $id; ?>" style="display:none"></tr>
 						<?php endforeach; ?>
 					<?php endif; ?>
 				</tbody>
 			</table>
+
+			<div id="cml-popup" class="cml-popup" style="display:none" aria-hidden="true"></div>
 
 			<?php if ( $total_pages > 1 ) : ?>
 				<div class="tablenav bottom">
