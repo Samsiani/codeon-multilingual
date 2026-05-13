@@ -18,6 +18,7 @@ use Samsiani\CodeonMultilingual\Frontend\SitemapFilter;
 use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Query\TermsClauses;
 use Samsiani\CodeonMultilingual\Rest\LangParam;
+use Samsiani\CodeonMultilingual\Rest\StringsApi;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use Samsiani\CodeonMultilingual\Url\PostLinkFilter;
 use Samsiani\CodeonMultilingual\Url\Router;
@@ -84,6 +85,7 @@ final class Plugin {
 
 		// REST.
 		LangParam::register();
+		StringsApi::register();
 
 		// Admin.
 		AdminMenu::register();
