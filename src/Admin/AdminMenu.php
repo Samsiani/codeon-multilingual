@@ -5,6 +5,8 @@ namespace Samsiani\CodeonMultilingual\Admin;
 
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 
 /**
@@ -58,11 +60,29 @@ final class AdminMenu {
 
 		add_submenu_page(
 			self::PARENT_SLUG,
+			__( 'Scan', 'codeon-multilingual' ),
+			__( 'Scan', 'codeon-multilingual' ),
+			self::CAPABILITY,
+			ScanPage::PAGE_SLUG,
+			array( ScanPage::class, 'render' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
 			__( 'Migration', 'codeon-multilingual' ),
 			__( 'Migration', 'codeon-multilingual' ),
 			self::CAPABILITY,
 			MigrationPage::PAGE_SLUG,
 			array( MigrationPage::class, 'render' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Settings', 'codeon-multilingual' ),
+			__( 'Settings', 'codeon-multilingual' ),
+			self::CAPABILITY,
+			SettingsPage::PAGE_SLUG,
+			array( SettingsPage::class, 'render' )
 		);
 	}
 }

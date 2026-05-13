@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Strings;
 
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Core\Settings;
 
 /**
  * String translation runtime — gettext interceptor + lazy compiled map.
@@ -102,6 +103,10 @@ final class StringTranslator {
 	// ---- Discovery -------------------------------------------------------
 
 	private static function discover( string $hash, string $domain, string $context, string $text ): void {
+		// Off by default — populate the catalog from the Scan page instead.
+		if ( ! (bool) Settings::get( 'auto_discover_strings', false ) ) {
+			return;
+		}
 		if ( isset( self::$seen_new[ $hash ] ) ) {
 			return;
 		}

@@ -1,0 +1,58 @@
+/* CodeOn Multilingual — floating frontend switcher. */
+
+.cml-floating-switcher {
+    position: fixed;
+    z-index: 99999;
+    background: #fff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    font-size: 13px;
+    line-height: 1.4;
+    color: #222;
+}
+.cml-floating-switcher.cml-pos-bottom-right { bottom: 20px; right: 20px; }
+.cml-floating-switcher.cml-pos-bottom-left  { bottom: 20px; left:  20px; }
+.cml-floating-switcher.cml-pos-top-right    { top:    20px; right: 20px; }
+.cml-floating-switcher.cml-pos-top-left     { top:    20px; left:  20px; }
+
+.cml-floating-switcher ul.cml-language-switcher {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.cml-floating-switcher .cml-language-item { margin: 0; padding: 0; }
+.cml-floating-switcher .cml-language-item a {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+    transition: background-color 0.15s, color 0.15s;
+}
+.cml-floating-switcher .cml-language-item a:hover { background: #f0f0f0; }
+.cml-floating-switcher .cml-language-item.cml-current a {
+    background: #2271b1;
+    color: #fff;
+}
+
+.cml-floating-switcher .cml-style-dropdown select {
+    border: 1px solid #ddd;
+    padding: 4px 22px 4px 8px;
+    border-radius: 4px;
+    background: #fff;
+    color: #222;
+    font: inherit;
+    cursor: pointer;
+}
+
+@media (max-width: 600px) {
+    .cml-floating-switcher {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+    .cml-floating-switcher .cml-language-item a { padding: 3px 6px; }
+}

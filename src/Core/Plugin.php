@@ -8,9 +8,12 @@ use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Admin\PostsListLanguage;
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
+use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
 use Samsiani\CodeonMultilingual\Frontend\Hreflang;
 use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
 use Samsiani\CodeonMultilingual\Frontend\LanguageSwitcher;
@@ -79,6 +82,7 @@ final class Plugin {
 
 		// Frontend (switcher, hreflang, html lang, sitemap).
 		LanguageSwitcher::register();
+		FloatingSwitcher::register();
 		Hreflang::register();
 		HtmlLangAttribute::register();
 		SitemapFilter::register();
@@ -93,6 +97,8 @@ final class Plugin {
 		PostsListLanguage::register();
 		LanguagesPage::register();
 		StringsPage::register();
+		ScanPage::register();
+		SettingsPage::register();
 		MigrationPage::register();
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
