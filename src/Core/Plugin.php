@@ -6,6 +6,7 @@ namespace Samsiani\CodeonMultilingual\Core;
 use Samsiani\CodeonMultilingual\Admin\AdminBar;
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
@@ -88,6 +89,7 @@ final class Plugin {
 		AdminBar::register();
 		LanguagesPage::register();
 		StringsPage::register();
+		MigrationPage::register();
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 	}
