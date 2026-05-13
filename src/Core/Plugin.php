@@ -17,6 +17,7 @@ use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
 use Samsiani\CodeonMultilingual\Frontend\Hreflang;
 use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
 use Samsiani\CodeonMultilingual\Frontend\LanguageSwitcher;
+use Samsiani\CodeonMultilingual\Frontend\LocaleOverride;
 use Samsiani\CodeonMultilingual\Frontend\SitemapFilter;
 use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Query\TermsClauses;
@@ -80,11 +81,12 @@ final class Plugin {
 		// Strings.
 		StringTranslator::register();
 
-		// Frontend (switcher, hreflang, html lang, sitemap).
+		// Frontend (switcher, hreflang, html lang, locale override, sitemap).
 		LanguageSwitcher::register();
 		FloatingSwitcher::register();
 		Hreflang::register();
 		HtmlLangAttribute::register();
+		LocaleOverride::register();
 		SitemapFilter::register();
 
 		// REST.
