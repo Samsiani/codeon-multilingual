@@ -96,6 +96,7 @@ final class Plugin {
 		MigrationPage::register();
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
+		add_action( 'admin_init', array( Activator::class, 'maybe_upgrade' ) );
 	}
 
 	public function load_textdomain(): void {

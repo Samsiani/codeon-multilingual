@@ -18,7 +18,7 @@ namespace Samsiani\CodeonMultilingual\Core;
  */
 final class Schema {
 
-	public const VERSION = '1';
+	public const VERSION = '2';
 
 	public static function install(): void {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -101,10 +101,12 @@ final class Schema {
 				domain VARCHAR(190) NOT NULL,
 				context VARCHAR(190) NOT NULL DEFAULT '',
 				source LONGTEXT NOT NULL,
+				source_language VARCHAR(10) NOT NULL DEFAULT 'en',
 				created_at INT UNSIGNED NOT NULL DEFAULT 0,
 				PRIMARY KEY  (id),
 				UNIQUE KEY hash_unique (hash),
-				KEY domain_idx (domain)
+				KEY domain_idx (domain),
+				KEY source_language_idx (source_language)
 			) {$charset_collate};",
 
 			"CREATE TABLE {$prefix}cml_string_translations (

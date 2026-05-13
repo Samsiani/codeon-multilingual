@@ -256,7 +256,9 @@ final class WpmlImporter {
 		}
 
 		// Compute md5(domain|context|source) server-side via UNHEX(MD5(CONCAT())).
-		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, created_at)
+		// source_language uses WPML's authoritative s.language; ON DUPLICATE
+		// updates it so reruns correct any prior detect-only values.
+		$sql = "INSERT INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at)
 			SELECT
 				UNHEX(MD5(CONCAT(
 					COALESCE(s.context, ''),
@@ -268,9 +270,12 @@ final class WpmlImporter {
 				COALESCE(s.context, ''),
 				COALESCE(s.gettext_context, ''),
 				s.value,
+				COALESCE(s.language, 'en'),
 				UNIX_TIMESTAMP()
 			FROM {$wpdb->prefix}icl_strings s
-			WHERE s.value IS NOT NULL AND s.value != ''";
+			WHERE s.value IS NOT NULL AND s.value != ''
+			ON DUPLICATE KEY UPDATE
+				source_language = VALUES(source_language)";
 
 		$wpdb->query( $sql );
 		return (int) $wpdb->rows_affected;

@@ -146,7 +146,7 @@ final class StringsPage {
 		);
 
 		// Page of rows.
-		$list_sql = "SELECT s.id, s.domain, s.context, s.source,
+		$list_sql = "SELECT s.id, s.domain, s.context, s.source, s.source_language,
 				(SELECT COUNT(*) FROM {$wpdb->prefix}cml_string_translations st WHERE st.string_id = s.id) AS translated_count
 			FROM {$wpdb->prefix}cml_strings s
 			WHERE {$where}
@@ -272,8 +272,20 @@ final class StringsPage {
 								data-source="<?php echo esc_attr( (string) $row->source ); ?>"
 								data-domain="<?php echo esc_attr( (string) $row->domain ); ?>"
 								data-context="<?php echo esc_attr( (string) $row->context ); ?>">
+								<?php
+								$source_lang   = isset( $row->source_language ) ? (string) $row->source_language : 'en';
+								$source_lang_native = '';
+								$slang_obj    = Languages::get( $source_lang );
+								if ( $slang_obj ) {
+									$source_lang_native = (string) $slang_obj->native;
+								}
+								?>
 								<td class="cml-col-source">
 									<span class="cml-source-text"><?php echo esc_html( $preview ); ?></span>
+									<span class="cml-source-lang cml-source-lang-<?php echo esc_attr( $source_lang ); ?>"
+										title="<?php echo esc_attr( '' !== $source_lang_native ? sprintf( /* translators: %s: language native name */ __( 'Source language: %s', 'codeon-multilingual' ), $source_lang_native ) : __( 'Source language', 'codeon-multilingual' ) ); ?>">
+										<?php echo esc_html( strtoupper( $source_lang ) ); ?>
+									</span>
 								</td>
 								<td class="cml-col-domain">
 									<code><?php echo esc_html( (string) $row->domain ); ?></code>

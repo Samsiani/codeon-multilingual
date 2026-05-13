@@ -30,6 +30,27 @@
 }
 .cml-strings-table td.cml-col-domain code { font-size: 11px; }
 
+.cml-source-lang {
+    display: inline-block;
+    padding: 1px 6px;
+    background: #f0f0f1;
+    color: #50575e;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    cursor: help;
+}
+.cml-source-lang-en { background: #e7f5ff; color: #1864ab; }
+.cml-source-lang-ka { background: #fff4e6; color: #b15c00; }
+.cml-source-lang-ru { background: #f8f0fc; color: #862e9c; }
+.cml-source-lang-ar { background: #fff5f5; color: #c92a2a; }
+.cml-source-lang-he { background: #ebfbee; color: #2f9e44; }
+.cml-source-lang-zh { background: #fff3bf; color: #845e00; }
+.cml-source-lang-ja { background: #ffe3e3; color: #c92a2a; }
+
 .cml-translate-btn {
     display: inline-flex;
     align-items: center;

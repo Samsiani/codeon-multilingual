@@ -140,11 +140,12 @@ final class StringTranslator {
 			$values[]       = $info['domain'];
 			$values[]       = $info['context'];
 			$values[]       = $info['source'];
+			$values[]       = self::detect_source_language( $info['source'] );
 			$values[]       = $now;
-			$placeholders[] = '(UNHEX(%s), %s, %s, %s, %d)';
+			$placeholders[] = '(UNHEX(%s), %s, %s, %s, %s, %d)';
 		}
 
-		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, created_at) VALUES "
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at) VALUES "
 			. implode( ',', $placeholders );
 
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
@@ -235,6 +236,44 @@ final class StringTranslator {
 
 	public static function hash( string $domain, string $context, string $text ): string {
 		return md5( $domain . '|' . $context . '|' . $text );
+	}
+
+	/**
+	 * Character-set heuristic for source-language detection.
+	 *
+	 * Most plugin code uses English sources, so 'en' is the fallback. We test
+	 * for distinctive script ranges first (Georgian, Cyrillic, Arabic, Hebrew,
+	 * CJK) — if any character of the source falls in that range, the string
+	 * is tagged with the corresponding language.
+	 *
+	 * Not perfect (e.g. a single Cyrillic letter in an English source flips
+	 * detection to ru), but good enough for the strings list label that the
+	 * admin can re-check. Authoritative source-language only comes from WPML
+	 * migration, which writes the column directly.
+	 */
+	public static function detect_source_language( string $text ): string {
+		if ( '' === $text ) {
+			return 'en';
+		}
+		if ( preg_match( '/[\x{10A0}-\x{10FF}]/u', $text ) ) {
+			return 'ka';
+		}
+		if ( preg_match( '/[\x{0400}-\x{04FF}]/u', $text ) ) {
+			return 'ru';
+		}
+		if ( preg_match( '/[\x{0600}-\x{06FF}]/u', $text ) ) {
+			return 'ar';
+		}
+		if ( preg_match( '/[\x{0590}-\x{05FF}]/u', $text ) ) {
+			return 'he';
+		}
+		if ( preg_match( '/[\x{4E00}-\x{9FFF}]/u', $text ) ) {
+			return 'zh';
+		}
+		if ( preg_match( '/[\x{3040}-\x{309F}\x{30A0}-\x{30FF}]/u', $text ) ) {
+			return 'ja';
+		}
+		return 'en';
 	}
 
 	/**

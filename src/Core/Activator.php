@@ -27,6 +27,68 @@ final class Activator {
 	}
 
 	/**
+	 * Schema upgrade entry point — called from admin_init on every admin request.
+	 *
+	 * Auto-update via wp-admin doesn't fire activation hooks, so we can't rely
+	 * on Activator::activate() running. Stored cml_db_version vs Schema::VERSION
+	 * decides whether dbDelta needs to run.
+	 *
+	 * Adds new columns (Schema v2 added cml_strings.source_language) without
+	 * destroying existing data. Backfill runs once per upgrade.
+	 */
+	public static function maybe_upgrade(): void {
+		$stored = (string) get_option( 'cml_db_version', '0' );
+		if ( version_compare( $stored, Schema::VERSION, '>=' ) ) {
+			return;
+		}
+
+		Schema::install();
+		update_option( 'cml_db_version', Schema::VERSION, true );
+
+		// One-time backfill for the new source_language column on existing rows.
+		self::backfill_source_languages();
+	}
+
+	/**
+	 * Walk every cml_strings row and stamp source_language based on character set
+	 * detection. Runs once per schema upgrade; ~3 ms per 100 rows.
+	 */
+	private static function backfill_source_languages(): void {
+		global $wpdb;
+		$batch_size = 500;
+		$last_id    = 0;
+
+		while ( true ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT id, source FROM {$wpdb->prefix}cml_strings WHERE id > %d ORDER BY id ASC LIMIT %d",
+					$last_id,
+					$batch_size
+				)
+			);
+			if ( empty( $rows ) ) {
+				break;
+			}
+
+			foreach ( $rows as $row ) {
+				$detected = \Samsiani\CodeonMultilingual\Strings\StringTranslator::detect_source_language( (string) $row->source );
+				$wpdb->update(
+					$wpdb->prefix . 'cml_strings',
+					array( 'source_language' => $detected ),
+					array( 'id' => (int) $row->id ),
+					array( '%s' ),
+					array( '%d' )
+				);
+				$last_id = (int) $row->id;
+			}
+
+			if ( count( $rows ) < $batch_size ) {
+				break;
+			}
+		}
+	}
+
+	/**
 	 * Term backfill runs synchronously — term counts are bounded (hundreds, not
 	 * millions) so a single INSERT IGNORE ... SELECT is fine.
 	 */
