@@ -1,0 +1,99 @@
+name: Release on tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          coverage: none
+
+      - name: Derive version from tag
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          TAG="$REF_NAME"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp build id
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          SHA="$(git rev-parse --short HEAD)"
+          BUILD_ID="${VERSION}+${SHA}"
+          export BUILD_ID
+          php -r '
+            $file = "src/Core/BuildId.php";
+            $build = getenv("BUILD_ID");
+            $content = file_get_contents($file);
+            $new = preg_replace(
+              "/define\\(\\s*\"CML_BUILD_ID\"\\s*,\\s*[^)]*\\)\\s*;/",
+              "define( \"CML_BUILD_ID\", \"" . addslashes($build) . "\" );",
+              str_replace("'", "\"", $content)
+            );
+            file_put_contents($file, $new);
+            echo "Stamped CML_BUILD_ID = " . $build . PHP_EOL;
+          '
+          grep "CML_BUILD_ID" src/Core/BuildId.php
+
+      - name: Verify plugin header version matches tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          HEADER_VERSION=$(grep -m1 -E '^\s*\*\s*Version:' codeon-multilingual.php | sed -E 's/.*Version:[[:space:]]*([0-9][^[:space:]]*).*/\1/')
+          echo "Header version: $HEADER_VERSION"
+          echo "Tag version:    $VERSION"
+          if [ "$HEADER_VERSION" != "$VERSION" ]; then
+            echo "::error::Plugin header Version ($HEADER_VERSION) != tag ($VERSION). Bump the header before tagging."
+            exit 1
+          fi
+
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --optimize-autoloader --prefer-dist
+
+      - name: Build release ZIP
+        run: |
+          STAGE="$(mktemp -d)"
+          PKG="$STAGE/codeon-multilingual"
+          mkdir -p "$PKG"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='node_modules' \
+            --exclude='*.zip' \
+            --exclude='.DS_Store' \
+            --exclude='phpcs.xml.dist' \
+            --exclude='phpstan.neon.dist' \
+            --exclude='phpunit.xml.dist' \
+            --exclude='.gitignore' \
+            ./ "$PKG/"
+          (cd "$STAGE" && zip -rq codeon-multilingual.zip codeon-multilingual)
+          mv "$STAGE/codeon-multilingual.zip" .
+          ls -lh codeon-multilingual.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          files: codeon-multilingual.zip
+          fail_on_unmatched_files: true

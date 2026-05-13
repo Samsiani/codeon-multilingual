@@ -1,0 +1,28 @@
+# Dependencies — never tracked. composer.lock IS tracked per CodeOn policy.
+vendor/
+node_modules/
+
+# OS / IDE noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build / cache artifacts
+build/
+dist/
+*.zip
+.phpunit.cache/
+.phpunit.result.cache
+.phpstan.cache/
+coverage/
+*.log
+
+# Local-only configs (devs may override the .dist versions)
+phpcs.xml
+phpstan.neon
+phpunit.xml
+.env
+.env.local

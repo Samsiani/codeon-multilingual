@@ -1,0 +1,48 @@
+{
+    "name": "samsiani/codeon-multilingual",
+    "description": "Lightweight multilingual plugin for WordPress and WooCommerce. WPML-compatible, fraction of the weight.",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://codeon.ge/plugins/codeon-multilingual",
+    "authors": [
+        {
+            "name": "Samsiani / CodeOn",
+            "homepage": "https://codeon.ge"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "automattic/jetpack-autoloader": "^3.0 || ^4.0 || ^5.0",
+        "yahnis-elsts/plugin-update-checker": "^5.6"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "wp-coding-standards/wpcs": "^3.0",
+        "phpstan/phpstan": "^1.10",
+        "szepeviktor/phpstan-wordpress": "^1.3",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "brain/monkey": "^2.6",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Samsiani\\CodeonMultilingual\\": "src/"
+        }
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "analyse": "phpstan analyse",
+        "test": "phpunit"
+    },
+    "config": {
+        "allow-plugins": {
+            "automattic/jetpack-autoloader": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
