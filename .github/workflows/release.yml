@@ -38,19 +38,17 @@ jobs:
         run: |
           SHA="$(git rev-parse --short HEAD)"
           BUILD_ID="${VERSION}+${SHA}"
-          export BUILD_ID
-          php -r '
-            $file = "src/Core/BuildId.php";
-            $build = getenv("BUILD_ID");
-            $content = file_get_contents($file);
-            $new = preg_replace(
-              "/define\\(\\s*\"CML_BUILD_ID\"\\s*,\\s*[^)]*\\)\\s*;/",
-              "define( \"CML_BUILD_ID\", \"" . addslashes($build) . "\" );",
-              str_replace("'", "\"", $content)
-            );
-            file_put_contents($file, $new);
-            echo "Stamped CML_BUILD_ID = " . $build . PHP_EOL;
-          '
+          cat > src/Core/BuildId.php <<PHP
+          <?php
+          /**
+           * CML_BUILD_ID — stamped at release build time.
+           */
+          defined( 'ABSPATH' ) || exit;
+          if ( ! defined( 'CML_BUILD_ID' ) ) {
+              define( 'CML_BUILD_ID', '${BUILD_ID}' );
+          }
+          PHP
+          echo "Stamped CML_BUILD_ID = ${BUILD_ID}"
           grep "CML_BUILD_ID" src/Core/BuildId.php
 
       - name: Verify plugin header version matches tag
