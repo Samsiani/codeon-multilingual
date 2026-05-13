@@ -110,8 +110,9 @@ final class PostsClauses {
 			return true;
 		}
 
-		// Admin sees all languages mixed for now — the admin lang filter ships in a later iteration.
-		if ( is_admin() ) {
+		// Admin defaults to "show all languages", except when the admin lang
+		// filter dropdown is engaged (PostsListLanguage sets this query var).
+		if ( is_admin() && true !== $query->get( 'cml_admin_lang_filter' ) ) {
 			return true;
 		}
 

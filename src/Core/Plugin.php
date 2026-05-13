@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Core;
 
 use Samsiani\CodeonMultilingual\Admin\AdminBar;
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
+use Samsiani\CodeonMultilingual\Admin\PostsListLanguage;
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
@@ -87,6 +88,7 @@ final class Plugin {
 		// Admin.
 		AdminMenu::register();
 		AdminBar::register();
+		PostsListLanguage::register();
 		LanguagesPage::register();
 		StringsPage::register();
 		MigrationPage::register();
