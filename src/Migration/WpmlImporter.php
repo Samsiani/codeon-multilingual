@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Migration;
 
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
+use Samsiani\CodeonMultilingual\Strings\L10nFileWriter;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 
 /**
@@ -139,6 +140,13 @@ final class WpmlImporter {
 		Languages::flush_cache();
 		StringTranslator::flush_cache();
 		TranslationGroups::flush();
+
+		// If the admin has opted into the native .l10n.php path, bulk-regenerate
+		// after import so the newly-imported translations are available via the
+		// fast native lookup path immediately.
+		if ( L10nFileWriter::is_enabled() ) {
+			L10nFileWriter::regenerate_all();
+		}
 
 		return $result;
 	}

@@ -24,6 +24,7 @@ final class Settings {
 			'frontend_switcher_style'     => 'dropdown',
 			'frontend_switcher_show_flag' => true,
 			'auto_discover_strings'       => false,
+			'use_native_l10n_files'       => false,
 		);
 	}
 

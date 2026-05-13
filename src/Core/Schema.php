@@ -56,6 +56,9 @@ final class Schema {
 		delete_option( Backfill::OPTION_STATUS );
 		delete_option( Backfill::OPTION_LAST_ID );
 		wp_clear_scheduled_hook( Backfill::HOOK );
+
+		// Remove generated .l10n.php files on full uninstall.
+		\Samsiani\CodeonMultilingual\Strings\L10nFileWriter::delete_all();
 	}
 
 	/**

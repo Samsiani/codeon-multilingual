@@ -23,6 +23,7 @@ use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Query\TermsClauses;
 use Samsiani\CodeonMultilingual\Rest\LangParam;
 use Samsiani\CodeonMultilingual\Rest\StringsApi;
+use Samsiani\CodeonMultilingual\Strings\L10nFileWriter;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use Samsiani\CodeonMultilingual\Url\PostLinkFilter;
 use Samsiani\CodeonMultilingual\Url\Router;
@@ -80,6 +81,7 @@ final class Plugin {
 
 		// Strings.
 		StringTranslator::register();
+		L10nFileWriter::register();
 
 		// Frontend (switcher, hreflang, html lang, locale override, sitemap).
 		LanguageSwitcher::register();

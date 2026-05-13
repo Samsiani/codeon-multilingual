@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Rest;
 
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Strings\L10nFileWriter;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use WP_Error;
 use WP_REST_Request;
@@ -112,6 +113,21 @@ final class StringsApi {
 		}
 
 		StringTranslator::flush_cache();
+
+		// Native .l10n.php path is opt-in. When enabled, rewrite the file for
+		// the affected domain + language so the next request reads it via WP's
+		// native translation loader.
+		if ( L10nFileWriter::is_enabled() ) {
+			$domain = (string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT domain FROM {$wpdb->prefix}cml_strings WHERE id = %d",
+					$id
+				)
+			);
+			if ( '' !== $domain ) {
+				L10nFileWriter::write_domain( $domain, $language );
+			}
+		}
 
 		$translated_count = (int) $wpdb->get_var(
 			$wpdb->prepare(
