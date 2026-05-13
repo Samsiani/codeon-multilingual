@@ -112,7 +112,7 @@
 
 /* ---- Popup editor ---- */
 .cml-popup {
-    position: absolute;
+    position: fixed;
     z-index: 100000;
     background: #fff;
     border: 1px solid #c3c4c7;

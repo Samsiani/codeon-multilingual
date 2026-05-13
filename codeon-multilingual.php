@@ -3,7 +3,7 @@
  * Plugin Name:       CodeOn Multilingual
  * Plugin URI:        https://codeon.ge/plugins/codeon-multilingual
  * Description:       Lightweight multilingual plugin for WordPress and WooCommerce. WPML-compatible, fraction of the weight.
- * Version:           0.5.1
+ * Version:           0.5.2
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Samsiani / CodeOn
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CML_VERSION', '0.5.1' );
+define( 'CML_VERSION', '0.5.2' );
 define( 'CML_FILE', __FILE__ );
 define( 'CML_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CML_URL', plugin_dir_url( __FILE__ ) );

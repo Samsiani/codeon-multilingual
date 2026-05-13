@@ -47,6 +47,12 @@
 		var popup        = document.getElementById('cml-popup');
 		if (!popup) return;
 
+		// Pull popup out of the .wrap container so no ancestor overflow:hidden,
+		// transform, or constrained width can clip it.
+		if (popup.parentNode !== document.body) {
+			document.body.appendChild(popup);
+		}
+
 		var source       = row.dataset.source || '';
 		var domain       = row.dataset.domain || '';
 		var context      = row.dataset.context || '';
@@ -245,29 +251,29 @@
 	}
 
 	function position(popup, btn) {
-		var rect       = btn.getBoundingClientRect();
-		var docW       = document.documentElement.clientWidth;
-		var docH       = document.documentElement.clientHeight;
-		var scrollY    = window.scrollY || window.pageYOffset || 0;
-		var scrollX    = window.scrollX || window.pageXOffset || 0;
-		var popupW     = popup.offsetWidth  || 640;
-		var popupH     = popup.offsetHeight || 220;
+		// Popup uses position:fixed (CSS), so coordinates are viewport-relative —
+		// no scroll math needed.
+		var rect   = btn.getBoundingClientRect();
+		var docW   = document.documentElement.clientWidth;
+		var docH   = document.documentElement.clientHeight;
+		var popupW = popup.offsetWidth  || 640;
+		var popupH = popup.offsetHeight || 220;
 
 		// Default: below the button, horizontally centered.
-		var top  = rect.bottom + scrollY + 8;
-		var left = rect.left + scrollX + rect.width / 2 - popupW / 2;
+		var top  = rect.bottom + 8;
+		var left = rect.left + rect.width / 2 - popupW / 2;
 
-		// Clamp to viewport.
-		if (left < scrollX + 10) {
-			left = scrollX + 10;
+		// Clamp to viewport (10px margin on each side).
+		if (left < 10) {
+			left = 10;
 		}
-		if (left + popupW > scrollX + docW - 10) {
-			left = scrollX + docW - popupW - 10;
+		if (left + popupW > docW - 10) {
+			left = docW - popupW - 10;
 		}
 
 		// Flip above if no room below.
 		if (rect.bottom + popupH + 16 > docH && rect.top - popupH - 8 > 0) {
-			top = rect.top + scrollY - popupH - 8;
+			top = rect.top - popupH - 8;
 		}
 
 		popup.style.top  = top  + 'px';

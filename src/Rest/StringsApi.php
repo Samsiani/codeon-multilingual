@@ -82,9 +82,6 @@ final class StringsApi {
 		if ( ! Languages::exists_and_active( $language ) ) {
 			return new WP_Error( 'cml_invalid_language', __( 'Language not active.', 'codeon-multilingual' ), array( 'status' => 400 ) );
 		}
-		if ( Languages::is_default( $language ) ) {
-			return new WP_Error( 'cml_default_lang', __( 'Cannot translate into the default language.', 'codeon-multilingual' ), array( 'status' => 400 ) );
-		}
 
 		global $wpdb;
 		$exists = (bool) $wpdb->get_var(
