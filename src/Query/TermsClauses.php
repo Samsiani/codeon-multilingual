@@ -107,7 +107,9 @@ final class TermsClauses {
 		if ( ! empty( $args['name__in'] ) ) {
 			return true;
 		}
-		if ( is_admin() ) {
+		// Admin defaults to "show all languages", except when our
+		// TermsListLanguage screen opts in explicitly via this query arg.
+		if ( is_admin() && empty( $args['cml_admin_lang_filter'] ) ) {
 			return true;
 		}
 		return false;

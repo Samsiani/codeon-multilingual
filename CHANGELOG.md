@@ -2,6 +2,19 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.34] — 2026-05-14
+
+### Added
+- **`Admin/TermsListLanguage`** — taxonomy admin lists (`edit-tags.php`) now get the same UI parity that posts have:
+  - Subsubsub language quick-link row above the list ("ქართული (3) · Русский (1) · English (0) · All languages (4)") with per-language counts. Cookie-persisted choice.
+  - "Languages" column with a per-row source-language badge + translate icons (✓ green check = sibling exists, "+" = create translation) for every active language. Clicking ✓ goes to that sibling's edit screen; clicking "+" creates the translation via `TermTranslator::add_translation_url()`.
+  - Applies to every translatable taxonomy: `category`, `post_tag`, `product_cat`, `product_tag`, `pa_*` (product attributes), `nav_menu` is excluded (Menus has its own dedicated screen).
+- **`TermsClauses` admin opt-in** — added an `cml_admin_lang_filter` query var that, when set on a `WP_Term_Query`, scopes term results to the current language. Same shape as `PostsClauses`'s opt-in.
+
+### Performance
+- One `language_counts` query per taxonomy per request (cached in a static map). Column rendering reuses `TranslationGroups`'s request-static sibling cache; 50 rows cost ≤ 2 DB hits for sibling lookups.
+- Language column only registers when ≥ 2 languages are active.
+
 ## [0.7.33] — 2026-05-14
 
 ### Changed
