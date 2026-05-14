@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.3] — 2026-05-14
+
+### Fixed
+- **Setup wizard step 1 → step 2 white screen.** The "Let's go" button on the welcome screen was wrapped in a `<form action="admin-post.php" method="get">` with no `action` field, so submitting it navigated the browser to `wp-admin/admin-post.php?page=cml-setup&step=2`. `admin-post.php` only routes registered `admin_post_<action>` hooks and dies silently when none match, so the user landed on a blank page. Replaced the form with a plain anchor pointing at `admin.php?page=cml-setup&step=2` (the wizard URL builder we already use everywhere else).
+
 ## [0.7.2] — 2026-05-14
 
 ### Added

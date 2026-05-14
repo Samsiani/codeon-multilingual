@@ -158,16 +158,14 @@ final class SetupWizard {
 			<?php esc_html_e( 'After the wizard you\'ll be able to translate posts, taxonomies, products, and theme strings.', 'codeon-multilingual' ); ?>
 		</p>
 
-		<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="get" class="cml-setup-actions">
-			<input type="hidden" name="page" value="<?php echo esc_attr( self::PAGE_SLUG ); ?>">
-			<input type="hidden" name="step" value="2">
-			<button type="submit" class="button button-primary button-large">
+		<div class="cml-setup-actions">
+			<a href="<?php echo esc_url( self::url( 2 ) ); ?>" class="button button-primary button-large">
 				<?php esc_html_e( "Let's go →", 'codeon-multilingual' ); ?>
-			</button>
+			</a>
 			<a href="<?php echo esc_url( self::skip_url() ); ?>" class="cml-skip" onclick="return confirm('<?php echo esc_js( __( 'Skip the setup wizard? You can re-run it later from the Languages page.', 'codeon-multilingual' ) ); ?>');">
 				<?php esc_html_e( 'Skip wizard', 'codeon-multilingual' ); ?>
 			</a>
-		</form>
+		</div>
 		<?php
 	}
 
