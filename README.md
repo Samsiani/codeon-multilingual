@@ -11,18 +11,18 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 | Dimension | CodeOn Multilingual | Polylang | WPML |
 |---|---|---|---|
-| PHP code (LOC) | ~7 710 | ~30–50k | ~100k+ across the suite |
-| Release ZIP | ~370 KB | ~3 MB | ~50–150 MB |
+| PHP code (LOC) | ~10.9 k | ~30–50 k | ~100 k+ across the suite |
+| Release ZIP | ~700 KB (incl. 60 SVG flags + catalog) | ~3 MB | ~50–150 MB |
 | DB tables added | 5 | 2 + reused taxonomy | 17+ |
-| Frontend JS shipped by default | 0 KB | ~30 KB | ~200 KB+ |
+| Frontend JS shipped by default | ~1.4 KB (dropdown toggle) | ~30 KB | ~200 KB+ |
 | Admin JS bundle | ~6 KB vanilla | ~120 KB jQuery+UI | 400 KB+ React |
 | Extra queries per WP_Query | 1 LEFT JOIN | 2–3 (taxonomy joins) | 3–7 |
-| `gettext` hot path overhead | off by default | filter per call | filter + DB hit |
+| `gettext` hot path overhead | 1 isset() per call against a request-static map | filter per call | filter + DB hit |
 | Memory per request | <1.5 MB | 3–5 MB | 8–15 MB |
 
 ## Status
 
-**v0.7.2** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, and a **first-run setup wizard** with a bundled 66-language catalog.
+**v0.7.22** — live in production on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), and a complete **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart items follow current language with fallback to original).
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -42,11 +42,17 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 
 **WooCommerce**
 - Product translation with full variation auto-clone
-- 20 prop sync across translation group (price, stock, sale dates, dimensions, tax, SKU…)
-- Group-keyed lock prevents recursion
+- 22 props synced across the translation group: price, stock, manage_stock, backorders, sold_individually, low_stock_amount, sale dates, dimensions, weight, tax_class, tax_status, downloadable, virtual, SKU, GTIN/UPC/EAN/ISBN, shipping class
+- Field-lock UI on translations (WPML-style): pricing, SKU, GTIN, stock controls, dimensions, shipping class, tax, virtual/downloadable, and the entire Attributes panel render disabled + read-only on translated products; banner reads "You're editing a translation of <Source> — edit the original to change these"
+- Shop-page mapping per language: on `/en/cart/`, `wc_get_page_id('cart')` returns the English cart page so `is_cart()` matches and the cart template fires
+- Cart items follow current language: line items, mini-cart, checkout review, order-received page, and emails swap to the translation; items without a translation stay in their original language
+- WC's "duplicate SKU" validator suppresses errors when the conflict is just another sibling in the same translation group
+- Translated WP pages without a sibling in the current language fall back to the source page rather than 404
+- Group-keyed lock prevents recursion during sibling sync
 
 **Strings**
-- Hash-keyed compiled map in wp_cache (default fallback path)
+- Hash-keyed compiled map in wp_cache, **keyed per language** so a request that touches multiple locales (e.g. WP boot's early `__()` calls + later router lang switch) never bleeds one language's translations into another
+- Translations into the **default language** apply correctly (the source code is in English; the site default is Georgian; the Georgian translation of an English source string IS the right thing to render)
 - Opt-in WP 6.5+ native `.l10n.php` writer (atomic + opcache-aware)
 - File-system scanner with regex for `__`, `_e`, `_x`, `_ex`, `esc_*`
 - Inline popup editor (vanilla JS, click-outside-saves)
@@ -54,13 +60,22 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 
 **Frontend**
 - Shortcode `[cml_language_switcher]` + classic widget + auto-floating switcher
+- Custom button/menu dropdown with bundled SVG flags (60 countries, MIT-licensed from lipis/flag-icons; Windows desktop without flag-emoji glyphs renders properly now)
+- Dropdown menu auto-sizes to the widest item, opens upward when anchored at the bottom of the viewport, and locks to the floating-switcher box width with a measure-and-pin JS pass that's stable across repeat clicks
 - Hreflang link tags + `x-default`
 - `<html lang>` + `dir` rewriting per current view
 - WP-core sitemap participation (all-language enumeration)
 
 **Admin**
+- First-run setup wizard at `admin.php?page=cml-setup` — 4 steps (welcome → default language → secondary languages → done), 66-language catalog, search-as-you-type, SVG flags, auto-fills locale/native/RTL when a code is recognised
+- Defensive redirect: `admin-post.php?page=cml-setup&step=N` 302s to the canonical `admin.php?...` so stale bookmarks don't white-screen
+- Languages admin list shows SVG flag per row + "Run setup wizard" page-title action
+- "Add Language" form auto-fills locale, English name, native name, flag, RTL from the catalog as the admin types a code
 - Per-post-type language quick-link row above the list table
 - "Languages" column with translate icons (globe / pen / +)
+- Admin bar language indicator reflects the **edited post's** language (not the admin user's) on edit screens; sub-menu jumps directly to sibling edit screens; "Add translation" always creates from the group source
+- "Permalink:" preview on the translation edit screen now reflects the post's own language URL
+- Translation meta box distinguishes the **source** ("Edit X (original)") from translations ("Edit X translation")
 - Cookie-persisted language selection
 - WPML data migration tool (5-statement SQL importer)
 

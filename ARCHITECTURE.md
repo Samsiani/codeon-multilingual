@@ -1,4 +1,4 @@
-# Architecture — CodeOn Multilingual v0.7.2
+# Architecture — CodeOn Multilingual v0.7.22
 
 This document describes how the plugin is structured, why each design choice was made, and how data flows through the system at request time.
 
@@ -6,24 +6,31 @@ This document describes how the plugin is structured, why each design choice was
 
 ```
 src/
-├── Core/                — Bootstrap, settings, languages, translation groups, schema, activation
+├── Core/                — Bootstrap, settings, languages, translation groups, schema, activation, bundled catalog
 ├── Url/                 — Routing strategy interface + Subdirectory impl + post/term link filters
-├── Query/               — posts_clauses + terms_clauses JOIN injection
+├── Query/               — posts_clauses + terms_clauses JOIN injection + pagename → page_id rewriter
 ├── Content/             — Post + term duplicate engines
-├── Strings/             — Gettext interceptor, compiled cache, scanner, .l10n.php writer
-├── Woo/                 — WooCommerce product sync + variation auto-translation
-├── Frontend/            — Switcher, hreflang, html lang, locale override, sitemap
+├── Strings/             — Gettext interceptor, per-language compiled cache, scanner, .l10n.php writer, PO/JSON exporter+importer
+├── Woo/                 — WC product sync, variation auto-translation, translation field-lock UI, shop-page mapping, cart-item translation
+├── Frontend/            — Switcher (list/dropdown/flags), hreflang, html lang, locale override, sitemap, floating switcher
 ├── Rest/                — REST language detection + strings API
 ├── Migration/           — WPML importer (icl_* tables → ours)
 ├── Compat/              — WPML compatibility shim (icl_* functions + wpml_* filters)
 ├── Cli/                 — WP-CLI command classes (language, translate, strings, migrate, backfill)
-└── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers, setup wizard
+└── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers, setup wizard, redirector
 
 res/
-└── languages.json       — bundled catalog (66 entries) used by the setup wizard
+├── languages.json       — bundled catalog (66 entries) used by the setup wizard
+└── flags/               — 60 SVG flags (lipis/flag-icons, MIT) used by switchers + admin Languages list + setup wizard
+
+assets/
+├── admin.css / admin.js                 — admin styles + posts-list filter JS
+├── strings-admin.css / .js              — inline strings editor (popup)
+├── floating-switcher.css                — frontend switcher styles (incl. custom dropdown)
+└── dropdown-switcher.js                 — ~1.4 KB toggle + measure-and-pin width JS
 ```
 
-54 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
+59 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
 
 ## Bootstrap and hook timing
 
@@ -293,15 +300,18 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | BuildId | `Core/BuildId.php` | file load |
 | Router | `Url/Router.php` | `plugins_loaded` p1, `home_url`, archive link filters |
 | RoutingStrategy / SubdirectoryStrategy | `Url/*` | invoked by Router |
-| PostLinkFilter | `Url/PostLinkFilter.php` | `post_link`, `page_link`, `post_type_link`, `attachment_link` |
+| PostLinkFilter | `Url/PostLinkFilter.php` | `post_link`, `page_link`, `post_type_link`, `attachment_link` — applies in admin too so the "Permalink:" preview on the edit screen reflects the post's own language |
 | TermLinkFilter | `Url/TermLinkFilter.php` | `term_link` |
-| PostsClauses | `Query/PostsClauses.php` | `posts_clauses` |
+| PostsClauses | `Query/PostsClauses.php` | `posts_clauses` (language-filter every WP_Query) + `request` (rewrite `pagename=<slug>` to `page_id=<sibling>` so URL resolution doesn't pick the wrong-language sibling and trigger a 404; falls back to default-language sibling when no translation exists) |
 | TermsClauses | `Query/TermsClauses.php` | `terms_clauses` |
 | PostTranslator | `Content/PostTranslator.php` | `add_meta_boxes`, `save_post`, `wp_unique_post_slug`, `admin_post_cml_add_translation` |
 | TermTranslator | `Content/TermTranslator.php` | `init` p99 (per-taxonomy hooks), `wp_unique_term_slug`, `admin_post_cml_add_term_translation` |
 | ProductSync | `Woo/ProductSync.php` | `woocommerce_product_object_updated_props` |
 | VariationTranslator | `Woo/VariationTranslator.php` | `cml_post_translation_created` |
-| StringTranslator | `Strings/StringTranslator.php` | `gettext`, `gettext_with_context`, `shutdown` (flush discovery) |
+| TranslationLock | `Woo/TranslationLock.php` | `add_meta_boxes_product` (p100, footer-injected JS); `wc_product_has_unique_sku` filter swallows duplicates within the same group |
+| PageMapping | `Woo/PageMapping.php` | `option_woocommerce_*_page_id` filters — cart, checkout, my-account, shop, terms, pay, view-order |
+| CartTranslation | `Woo/CartTranslation.php` | `woocommerce_cart_item_product`, `woocommerce_cart_item_permalink` |
+| StringTranslator | `Strings/StringTranslator.php` | `gettext`, `gettext_with_context`, `shutdown` (flush discovery). Per-language compiled-map cache: `array<lang, array<hash, translation>>` so a request that switches languages mid-flight doesn't bleed one language's map into another |
 | Scanner | `Strings/Scanner.php` | invoked by ScanPage |
 | L10nFileWriter | `Strings/L10nFileWriter.php` | `load_textdomain` p99 (when setting enabled) |
 | LanguageSwitcher | `Frontend/LanguageSwitcher.php` | `cml_language_switcher` shortcode, `widgets_init` |
@@ -324,8 +334,8 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | SettingsPage | `Admin/Pages/SettingsPage.php` | `admin_post_cml_save_settings` |
 | MigrationPage | `Admin/Pages/MigrationPage.php` | `admin_post_cml_run_wpml_import` |
 | SetupWizard | `Admin/Pages/SetupWizard.php` | hidden submenu `admin.php?page=cml-setup`, `admin_post_cml_setup_step/skip/finish` |
-| SetupRedirector | `Admin/SetupRedirector.php` | `admin_init` p1 — one-shot redirect to wizard after first activation |
-| LanguageCatalog | `Core/LanguageCatalog.php` | invoked by SetupWizard; reads `res/languages.json` |
+| SetupRedirector | `Admin/SetupRedirector.php` | `admin_init` p1 — one-shot redirect to wizard after first activation. Also defensively hooks `admin_post` / `admin_post_nopriv` so stale `admin-post.php?page=cml-setup` URLs 302 to the canonical `admin.php?...` instead of white-screening |
+| LanguageCatalog | `Core/LanguageCatalog.php` | invoked by SetupWizard + admin Add-Language form auto-fill; reads `res/languages.json` and resolves bundled SVG flag URLs in `res/flags/<code>.svg` |
 | PoExporter | `Strings/PoExporter.php` | pure render (PO + JSON), consumed by `StringsCommand::export` |
 | PoImporter | `Strings/PoImporter.php` | pure parse (PO + JSON), consumed by `StringsCommand::import` |
 | CommandLoader | `Cli/CommandLoader.php` | invoked at plugin-file load time, guarded by `defined('WP_CLI') && WP_CLI` |

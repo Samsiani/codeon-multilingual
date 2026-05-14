@@ -1,12 +1,12 @@
 # Roadmap & gap analysis
 
-Current version: **v0.7.2** (released 2026-05-14)
+Current version: **v0.7.22** (released 2026-05-14)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
 ## Where we are
 
-~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, and the WPML compatibility shim. Production deployment validated on artcase.ge with 32 passing unit tests.
+The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the WPML compatibility shim, the WP-CLI command surface, the first-run setup wizard, the bundled SVG flag library, the per-language compiled-map cache, and the full WooCommerce translation stack (product field locking, shop-page mapping per language, cart items follow current language with source fallback). 62 passing unit tests, production-deployed on artcase.ge.
 
 ## Status vs v0.1.0 MVP commitments
 
@@ -22,7 +22,11 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 | Compiled-blob caching | ✅ done | both paths |
 | WC product translation | ✅ done | via PostTranslator |
 | WC variation auto-clone | ✅ done | `Woo/VariationTranslator.php` |
-| WC stock/price/dimensions/tax sync | ✅ done | 20 synced props, `Woo/ProductSync.php` |
+| WC stock/price/dimensions/tax sync | ✅ done | 22 synced props (incl. GTIN + shipping class), `Woo/ProductSync.php` |
+| WC field-lock UI on translations | ✅ done | `Woo/TranslationLock.php`, v0.7.19 — WPML-style locked-field notices |
+| WC shop-page mapping per language | ✅ done | `Woo/PageMapping.php`, v0.7.21 — cart/checkout/my-account on `/en/` resolve correctly |
+| WC cart items follow current language | ✅ done | `Woo/CartTranslation.php`, v0.7.21 — items swap to current language, fall back to original |
+| WC duplicate-SKU validator silenced for siblings | ✅ done | `Woo/TranslationLock::allow_sibling_sku_duplicate`, v0.7.19 |
 | **WC shipping-zone strings (curated)** | ❌ **missing** | Captured only via auto-discovery when on |
 | **WC payment-method titles (curated)** | ❌ **missing** | Same |
 | **WC email subjects/bodies (curated)** | ❌ **missing** | Same |
@@ -61,6 +65,21 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 | 22 unit tests | v0.5.3 | SubdirectoryStrategy + HtmlLangAttribute + StringTranslator hash |
 | WPML compat shim (13 API surfaces) | v0.7.0 | Astra/Elementor/WoodMart/YITH now consume our data through WPML's public API |
 | 30 unit tests | v0.7.0 | + WpmlElementTypeTest (8 tests covering all 4 element-type conventions) |
+| WP-CLI command surface | v0.7.1 | 5 command groups: language, translate, strings, migrate, backfill |
+| First-run setup wizard | v0.7.2 | 4-step guide + bundled 66-language catalog |
+| Defensive rescue redirect for admin-post.php?page=cml-setup URLs | v0.7.4 | Stale bookmarks no longer white-screen |
+| Bundled SVG flag library | v0.7.5 | 60 flags (~560 KB) from lipis/flag-icons (MIT) |
+| Flags on admin Languages list + auto-fill on Add-Language form | v0.7.5–v0.7.6 | |
+| Legacy flag-code backfill on schema upgrade | v0.7.7 | Rows seeded with language code (`ka`) get reconciled to country code (`ge`) |
+| Custom dropdown switcher with SVG flags | v0.7.8 | Replaces native `<select>` (which can't render `<img>` children) |
+| Dropdown UX polish | v0.7.9–v0.7.15 | Source removed from menu, JS-measured width, auto-open upward when bottom-anchored, menu == box width |
+| Per-click width accumulation fix + CI hardening | v0.7.16 | scrollWidth measurement reset before each open; PHPStan memory bumped to 2 GB; `make_latest` on releases |
+| Translations into the default language now apply | v0.7.17 | Removed leftover is_default() short-circuit |
+| Per-language compiled-map cache | v0.7.18 | Each language gets its own request-static slot — no more cross-language bleed |
+| Product field-lock UI on translations | v0.7.19 | WPML-style locked fields + banner; SKU dup-validator silenced for siblings |
+| Admin permalink + admin-bar follow post's language | v0.7.20 | Source/translation labels distinguished; new translations always seed from group source |
+| WooCommerce shop pages + cart items per language | v0.7.21–v0.7.22 | `/en/cart/` resolves to English cart, cart items swap per language, untranslated pages fall back to source |
+| 62 unit tests | v0.7.18 | + LanguageCatalog, PoRoundTrip, CliHelpers, StringTranslator hash regression |
 
 ## What's missing — ranked by impact for production sites
 
@@ -110,10 +129,16 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 
 | Version | Theme | Headline features | Status |
 |---|---|---|---|
-| ~~v0.7.0~~ | Compatibility | WPML compat shim (`icl_*` + `wpml_*` filters), foundational adoption move | ✅ shipped |
+| ~~v0.7.0~~ | Compatibility | WPML compat shim (`icl_*` + `wpml_*` filters) | ✅ shipped |
 | ~~v0.7.1~~ | Ops | WP-CLI command surface (`wp cml language / translate / strings / migrate / backfill`) | ✅ shipped |
 | ~~v0.7.2~~ | Onboarding | First-run setup wizard + bundled 66-language catalog | ✅ shipped |
-| **v0.7.3** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
+| ~~v0.7.3 – v0.7.4~~ | Wizard polish | Whitescreen fix + defensive rescue redirect for stale URLs | ✅ shipped |
+| ~~v0.7.5 – v0.7.10~~ | Flag UX | Bundled SVG flags, flags on admin list, flag backfill, dropdown rebuild, bullet/sizing fixes | ✅ shipped |
+| ~~v0.7.11 – v0.7.16~~ | Switcher polish | Menu placement, auto-width, click-accumulation fix, CI + release workflow hardening | ✅ shipped |
+| ~~v0.7.17 – v0.7.18~~ | String cache correctness | Default-lang translations apply; per-language compiled-map cache | ✅ shipped |
+| ~~v0.7.19 – v0.7.20~~ | Translation editing UX | WPML-style product field locks; admin permalink + admin-bar follow post's language | ✅ shipped |
+| ~~v0.7.21 – v0.7.22~~ | WC translation stack | Shop-page mapping per language, cart items per language, source-fallback for untranslated pages | ✅ shipped |
+| **v0.7.23** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
 | **v0.8.0** | WC depth | WC curated string registration, attribute-term slug mapping for variations, shipping/payment/email strings | planned |
 | **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
 | **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |
