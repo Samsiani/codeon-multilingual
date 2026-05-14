@@ -255,7 +255,12 @@ final class LanguageSwitcher {
 		$out .= '</button>';
 		$out .= '<ul class="cml-dropdown-menu" role="listbox" hidden>';
 		foreach ( $items as $i ) {
-			$out .= '<li role="option"' . ( $i['is_current'] ? ' aria-selected="true"' : '' ) . '>';
+			// Skip the current language so it doesn't appear twice (already shown
+			// in the toggle button). Polylang uses the same convention.
+			if ( $i['is_current'] ) {
+				continue;
+			}
+			$out .= '<li role="option">';
 			$out .= '<a href="' . esc_url( $i['url'] ) . '" lang="' . esc_attr( $i['code'] ) . '">';
 			$out .= self::render_label( $i, $show_flag, $show_native, $show_code );
 			$out .= '</a></li>';

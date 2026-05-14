@@ -1,4 +1,10 @@
-/* CodeOn Multilingual — floating frontend switcher. */
+/* CodeOn Multilingual — frontend switcher styles.
+ *
+ * Themes routinely set img { max-width: 100%; height: auto; } which makes
+ * our 640×480 flag SVGs render at full container width. !important is the
+ * only reliable way to win that specificity battle without resorting to
+ * inline styles on every <img>.
+ */
 
 .cml-floating-switcher {
     position: fixed;
@@ -16,6 +22,33 @@
 .cml-floating-switcher.cml-pos-top-right    { top:    20px; right: 20px; }
 .cml-floating-switcher.cml-pos-top-left     { top:    20px; left:  20px; }
 
+/* Reset: any theme rule on img inside our switcher loses to these. */
+.cml-language-switcher img,
+.cml-floating-switcher img {
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-sizing: content-box !important;
+}
+
+.cml-language-switcher img.cml-flag-svg,
+.cml-floating-switcher img.cml-flag-svg {
+    display: inline-block !important;
+    width: 20px !important;
+    height: 14px !important;
+    object-fit: cover !important;
+    border-radius: 2px !important;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+    vertical-align: middle !important;
+    flex: 0 0 auto !important;
+}
+
+/* ---------- list style ---------- */
+
+ul.cml-language-switcher,
 .cml-floating-switcher ul.cml-language-switcher {
     margin: 0;
     padding: 0;
@@ -24,61 +57,59 @@
     gap: 4px;
     align-items: center;
 }
-.cml-floating-switcher .cml-language-item { margin: 0; padding: 0; }
-.cml-floating-switcher .cml-language-item a {
-    display: inline-block;
+.cml-language-switcher .cml-language-item { margin: 0; padding: 0; list-style: none; }
+.cml-language-switcher .cml-language-item a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 4px 8px;
     border-radius: 4px;
     text-decoration: none;
-    color: #333;
+    color: inherit;
     transition: background-color 0.15s, color 0.15s;
 }
-.cml-floating-switcher .cml-language-item a:hover { background: #f0f0f0; }
-.cml-floating-switcher .cml-language-item.cml-current a {
+.cml-language-switcher .cml-language-item a:hover { background: #f0f0f0; }
+.cml-language-switcher .cml-language-item.cml-current a {
     background: #2271b1;
     color: #fff;
 }
 
-.cml-floating-switcher .cml-flag-svg,
-.cml-language-switcher .cml-flag-svg {
-    height: 14px;
-    width: auto;
-    vertical-align: -2px;
-    border-radius: 2px;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
-}
+/* ---------- custom dropdown (button + list) ---------- */
 
-.cml-floating-switcher .cml-style-dropdown select {
-    border: 1px solid #ddd;
-    padding: 4px 22px 4px 8px;
-    border-radius: 4px;
-    background: #fff;
-    color: #222;
-    font: inherit;
-    cursor: pointer;
-}
-
-/* Custom dropdown (button + list) — needed so flag <img> tags can sit
-   inside the menu (native <select>/<option> doesn't render images). */
 .cml-language-switcher.cml-style-dropdown {
     position: relative;
     display: inline-block;
 }
 .cml-language-switcher .cml-dropdown-toggle {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid #ddd;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid #dcdcde;
     border-radius: 4px;
     background: #fff;
     color: inherit;
     font: inherit;
-    cursor: pointer;
     line-height: 1.4;
+    cursor: pointer;
+    max-width: 200px;
+    white-space: nowrap;
 }
 .cml-language-switcher .cml-dropdown-toggle:hover { background: #f6f7f7; }
-.cml-language-switcher .cml-dropdown-arrow { font-size: 10px; opacity: 0.7; }
+.cml-language-switcher .cml-dropdown-toggle:focus { outline: 2px solid #2271b1; outline-offset: 1px; }
+.cml-language-switcher .cml-dropdown-toggle > .cml-name,
+.cml-language-switcher .cml-dropdown-toggle > .cml-native,
+.cml-language-switcher .cml-dropdown-toggle > .cml-code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+.cml-language-switcher .cml-dropdown-arrow {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: auto;
+    transition: transform 0.15s;
+}
 .cml-language-switcher .cml-dropdown-menu {
     position: absolute;
     top: calc(100% + 4px);
@@ -90,28 +121,62 @@
     background: #fff;
     border: 1px solid #dcdcde;
     border-radius: 6px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
     min-width: 100%;
-    white-space: nowrap;
+    max-width: 240px;
 }
-.cml-language-switcher .cml-dropdown-menu li { margin: 0; padding: 0; }
+/* Defeat themes that override [hidden] { display: block }. */
+.cml-language-switcher .cml-dropdown-menu[hidden] { display: none !important; }
+.cml-language-switcher .cml-dropdown-menu li {
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+    display: block;
+}
 .cml-language-switcher .cml-dropdown-menu li a {
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 8px;
     padding: 6px 14px;
     color: inherit;
     text-decoration: none;
+    white-space: nowrap;
+    line-height: 1.4;
 }
 .cml-language-switcher .cml-dropdown-menu li a:hover,
-.cml-language-switcher .cml-dropdown-menu li a:focus { background: #f0f6fc; outline: none; }
-.cml-language-switcher .cml-dropdown-menu li[aria-selected="true"] a { font-weight: 600; }
-.cml-language-switcher.cml-style-dropdown[data-cml-open] .cml-dropdown-arrow { transform: rotate(180deg); }
+.cml-language-switcher .cml-dropdown-menu li a:focus {
+    background: #f0f6fc;
+    outline: none;
+}
+.cml-language-switcher.cml-style-dropdown[data-cml-open] .cml-dropdown-arrow {
+    transform: rotate(180deg);
+}
+.cml-language-switcher.cml-style-dropdown[data-cml-open] .cml-dropdown-menu {
+    /* `hidden` attribute is removed by JS; this is just belt-and-braces in
+       case a theme uses [hidden] { display: block } anywhere. */
+    display: block !important;
+}
+
+/* ---------- flags-only style ---------- */
+
+ul.cml-language-switcher.cml-style-flags {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.cml-language-switcher.cml-style-flags li a { padding: 2px 4px; }
+
+/* ---------- small viewports ---------- */
 
 @media (max-width: 600px) {
     .cml-floating-switcher {
         font-size: 12px;
         padding: 4px 8px;
     }
-    .cml-floating-switcher .cml-language-item a { padding: 3px 6px; }
+    .cml-language-switcher .cml-dropdown-toggle { padding: 4px 8px; }
+    .cml-language-switcher .cml-dropdown-toggle > .cml-name,
+    .cml-language-switcher .cml-dropdown-toggle > .cml-native { max-width: 100px; }
 }

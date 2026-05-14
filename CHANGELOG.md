@@ -2,6 +2,14 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.9] — 2026-05-14
+
+### Fixed
+- **Frontend dropdown UI: oversized flags + duplicate current language.** Theme CSS (`img { max-width: 100%; height: auto }`) was winning the specificity battle and rendering our 640×480 SVG flags at full container width. Reset `img` styles inside the switcher with `!important` and pinned flag dimensions to 20×14 px. Without the fix flags filled the entire dropdown column.
+- **Current language no longer appears inside the menu.** The toggle button shows the current language, the menu now lists only the alternatives (Polylang pattern). Removes the perceived duplication.
+- **Menu items lay out as flex rows now.** Hardened `display: flex` / `align-items: center` with `!important` so theme rules on `a` tags can't collapse the row.
+- Hardened `[hidden]` handling so the closed menu stays closed even when a theme has `[hidden] { display: block }` somewhere in its reset.
+
 ## [0.7.8] — 2026-05-14
 
 ### Changed
