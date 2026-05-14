@@ -237,19 +237,29 @@ final class PostTranslator {
 
 		$target_parent = self::resolve_translated_parent( (int) $source->post_parent, $target_lang );
 
-		$slug = self::generate_unique_slug(
-			$source->post_name,
-			$source->post_type,
-			$target_parent,
-			$target_lang
-		);
-
 		$now     = current_time( 'mysql' );
 		$now_gmt = current_time( 'mysql', true );
 
 		// Attachments must stay as 'inherit' or media library breaks; everything
 		// else starts as draft so the translator can review before publishing.
 		$target_status = 'attachment' === $source->post_type ? 'inherit' : 'draft';
+
+		// Slug: attachments keep the source slug (they don't go through a
+		// draft → publish workflow), but every other type starts with an
+		// empty post_name. WP keeps post_name empty on drafts and only
+		// generates it from sanitize_title($post_title) when the admin
+		// finally publishes — so by then the title has been translated
+		// (e.g. "ვაშლი" → "Apple") and the slug becomes /apple/ instead
+		// of carrying the source-language slug into the translated URL.
+		$slug = '';
+		if ( 'attachment' === $source->post_type ) {
+			$slug = self::generate_unique_slug(
+				$source->post_name,
+				$source->post_type,
+				$target_parent,
+				$target_lang
+			);
+		}
 
 		$insert = $wpdb->insert(
 			$wpdb->posts,

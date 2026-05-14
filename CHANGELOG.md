@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.33] — 2026-05-14
+
+### Changed
+- **Translation slug regenerates from the translated title on first publish.** Cloning a post used to carry the source-language slug into the translation (e.g. Georgian `ვაშლი` → `/ka/ვაშლი/` → /en/ვაშლი/), forcing the admin to manually edit the slug after translating the title. Now `PostTranslator::do_duplicate` stores an empty `post_name` for non-attachment translations. WP's draft → publish flow keeps `post_name` empty until publish, then derives it from `sanitize_title($post_title)` — by which time the admin has translated `ვაშლი` to `Apple` and the published slug becomes `apple`. Attachments still use the source slug (no draft workflow) and our language-scoped `wp_unique_post_slug` filter still enforces per-language uniqueness on publish.
+
 ## [0.7.32] — 2026-05-14
 
 ### Fixed
