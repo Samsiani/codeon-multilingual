@@ -2,6 +2,12 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.10] — 2026-05-14
+
+### Fixed
+- **Flag max-height pinned to 20 px** with `aspect-ratio: 4 / 3` so flags keep their natural ratio and never exceed 20 × 28 px regardless of theme rules.
+- **Removed list bullets from menu items.** WoodMart and similar themes add bullets via three independent vectors (`list-style: disc`, `::marker` content, and `::before` content); v0.7.9 only handled one. Now we kill `list-style` + `list-style-type` + `list-style-image` and override `::marker` / `::before` with `content: none !important`.
+
 ## [0.7.9] — 2026-05-14
 
 ### Fixed
