@@ -2,6 +2,14 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.29] — 2026-05-14
+
+### Added
+- **Multilingual → Menus** admin page (`admin.php?page=cml-menus`) listing every nav menu with its source language, item count, and one "Sync to <LANG>" / "Re-sync" action per active language. Centralises the workflow that previously lived in the `nav-menus.php` meta-box.
+
+### Changed
+- Re-sync prompts a confirm dialog ("Re-sync will wipe the translated menu's items and re-clone from source. Custom edits to that menu will be lost.") so admins don't blast their hand-tuned translations by accident.
+
 ## [0.7.28] — 2026-05-14
 
 ### Changed

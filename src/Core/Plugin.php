@@ -7,6 +7,7 @@ use Samsiani\CodeonMultilingual\Admin\AdminBar;
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Admin\PostsListLanguage;
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\MenusPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
@@ -122,6 +123,7 @@ final class Plugin {
 		ScanPage::register();
 		SettingsPage::register();
 		MigrationPage::register();
+		MenusPage::register();
 		SetupWizard::register();
 		SetupRedirector::register();
 
