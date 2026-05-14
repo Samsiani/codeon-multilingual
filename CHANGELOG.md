@@ -2,6 +2,12 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.31] — 2026-05-14
+
+### Fixed
+- **Display + Layout settings on the nav-menu language-switcher placeholder didn't persist.** `on_save_menu_item` unconditionally wrote the meta on every `wp_update_nav_menu_item` event — including partial AJAX edits where the per-item editor panel wasn't expanded and our form fields aren't in `$_POST`. The handler would fall through to `DEFAULT_DISPLAY` / `DEFAULT_LAYOUT` and clobber the admin's previous choice. Now only writes when the corresponding `$_POST` field is present; first-time insert still seeds defaults so a new placeholder starts in a valid state.
+- **Removed the `:hover { background: #f0f0f0 }` rule** on `.cml-language-switcher .cml-language-item a:hover` — the menu items now inherit whatever hover style the theme applies, no more grey block taking over the menu on mouse-over.
+
 ## [0.7.30] — 2026-05-14
 
 ### Fixed

@@ -71,10 +71,7 @@ ul.cml-language-switcher,
     color: inherit;
     transition: background-color 0.15s, color 0.15s;
 }
-.cml-language-switcher .cml-language-item a:hover { background: #f0f0f0; }
-/* Current language: no background inversion — keep theme's link color and
-   just bold the label so it reads as "selected" without clashing with the
-   site's palette. */
+/* No hover background — let the theme decide. */
 .cml-language-switcher .cml-language-item.cml-current a {
     background: transparent;
     color: inherit;

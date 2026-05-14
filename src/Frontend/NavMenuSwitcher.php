@@ -226,16 +226,28 @@ final class NavMenuSwitcher {
 			return;
 		}
 
+		// Only update each meta key when the corresponding form field was
+		// actually submitted. Without this guard, partial-AJAX saves and
+		// first-time inserts (where the per-item panel wasn't expanded) would
+		// clobber the admin's previous choice with the default.
 		// phpcs:disable WordPress.Security.NonceVerification.Missing — menu save is nonced upstream by wp-admin/nav-menus.php.
-		$display_raw = isset( $_POST['menu-item-cml-display'][ $id ] ) ? sanitize_key( (string) $_POST['menu-item-cml-display'][ $id ] ) : '';
-		$layout_raw  = isset( $_POST['menu-item-cml-layout'][ $id ] )  ? sanitize_key( (string) $_POST['menu-item-cml-layout'][ $id ] )  : '';
+		if ( isset( $_POST['menu-item-cml-display'][ $id ] ) ) {
+			$raw     = sanitize_key( (string) $_POST['menu-item-cml-display'][ $id ] );
+			$display = in_array( $raw, self::DISPLAY_MODES, true ) ? $raw : self::DEFAULT_DISPLAY;
+			update_post_meta( $id, self::META_DISPLAY, $display );
+		} elseif ( ! $already_flag ) {
+			// First save (insert path) — seed with default so the placeholder
+			// starts with a valid display mode.
+			update_post_meta( $id, self::META_DISPLAY, self::DEFAULT_DISPLAY );
+		}
+		if ( isset( $_POST['menu-item-cml-layout'][ $id ] ) ) {
+			$raw    = sanitize_key( (string) $_POST['menu-item-cml-layout'][ $id ] );
+			$layout = in_array( $raw, self::LAYOUTS, true ) ? $raw : self::DEFAULT_LAYOUT;
+			update_post_meta( $id, self::META_LAYOUT, $layout );
+		} elseif ( ! $already_flag ) {
+			update_post_meta( $id, self::META_LAYOUT, self::DEFAULT_LAYOUT );
+		}
 		// phpcs:enable
-
-		$display = in_array( $display_raw, self::DISPLAY_MODES, true ) ? $display_raw : self::DEFAULT_DISPLAY;
-		$layout  = in_array( $layout_raw, self::LAYOUTS, true )        ? $layout_raw  : self::DEFAULT_LAYOUT;
-
-		update_post_meta( $id, self::META_DISPLAY, $display );
-		update_post_meta( $id, self::META_LAYOUT, $layout );
 	}
 
 	public static function get_display_mode( int $item_id ): string {
