@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.22] — 2026-05-14
+
+### Fixed
+- **`/en/cart/` still 404'd even after v0.7.21's `PageMapping` fix.** WP's `WP_Query` for `?pagename=cart` calls `get_page_by_path('cart')` — a raw SQL lookup that bypasses `posts_clauses`. So URL resolution found the Georgian cart page first (lower ID), set it as the queried object, then ran the main query (which we DO filter) and got back the English cart page. The mismatch between `queried_object_id` and `posts[0]` flipped WP into 404 mode. Now `PostsClauses` also hooks the `get_page_by_path` filter and redirects the result to the current-language sibling when the returned page is in a different language.
+
 ## [0.7.21] — 2026-05-14
 
 ### Added
