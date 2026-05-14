@@ -83,21 +83,27 @@ final class TermTranslator {
 							if ( $code === $current_lang ) {
 								continue;
 							}
-							$sibling_id  = (int) ( array_search( $code, $siblings, true ) ?: 0 );
-							$has_sibling = $sibling_id > 0 && $sibling_id !== (int) $term->term_id;
+							$sibling_id    = (int) ( array_search( $code, $siblings, true ) ?: 0 );
+							$has_sibling   = $sibling_id > 0 && $sibling_id !== (int) $term->term_id;
+							$is_source_row = $has_sibling && $sibling_id === $group_id;
 							?>
 							<li style="margin-bottom:6px">
 								<?php if ( $has_sibling ) : ?>
 									<span class="dashicons dashicons-yes-alt" style="color:#46b450"></span>
 									<a href="<?php echo esc_url( (string) get_edit_term_link( $sibling_id, $taxonomy ) ); ?>">
 										<?php
-										/* translators: %s: language native name */
-										printf( esc_html__( 'Edit %s translation', 'codeon-multilingual' ), esc_html( $lang->native ) );
+										if ( $is_source_row ) {
+											/* translators: %s: language native name */
+											printf( esc_html__( 'Edit %s (original)', 'codeon-multilingual' ), esc_html( $lang->native ) );
+										} else {
+											/* translators: %s: language native name */
+											printf( esc_html__( 'Edit %s translation', 'codeon-multilingual' ), esc_html( $lang->native ) );
+										}
 										?>
 									</a>
 								<?php else : ?>
 									<span class="dashicons dashicons-plus-alt" style="color:#2271b1"></span>
-									<a href="<?php echo esc_url( self::add_translation_url( (int) $term->term_id, $taxonomy, $code ) ); ?>">
+									<a href="<?php echo esc_url( self::add_translation_url( $group_id, $taxonomy, $code ) ); ?>">
 										<?php
 										/* translators: %s: language native name */
 										printf( esc_html__( 'Add %s translation', 'codeon-multilingual' ), esc_html( $lang->native ) );

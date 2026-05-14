@@ -37,9 +37,18 @@ final class AdminBar {
 			return;
 		}
 
-		$current_code = CurrentLanguage::code();
-		$current_lang = Languages::get( $current_code );
-		$label        = $current_lang ? $current_lang->native : $current_code;
+		$post_id = self::current_post_id();
+		$group_id = $post_id > 0 ? ( TranslationGroups::get_group_id( $post_id ) ?? $post_id ) : 0;
+
+		// On a post/term edit screen the "context language" is the POST's
+		// language — that's what the admin bar should reflect, NOT the
+		// request's (= admin user's) language. On any other screen, fall
+		// back to the request language.
+		$context_code = $post_id > 0
+			? ( TranslationGroups::get_language( $post_id ) ?? CurrentLanguage::code() )
+			: CurrentLanguage::code();
+		$context_lang = Languages::get( $context_code );
+		$label        = $context_lang ? $context_lang->native : $context_code;
 
 		$bar->add_node(
 			array(
@@ -50,32 +59,40 @@ final class AdminBar {
 			)
 		);
 
-		$post_id = self::current_post_id();
 		if ( $post_id <= 0 ) {
 			return;
 		}
 
-		$group_id = TranslationGroups::get_group_id( $post_id ) ?? $post_id;
 		$siblings = TranslationGroups::get_siblings( $group_id );
 
 		foreach ( Languages::active() as $code => $lang ) {
-			if ( $code === $current_code ) {
+			if ( $code === $context_code ) {
 				continue;
 			}
 
 			$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
 
 			if ( $sibling_id > 0 ) {
-				$url = is_admin()
+				$url            = is_admin()
 					? (string) ( get_edit_post_link( $sibling_id, 'raw' ) ?: '' )
 					: (string) get_permalink( $sibling_id );
+				$sibling_is_src = ( $sibling_id === $group_id );
 
-				/* translators: %s: language native name */
-				$title = sprintf( __( 'Open %s version', 'codeon-multilingual' ), $lang->native );
+				if ( $sibling_is_src ) {
+					/* translators: %s: language native name */
+					$title = sprintf( __( 'Edit %s (original)', 'codeon-multilingual' ), $lang->native );
+				} else {
+					/* translators: %s: language native name */
+					$title = sprintf( __( 'Edit %s translation', 'codeon-multilingual' ), $lang->native );
+				}
 				$icon  = 'dashicons-yes-alt';
 				$color = '#46b450';
 			} else {
-				$url = PostTranslator::add_translation_url( $post_id, $code );
+				// Always create new translations FROM THE SOURCE (group_id),
+				// not from the current post (which might itself be a
+				// translation — duplicating off a translation copies the
+				// translated content as the new "source", which is wrong).
+				$url = PostTranslator::add_translation_url( $group_id, $code );
 
 				/* translators: %s: language native name */
 				$title = sprintf( __( 'Add %s translation', 'codeon-multilingual' ), $lang->native );

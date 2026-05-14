@@ -2,6 +2,16 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.20] — 2026-05-14
+
+### Fixed
+- **Permalink preview on the translation's edit screen ignored the post's language.** `PostLinkFilter::filter` short-circuited with `is_admin()`, so the "Permalink:" preview, "View Post" links, and any other `get_permalink()` consumer in wp-admin rendered the canonical un-prefixed URL (`/product/bmw-x5-sdrive35i/`) instead of the translation's URL (`/ru/product/bmw-x5-sdrive35i/`). Removed the guard — the filter now always uses the post's own language regardless of where it's called.
+- **Admin bar language indicator reflected the request language, not the edited post's.** Editing a Russian product showed `ქართული` (the admin user's locale). The bar now uses the post's language as "context language" on edit screens, so the top label says `Русский` and the sub-menu lists `ქართული` and English as siblings to jump to.
+
+### Changed
+- **Source product/term gets a distinct label.** Translation meta box, term edit panel, and admin-bar sub-menu now say `Edit <lang> (original)` for the row whose `sibling_id == group_id`. Plain translations still say `Edit <lang> translation`. Reflects the actual semantics — the source isn't a translation, it's the original.
+- **"Add translation" links always start from the group's source.** Previously `add_translation_url($post->ID, $code)` used the current post as source — duplicating off a translation copied the translated content into the new post. Now `add_translation_url($group_id, $code)` always seeds new translations from the original post/term content.
+
 ## [0.7.19] — 2026-05-14
 
 ### Added

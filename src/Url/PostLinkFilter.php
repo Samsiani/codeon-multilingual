@@ -39,7 +39,7 @@ final class PostLinkFilter {
 	 */
 	public static function filter( $link, $post ): string {
 		$link = (string) $link;
-		if ( '' === $link || is_admin() ) {
+		if ( '' === $link ) {
 			return $link;
 		}
 
@@ -56,6 +56,9 @@ final class PostLinkFilter {
 			return $stripped;
 		}
 
+		// Filter applies in admin too — the "Permalink:" preview on the edit
+		// screen and any "View Post" link must always reflect the post's own
+		// language, not the admin user's current request language.
 		return Router::with_lang( $stripped, $post_lang );
 	}
 }
