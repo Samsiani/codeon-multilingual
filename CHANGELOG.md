@@ -2,6 +2,29 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.1] — 2026-05-14
+
+### Added
+- **WP-CLI command surface** — 5 new commands under `src/Cli/` (`LanguageCommand`, `TranslateCommand`, `StringsCommand`, `MigrateCommand`, `BackfillCommand`) registered through `Cli/CommandLoader`. Hidden behind a `defined('WP_CLI') && WP_CLI` guard so command classes never load on a normal web request.
+  - `wp cml language list / create / activate / deactivate / set-default / delete` — full CRUD against `wp_cml_languages`, with cache flush, default-row enforcement, and code-regex validation.
+  - `wp cml translate post <id> --to=<lang>` / `wp cml translate term <id> --tax=<tax> --to=<lang>` — thin wrappers over the existing `PostTranslator::duplicate` / `TermTranslator::duplicate` services. Idempotent.
+  - `wp cml strings scan [--theme=<slug>] [--plugin=<slug>] [--all]` — drives `Scanner::scan_theme` / `scan_plugin`. `--all` walks active theme + every active plugin in one pass.
+  - `wp cml strings export --lang=<code> [--format=po|json] [--domain=<d>] [--output=<file>]` — PO (default) or JSON, multi-domain via `# Domain:` comments, untranslated rows opt-in.
+  - `wp cml strings import <file> [--format=auto|po|json] [--lang=<code>] [--regenerate-l10n]` — auto-detects format by extension, accepts STDIN (`-`), inserts missing source strings on the fly.
+  - `wp cml strings count` — catalog summary by language.
+  - `wp cml migrate wpml [--dry-run]` — non-interactive wrapper for `WpmlImporter::import_all` with a dry-run summary.
+  - `wp cml backfill run [--all]` / `status` / `reset` — synchronous backfill loop independent of wp-cron.
+- **`PoExporter` / `PoImporter`** — pure PO + JSON serializer/parser pair under `src/Strings/`. Lossless round-trip across multi-domain catalogs, embedded quotes and newlines, msgctxt, and untranslated entries (verified by tests).
+- **`Languages::create() / update_active() / set_default() / delete()`** — write-side mutators on the existing read-service so CLI doesn't duplicate the admin-page logic.
+- **`Backfill::run_batch_now()`** — synchronous batch wrapper for CLI; the wp-cron path is unchanged.
+
+### Tests
+- 13 new unit tests: 8 in `PoRoundTripTest` (PO/JSON round-trips, msgctxt, quote/newline preservation, plural skipping with warning, header Language detection, untranslated entries), 5 in `CliHelpersTest` (row shaping, format auto-detection). Total: 30 → 43 passing.
+- New WP-CLI class stubs in `tests/bootstrap.php` and `tests/phpstan-stubs.php` so unit tests and static analysis resolve `WP_CLI` / `WP_CLI_Command` / `WP_CLI\Utils\format_items` without the live CLI.
+
+### Notes
+- Roadmap originally specified `wp cml language add`; shipped command is `create` to follow `wp post create` / `wp term create` / `wp user create` conventions. Roadmap row updated.
+
 ## [0.7.0] — 2026-05-14
 
 ### Added

@@ -32,3 +32,23 @@ if ( ! defined( 'CML_BUILD_ID' ) ) {
 if ( ! defined( 'HOUR_IN_SECONDS' ) ) {
 	define( 'HOUR_IN_SECONDS', 3600 );
 }
+
+// WP-CLI stubs so the autoloader can resolve src/Cli/*.php classes during
+// unit tests. The CLI runtime itself is not exercised here — only the pure
+// helper methods on the command classes (row_for_display, detect_format,
+// PoExporter/PoImporter). The stubs intentionally do nothing.
+if ( ! class_exists( '\\WP_CLI_Command' ) ) {
+	class WP_CLI_Command { // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
+	}
+}
+if ( ! class_exists( '\\WP_CLI' ) ) {
+	final class WP_CLI { // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
+		public static function add_command( string $name, $class ): void {}
+		public static function log( string $msg ): void {}
+		public static function success( string $msg ): void {}
+		public static function warning( string $msg ): void {}
+		public static function error( string $msg ): void {
+			throw new \RuntimeException( $msg );
+		}
+	}
+}

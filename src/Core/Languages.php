@@ -104,4 +104,80 @@ final class Languages {
 		self::$request_cache = null;
 		wp_cache_delete( self::CACHE_KEY, self::CACHE_GROUP );
 	}
+
+	/**
+	 * Insert a language row. Caller validates uniqueness and required fields;
+	 * we trust the input and rely on the unique PRIMARY KEY (code) to error if
+	 * the contract is broken.
+	 *
+	 * @param array{code:string,locale:string,name:string,native:string,flag?:string,rtl?:int,active?:int,is_default?:int,position?:int} $data
+	 */
+	public static function create( array $data ): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . 'cml_languages';
+
+		$row = array(
+			'code'       => (string) $data['code'],
+			'locale'     => (string) $data['locale'],
+			'name'       => (string) $data['name'],
+			'native'     => (string) $data['native'],
+			'flag'       => (string) ( $data['flag'] ?? '' ),
+			'rtl'        => (int) ( $data['rtl'] ?? 0 ),
+			'active'     => (int) ( $data['active'] ?? 1 ),
+			'is_default' => (int) ( $data['is_default'] ?? 0 ),
+			'position'   => (int) ( $data['position'] ?? 0 ),
+		);
+
+		if ( 1 === $row['is_default'] ) {
+			$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
+		}
+
+		$inserted = $wpdb->insert(
+			$table,
+			$row,
+			array( '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' )
+		);
+		self::flush_cache();
+
+		return false !== $inserted;
+	}
+
+	public static function update_active( string $code, bool $active ): bool {
+		global $wpdb;
+		$updated = $wpdb->update(
+			$wpdb->prefix . 'cml_languages',
+			array( 'active' => $active ? 1 : 0 ),
+			array( 'code' => $code ),
+			array( '%d' ),
+			array( '%s' )
+		);
+		self::flush_cache();
+		return false !== $updated;
+	}
+
+	public static function set_default( string $code ): bool {
+		if ( ! self::exists( $code ) ) {
+			return false;
+		}
+		global $wpdb;
+		$table = $wpdb->prefix . 'cml_languages';
+		$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
+		$wpdb->update( $table, array( 'is_default' => 1 ), array( 'code' => $code ), array( '%d' ), array( '%s' ) );
+		self::flush_cache();
+		return true;
+	}
+
+	public static function delete( string $code ): bool {
+		$lang = self::get( $code );
+		if ( null === $lang ) {
+			return false;
+		}
+		if ( 1 === (int) $lang->is_default ) {
+			return false;
+		}
+		global $wpdb;
+		$deleted = $wpdb->delete( $wpdb->prefix . 'cml_languages', array( 'code' => $code ), array( '%s' ) );
+		self::flush_cache();
+		return false !== $deleted && $deleted > 0;
+	}
 }

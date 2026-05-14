@@ -1,6 +1,6 @@
 # Roadmap & gap analysis
 
-Current version: **v0.7.0** (released 2026-05-14)
+Current version: **v0.7.1** (released 2026-05-14)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
@@ -40,7 +40,7 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 | Slug uniqueness scoped per language | ✅ done | both `wp_unique_post_slug` and `wp_unique_term_slug` |
 | Backfill on activation | ✅ done | `Core/Backfill.php` + Activator |
 | **Admin per-user UI language** | ❌ **missing** | No `user_meta` for admin locale; admin always follows site locale |
-| **WP-CLI commands** | ❌ **missing entirely** | Zero CLI surface |
+| **WP-CLI commands** | ✅ done | `src/Cli/` — 5 command groups (language, translate, strings, migrate, backfill), v0.7.1 |
 | Activator opcache flush + BUILD_ID | ✅ done | per CodeOn convention |
 
 ## Bonus features shipped beyond v0.1.0
@@ -64,29 +64,13 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 
 ## What's missing — ranked by impact for production sites
 
-### 1. WP-CLI commands ❌ (next priority)
-
-**Why it matters:** Required for ops/CI workflows on real production sites. Right now staged content additions or bulk operations require admin UI clicks.
-
-**Scope:** ~250 LOC under `src/Cli/`.
-
-**Commands to implement:**
-- `wp cml language list / add / activate / deactivate / delete / set-default`
-- `wp cml translate post <id> --to=ka`
-- `wp cml translate term <id> --tax=category --to=ka`
-- `wp cml strings scan [--theme=…] [--plugin=…]`
-- `wp cml strings export [--lang=ka] [--format=po]`
-- `wp cml strings import <file>`
-- `wp cml migrate wpml [--dry-run]`
-- `wp cml backfill run [--all]`
-
-### 2. Menu translation flow ❌
+### 1. Menu translation flow ❌ (next priority)
 
 **Why it matters:** Admins expect explicit "translate this menu" actions, the same way WPML does. Currently menus inherit via post/term plumbing but there's no visible admin surface, so editing translated menus is awkward.
 
 **Scope:** ~300 LOC, new module `Content/MenuTranslator.php` + admin integration on `nav-menus.php`.
 
-### 3. WC curated string registration ❌
+### 2. WC curated string registration ❌
 
 **Why it matters:** Auto-discovery captures these strings only when traffic hits the right code paths. Curated registration guarantees they're in the catalog from day one.
 
@@ -98,25 +82,25 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 - Email subjects + headings
 - Cart/checkout notices and labels
 
-### 4. Language switcher — nav menu item ❌
+### 3. Language switcher — nav menu item ❌
 
 **Why it matters:** Themes that don't render the floating switcher have no in-menu language option. Common WPML pattern — admin picks "Languages" under Appearance → Menus and gets per-language items.
 
 **Scope:** ~200 LOC. Register a virtual menu item type via `customize_register` + filter `wp_nav_menu_items`.
 
-### 5. Polylang compat shim ❌
+### 4. Polylang compat shim ❌
 
 **Why it matters:** Some plugins are written against Polylang's `pll_*` API instead of WPML's. Implementing this widens our migration funnel.
 
 **Scope:** ~300 LOC, single file `Compat/PolylangFunctions.php`.
 
-### 6. Language switcher — Gutenberg block ❌
+### 5. Language switcher — Gutenberg block ❌
 
 **Why it matters:** Modern editors expect a block. Right now the legacy-widget block covers it but feels dated.
 
 **Scope:** ~200 LOC PHP + a small block.json registration. Server-rendered so no JS bundle.
 
-### 7. Admin per-user UI language ❌
+### 6. Admin per-user UI language ❌
 
 **Why it matters:** Small but expected. Each admin user picks their own locale for the wp-admin interface.
 
@@ -127,8 +111,8 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 | Version | Theme | Headline features | Status |
 |---|---|---|---|
 | ~~v0.7.0~~ | Compatibility | WPML compat shim (`icl_*` + `wpml_*` filters), foundational adoption move | ✅ shipped |
-| **v0.7.1** | Ops | WP-CLI command surface | next |
-| **v0.7.2** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | planned |
+| ~~v0.7.1~~ | Ops | WP-CLI command surface (`wp cml language / translate / strings / migrate / backfill`) | ✅ shipped |
+| **v0.7.2** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
 | **v0.8.0** | WC depth | WC curated string registration, attribute-term slug mapping for variations, shipping/payment/email strings | planned |
 | **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
 | **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |

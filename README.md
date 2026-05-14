@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.7.0** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, and the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified).
+**v0.7.1** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), and a full **WP-CLI command surface** for ops/CI workflows.
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -73,6 +73,15 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wpml_object_id`, `wpml_current_language`, `wpml_default_language`, `wpml_active_languages`, `wpml_post_language_details`, `wpml_element_has_translations`, `wpml_translate_single_string` filters
 - `wpml_register_single_string`, `wpml_switch_language` actions
 - Astra, GeneratePress, WoodMart, Elementor, YITH, Woo extensions work without code changes
+
+**WP-CLI**
+- `wp cml language list / create / activate / deactivate / set-default / delete`
+- `wp cml translate post <id> --to=<lang>` / `wp cml translate term <id> --tax=<tax> --to=<lang>`
+- `wp cml strings scan [--theme=<slug>] [--plugin=<slug>] [--all]`
+- `wp cml strings export --lang=<code> [--format=po|json] [--domain=<d>] [--output=<file>]`
+- `wp cml strings import <file> [--format=auto|po|json] [--lang=<code>]`
+- `wp cml migrate wpml [--dry-run]`
+- `wp cml backfill run [--all]` / `status` / `reset`
 
 ## Requirements
 

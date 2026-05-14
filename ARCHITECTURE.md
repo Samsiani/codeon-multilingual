@@ -1,4 +1,4 @@
-# Architecture — CodeOn Multilingual v0.7.0
+# Architecture — CodeOn Multilingual v0.7.1
 
 This document describes how the plugin is structured, why each design choice was made, and how data flows through the system at request time.
 
@@ -16,10 +16,11 @@ src/
 ├── Rest/                — REST language detection + strings API
 ├── Migration/           — WPML importer (icl_* tables → ours)
 ├── Compat/              — WPML compatibility shim (icl_* functions + wpml_* filters)
+├── Cli/                 — WP-CLI command classes (language, translate, strings, migrate, backfill)
 └── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers
 ```
 
-44 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order.
+51 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
 
 ## Bootstrap and hook timing
 
@@ -319,6 +320,20 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | ScanPage | `Admin/Pages/ScanPage.php` | `admin_post_cml_run_scan` |
 | SettingsPage | `Admin/Pages/SettingsPage.php` | `admin_post_cml_save_settings` |
 | MigrationPage | `Admin/Pages/MigrationPage.php` | `admin_post_cml_run_wpml_import` |
+| PoExporter | `Strings/PoExporter.php` | pure render (PO + JSON), consumed by `StringsCommand::export` |
+| PoImporter | `Strings/PoImporter.php` | pure parse (PO + JSON), consumed by `StringsCommand::import` |
+| CommandLoader | `Cli/CommandLoader.php` | invoked at plugin-file load time, guarded by `defined('WP_CLI') && WP_CLI` |
+| LanguageCommand | `Cli/LanguageCommand.php` | `wp cml language ...` |
+| TranslateCommand | `Cli/TranslateCommand.php` | `wp cml translate post|term ...` |
+| StringsCommand | `Cli/StringsCommand.php` | `wp cml strings scan|export|import|count` |
+| MigrateCommand | `Cli/MigrateCommand.php` | `wp cml migrate wpml` |
+| BackfillCommand | `Cli/BackfillCommand.php` | `wp cml backfill run|status|reset` |
+
+### CLI design notes
+
+WP-CLI command classes live in their own `src/Cli/` directory and are only loaded when `WP_CLI` is defined. The classes are thin wrappers over the existing services — `Languages::create / update_active / set_default / delete` on the read service for language CRUD, `PostTranslator::duplicate` / `TermTranslator::duplicate` for content translation, `Scanner::scan_*` for catalog discovery, `WpmlImporter::import_all` for migration, and `Backfill::run_batch_now()` (a new synchronous wrapper around the existing private batch logic) for cron-independent backfills.
+
+The string export/import path is built on two pure helpers (`PoExporter` / `PoImporter`) so a `wp cml strings export | wp cml strings import -` round-trip is byte-stable. The PO output carries a non-standard `# Domain: <name>` comment per entry so multi-domain catalogs survive without one-file-per-domain bookkeeping; standard PO tooling ignores the comment. Plural forms (`msgid_plural` / `msgstr[n]`) are intentionally skipped during import — our string table doesn't model plurals; WP core handles those natively via `.mo`.
 
 ## Public extension hooks
 

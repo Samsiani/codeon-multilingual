@@ -59,6 +59,31 @@ final class Backfill {
 		}
 	}
 
+	/**
+	 * Synchronous variant for CLI / one-shot callers. Runs one batch and
+	 * returns counts so the caller can loop until done without depending on
+	 * wp-cron. Status options still mutate identically to the cron path.
+	 *
+	 * @return array{processed:int, remaining:int, done:bool}
+	 */
+	public static function run_batch_now(): array {
+		global $wpdb;
+		self::process_batch();
+		$remaining = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			 FROM {$wpdb->posts} p
+			 LEFT JOIN {$wpdb->prefix}cml_post_language pl ON pl.post_id = p.ID
+			 WHERE pl.post_id IS NULL
+			   AND p.post_status NOT IN ('auto-draft', 'trash')
+			   AND p.post_type != 'revision'"
+		);
+		return array(
+			'processed' => (int) $wpdb->rows_affected,
+			'remaining' => $remaining,
+			'done'      => 'done' === (string) get_option( self::OPTION_STATUS, 'idle' ),
+		);
+	}
+
 	private static function process_batch(): void {
 		global $wpdb;
 
