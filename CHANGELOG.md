@@ -2,6 +2,15 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.16] — 2026-05-14
+
+### Fixed
+- **Dropdown grew ~2 px per click.** v0.7.15's measure-and-pin code read `toggle.scrollWidth` each open, but `scrollWidth` returns `max(content, clientWidth)` — and `clientWidth` grows with the previously-applied `min-width`. After the first open we measured the new width and re-pinned ~2 px wider, accumulating on every click. Fix: clear the inline `min-width` on both the toggle and the menu, force a reflow, then measure natural content. Verified with a headless-Chromium test (5 open/close cycles, width stable at toggle=152 / menu=172 / box=172 throughout).
+
+### CI / Release
+- **`ci.yml`**: bumped PHPStan memory limit from 1 GB to 2 GB. PHPStan 1.12 hit OOM in CI on the larger v0.7.11+ catalog/wizard payload (it stays under 512 MB locally but the CI runner's PHP overhead pushes it past 1 GB).
+- **`release.yml`**: added `make_latest: 'true'` to softprops/action-gh-release. Avoids the "Error updating policy" flake we hit on v0.7.10 and guarantees every newly-tagged release is flagged Latest (the auto-detection lost a race on v0.7.1 vs v0.7.2 earlier today when both workflows finished in the same second).
+
 ## [0.7.15] — 2026-05-14
 
 ### Fixed

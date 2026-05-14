@@ -37,10 +37,19 @@
 				toggle.setAttribute('aria-expanded', 'true');
 				menu.removeAttribute('hidden');
 
-				// Equalise toggle, menu and the floating-switcher container
-				// so all three share the same width when the menu is open.
-				// Step 1: find the widest natural content (toggle or any
-				// menu link) and widen the toggle to fit it.
+				// CRITICAL: clear any previously-applied inline min-width
+				// before measuring. scrollWidth returns max(content, clientWidth),
+				// and clientWidth grows with min-width — so without this reset
+				// the toggle/menu would grow by ~2 px on every open click.
+				toggle.style.minWidth = '';
+				menu.style.minWidth   = '';
+				// Force a reflow so the cleared styles take effect before we
+				// read scrollWidth / offsetWidth below.
+				void menu.offsetWidth;
+
+				// Step 1: measure the widest natural content (toggle button
+				// or any menu link) and pin the toggle to fit it. The toggle
+				// widens, which propagates to the floating-switcher box.
 				var widest = toggle.scrollWidth;
 				menu.querySelectorAll('a').forEach(function (a) {
 					widest = Math.max(widest, a.scrollWidth);
@@ -50,11 +59,10 @@
 				}
 
 				// Step 2: the floating-switcher (if any) wraps the toggle
-				// with its own padding, so its outer width is `toggle + pad`.
-				// Pin the menu's min-width to the floating-switcher's
-				// offsetWidth so the menu visually matches the box that
-				// triggered it. Reading offsetWidth here forces a reflow,
-				// so the new toggle width is already applied.
+				// with its own padding, so its outer width is now
+				// `toggle + pad`. Sync the menu's min-width to the
+				// floating-switcher's resulting offsetWidth so the menu
+				// visually equals the box that triggered it.
 				var floatingBox = wrapper.closest('.cml-floating-switcher');
 				if (floatingBox) {
 					menu.style.minWidth = floatingBox.offsetWidth + 'px';

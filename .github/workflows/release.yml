@@ -95,3 +95,10 @@ jobs:
           generate_release_notes: true
           files: codeon-multilingual.zip
           fail_on_unmatched_files: true
+          # Explicitly flag every tagged build as the Latest release. Without
+          # this, when two release workflows finish in the same second (e.g.
+          # back-to-back tag pushes) GitHub picks whichever it discovers first
+          # as Latest, which can leave the older tag flagged Latest. The action
+          # also occasionally errors with "Error updating policy" when this
+          # decision is left implicit.
+          make_latest: 'true'

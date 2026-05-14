@@ -24,7 +24,7 @@ jobs:
           php -l codeon-multilingual.php > /dev/null
           php -l uninstall.php > /dev/null
       - name: PHPStan
-        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G --error-format=github
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G --error-format=github
       - name: PHPCS
         run: vendor/bin/phpcs -n --report=summary
         continue-on-error: true
