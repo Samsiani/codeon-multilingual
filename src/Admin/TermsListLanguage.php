@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Admin;
 
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
+use Samsiani\CodeonMultilingual\Core\LanguageCatalog;
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 use WP_Term_Query;
@@ -181,7 +182,7 @@ final class TermsListLanguage {
 		return $views;
 	}
 
-	// ---- Languages column ------------------------------------------------
+	// ---- Languages columns (one per active language) --------------------
 
 	/**
 	 * @param array<string, string> $columns
@@ -193,15 +194,22 @@ final class TermsListLanguage {
 			return $columns;
 		}
 
-		$new = array();
+		$lang_columns = array();
+		foreach ( $languages as $code => $lang ) {
+			$lang_columns[ 'cml-lang-' . $code ] = self::column_header_html( (string) $code, $lang );
+		}
+
+		$new      = array();
+		$inserted = false;
 		foreach ( $columns as $key => $label ) {
 			$new[ $key ] = $label;
 			if ( 'name' === $key ) {
-				$new['cml-languages'] = __( 'Languages', 'codeon-multilingual' );
+				$new      = array_merge( $new, $lang_columns );
+				$inserted = true;
 			}
 		}
-		if ( ! isset( $new['cml-languages'] ) ) {
-			$new['cml-languages'] = __( 'Languages', 'codeon-multilingual' );
+		if ( ! $inserted ) {
+			$new = array_merge( $new, $lang_columns );
 		}
 		return $new;
 	}
@@ -214,10 +222,11 @@ final class TermsListLanguage {
 	 */
 	public static function render_column( $content, $column = '', $term_id = 0 ): string {
 		$content = (string) $content;
-		if ( 'cml-languages' !== (string) $column ) {
+		$column  = (string) $column;
+		if ( '' === $column || 0 !== strpos( $column, 'cml-lang-' ) ) {
 			return $content;
 		}
-		$term_id  = (int) $term_id;
+		$term_id = (int) $term_id;
 		if ( $term_id <= 0 ) {
 			return $content;
 		}
@@ -227,49 +236,106 @@ final class TermsListLanguage {
 			return $content;
 		}
 
+		$col_lang = substr( $column, strlen( 'cml-lang-' ) );
+		$lang     = Languages::get( $col_lang );
+		if ( null === $lang ) {
+			return $content;
+		}
+
 		$term_lang = TranslationGroups::get_term_language( $term_id ) ?? Languages::default_code();
 		$group_id  = TranslationGroups::get_term_group_id( $term_id ) ?? $term_id;
 		$siblings  = TranslationGroups::get_term_siblings( $group_id );
-		$languages = Languages::active();
 
-		$out = '<span class="cml-lang-badge">' . esc_html( strtoupper( $term_lang ) ) . '</span>';
-
-		foreach ( $languages as $code => $lang ) {
-			if ( $code === $term_lang ) {
-				continue;
-			}
-			$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
-
-			if ( $sibling_id > 0 && $sibling_id !== $term_id ) {
-				$url   = (string) ( get_edit_term_link( $sibling_id, $taxonomy ) ?: '' );
-				$title = sprintf(
-					/* translators: %s: language native name */
-					__( 'Edit %s translation', 'codeon-multilingual' ),
-					$lang->native
-				);
-				$out  .= sprintf(
-					'<a class="cml-lang-link" href="%s" title="%s" aria-label="%s"><span class="dashicons dashicons-yes-alt cml-icon-translated" aria-hidden="true"></span></a>',
-					esc_url( $url ),
-					esc_attr( $title ),
-					esc_attr( $title )
-				);
-			} else {
-				$url   = TermTranslator::add_translation_url( $term_id, $taxonomy, (string) $code );
-				$title = sprintf(
-					/* translators: %s: language native name */
-					__( 'Add %s translation', 'codeon-multilingual' ),
-					$lang->native
-				);
-				$out  .= sprintf(
-					'<a class="cml-lang-link" href="%s" title="%s" aria-label="%s"><span class="dashicons dashicons-plus-alt2 cml-icon-add" aria-hidden="true"></span></a>',
-					esc_url( $url ),
-					esc_attr( $title ),
-					esc_attr( $title )
-				);
-			}
+		// Source language for this row — render the flag itself.
+		if ( $col_lang === $term_lang ) {
+			$flag = self::flag_html( $lang );
+			$title = sprintf(
+				/* translators: %s: language native name */
+				__( 'Source language: %s', 'codeon-multilingual' ),
+				$lang->native
+			);
+			return sprintf(
+				'<span class="cml-lang-source" title="%s" aria-label="%s">%s</span>',
+				esc_attr( $title ),
+				esc_attr( $title ),
+				$flag
+			);
 		}
 
-		return $out;
+		$sibling_id = (int) ( array_search( $col_lang, $siblings, true ) ?: 0 );
+
+		if ( $sibling_id > 0 && $sibling_id !== $term_id ) {
+			$url   = (string) ( get_edit_term_link( $sibling_id, $taxonomy ) ?: '' );
+			$title = sprintf(
+				/* translators: %s: language native name */
+				__( 'Edit %s translation', 'codeon-multilingual' ),
+				$lang->native
+			);
+			return sprintf(
+				'<a class="cml-lang-link" href="%s" title="%s" aria-label="%s"><span class="dashicons dashicons-yes-alt cml-icon-translated" aria-hidden="true"></span></a>',
+				esc_url( $url ),
+				esc_attr( $title ),
+				esc_attr( $title )
+			);
+		}
+
+		$url   = TermTranslator::add_translation_url( $term_id, $taxonomy, (string) $col_lang );
+		$title = sprintf(
+			/* translators: %s: language native name */
+			__( 'Add %s translation', 'codeon-multilingual' ),
+			$lang->native
+		);
+		return sprintf(
+			'<a class="cml-lang-link" href="%s" title="%s" aria-label="%s"><span class="dashicons dashicons-plus-alt2 cml-icon-add" aria-hidden="true"></span></a>',
+			esc_url( $url ),
+			esc_attr( $title ),
+			esc_attr( $title )
+		);
+	}
+
+	/**
+	 * Column header: flag + uppercase code. Uses bundled SVG when available,
+	 * regional-indicator emoji as fallback. Empty flag string means no flag.
+	 *
+	 * @param string $code
+	 * @param object $lang
+	 */
+	private static function column_header_html( string $code, $lang ): string {
+		$flag       = self::flag_html( $lang );
+		$code_label = esc_html( strtoupper( $code ) );
+		$tooltip    = esc_attr( $lang->native ?? $code );
+
+		return sprintf(
+			'<span class="cml-col-header" title="%s">%s<span class="cml-col-code">%s</span></span>',
+			$tooltip,
+			$flag,
+			$code_label
+		);
+	}
+
+	/**
+	 * Render a flag image (SVG preferred, emoji fallback, empty string when
+	 * no country code on the language row).
+	 *
+	 * @param object $lang
+	 */
+	private static function flag_html( $lang ): string {
+		$flag_code = (string) ( $lang->flag ?? '' );
+		if ( '' === $flag_code ) {
+			return '';
+		}
+		$svg = LanguageCatalog::flag_svg_url( $flag_code );
+		if ( null !== $svg ) {
+			return sprintf(
+				'<img class="cml-flag-svg" src="%s" alt="" width="16" height="11" />',
+				esc_url( $svg )
+			);
+		}
+		$emoji = LanguageCatalog::flag_emoji( $flag_code );
+		if ( '' !== $emoji ) {
+			return '<span class="cml-flag-emoji" aria-hidden="true">' . esc_html( $emoji ) . '</span>';
+		}
+		return '';
 	}
 
 	// ---- Helpers ---------------------------------------------------------
@@ -315,24 +381,38 @@ final class TermsListLanguage {
 	}
 
 	public static function render_styles(): void {
-		// Tight per-row column — same visual budget as the posts column.
+		// Per-language columns — one narrow column per active language.
 		echo '<style>
 			.cml-lang-views { margin-top: 4px !important; clear: both; }
 			.cml-lang-views li { margin: 0 !important; }
-			.column-cml-languages { width: 130px; }
-			.column-cml-languages .cml-lang-badge {
-				display: inline-block; padding: 1px 6px;
-				margin-right: 4px; border-radius: 3px;
-				background: #f0f0f1; color: #2c3338;
-				font-family: monospace; font-size: 11px; font-weight: 600;
+			th[class*="column-cml-lang-"], td[class*="column-cml-lang-"] {
+				width: 56px; min-width: 56px; text-align: center; white-space: nowrap;
 			}
-			.column-cml-languages .cml-lang-link {
-				text-decoration: none; margin-right: 3px;
+			.cml-col-header {
+				display: inline-flex; align-items: center; gap: 4px;
+				font-weight: 600; line-height: 1;
+			}
+			.cml-col-header .cml-flag-svg {
+				width: 16px; height: 11px; border-radius: 1px;
+				box-shadow: 0 0 0 1px rgba(0,0,0,0.08); display: inline-block;
+			}
+			.cml-col-header .cml-flag-emoji { font-size: 14px; line-height: 1; }
+			.cml-col-code { font-size: 11px; letter-spacing: 0.3px; color: #2c3338; }
+			.cml-lang-source .cml-flag-svg {
+				width: 18px; height: 13px; border-radius: 1px;
+				box-shadow: 0 0 0 1px rgba(0,0,0,0.08); vertical-align: middle;
+			}
+			.cml-lang-source .cml-flag-emoji { font-size: 16px; line-height: 1; vertical-align: middle; }
+			td[class*="column-cml-lang-"] .cml-lang-link {
+				text-decoration: none; display: inline-block; vertical-align: middle;
+			}
+			td[class*="column-cml-lang-"] .dashicons {
+				font-size: 18px; height: 18px; width: 18px; line-height: 18px;
 				vertical-align: middle;
 			}
-			.column-cml-languages .cml-icon-translated { color: #46b450; }
-			.column-cml-languages .cml-icon-add        { color: #b4b9be; }
-			.column-cml-languages .cml-lang-link:hover .cml-icon-add { color: #2271b1; }
+			td[class*="column-cml-lang-"] .cml-icon-translated { color: #46b450; }
+			td[class*="column-cml-lang-"] .cml-icon-add { color: #b4b9be; transition: color 0.15s; }
+			td[class*="column-cml-lang-"] .cml-lang-link:hover .cml-icon-add { color: #2271b1; }
 		</style>';
 	}
 }

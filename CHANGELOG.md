@@ -2,6 +2,13 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.36] — 2026-05-14
+
+### Changed
+- **"Languages" column replaced with per-language columns.** Both the posts admin (`edit.php`) and taxonomy admin (`edit-tags.php`) now render one narrow column per active language (`KA` / `RU` / `EN` …) with a flag-emoji or bundled-SVG flag in the header. Each cell now tells you at a glance which language is the source (flag rendered) and, for every other language, whether a translation exists (green ✓ linking to the sibling's edit screen) or is missing (grey + linking to "create translation"). The single "Languages" column was a UX dead-end — hovering each + to learn its language doesn't scale once you have 3+ languages.
+- Column width per language: 56 px (vs. the old 130–140 px single column). Net horizontal cost is roughly the same for 2–3 languages, slightly more for 4+. Hidden entirely when only one language is active.
+- No performance change. Each cell still calls `TranslationGroups::get_*` which is request-static cached, so a 50-row × 3-language page costs the same ≤ 2 DB hits as before.
+
 ## [0.7.35] — 2026-05-14
 
 ### Fixed
