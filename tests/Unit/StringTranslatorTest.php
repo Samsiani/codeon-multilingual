@@ -44,4 +44,16 @@ final class StringTranslatorTest extends TestCase {
 		$this->assertSame( 32, strlen( $h ) );
 		$this->assertMatchesRegularExpression( '/^[0-9a-f]{32}$/', $h );
 	}
+
+	public function test_hash_matches_context_variant_used_by_wpml_migration(): void {
+		// The migration importer + WPML compat shim emit
+		// md5(domain|context|source). Live regression: on artcase.ge a
+		// Georgian-default site's woodmart `Search for products` row with
+		// context `submit button` had hash B36DA92E… stored in DB. The
+		// runtime hasher must produce the same value or the lookup misses.
+		$this->assertSame(
+			'b36da92e937bc9135244cdb975e042e6',
+			StringTranslator::hash( 'woodmart', 'submit button', 'Search for products' )
+		);
+	}
 }

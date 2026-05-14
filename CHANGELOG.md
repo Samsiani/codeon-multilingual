@@ -2,6 +2,15 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.17] — 2026-05-14
+
+### Fixed
+- **Translations stored against the default language never applied.** `StringTranslator::resolve` short-circuited with `return $translation;` whenever `CurrentLanguage::is_default()` was true. The assumption was "source strings are already in the default language, no lookup needed" — false for any site whose default language is not the language the theme/plugin source was written in. On artcase.ge (default = Georgian) `_x('Search for products', 'submit button', 'woodmart')` ignored the stored `ძიება` translation and rendered the English source. Removed the short-circuit; the compiled map is now consulted on every gettext call.
+- Lookup cost remains O(1) per call (single `isset()` against the request-static compiled map). The map for the default language only loads once per request when the request actually translates default-language strings.
+
+### Tests
+- New regression in `StringTranslatorTest` asserts the live `woodmart` / `submit button` / `Search for products` hash matches the value stored in artcase.ge's DB, so any future change to the hash function fails the suite. 61 → 62 passing.
+
 ## [0.7.16] — 2026-05-14
 
 ### Fixed

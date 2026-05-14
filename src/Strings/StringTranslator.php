@@ -92,10 +92,12 @@ final class StringTranslator {
 
 		self::discover( $hash, $domain, $context, $text );
 
-		if ( CurrentLanguage::is_default() ) {
-			return $translation;
-		}
-
+		// Always consult the compiled map for the current language, even when
+		// it IS the default language. Earlier versions short-circuited here
+		// on the assumption that source strings are written in the default
+		// language — false for Georgian/Russian/etc. sites whose theme and
+		// plugin code ships English sources. Lookup cost is one isset() per
+		// gettext call against a cached request-static map.
 		$compiled = self::compiled_map();
 		return $compiled[ $hash ] ?? $translation;
 	}
