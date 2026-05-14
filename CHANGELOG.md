@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.27] — 2026-05-14
+
+### Fixed
+- **"Failed to create menu translation" on every translate-menu click.** v0.7.26 reused `TermTranslator::duplicate` to create the target menu's `nav_menu` term, which calls `wp_insert_term($source_name, 'nav_menu', …)`. WP's term insert rejects duplicate names within the same taxonomy — and the only menu under `nav_menu` is the source's own name. Every translate attempt failed silently with WP_Error, `translate_menu()` returned 0, the handler died with "Failed to create menu translation." Now `MenuTranslator::create_translated_menu_term()` creates the menu inline with a language-suffixed name (e.g. *"Main navigation (English)"*) and writes the language row to `cml_term_language` directly, joining the source's group.
+
 ## [0.7.26] — 2026-05-14
 
 ### Added

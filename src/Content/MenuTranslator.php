@@ -76,15 +76,21 @@ final class MenuTranslator {
 
 		// Idempotency: existing sibling short-circuits.
 		$group_id = TranslationGroups::get_term_group_id( $source_menu_id );
-		if ( null !== $group_id ) {
-			$siblings = TranslationGroups::get_term_siblings( $group_id );
-			$existing = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
-			if ( $existing > 0 ) {
-				return $existing;
-			}
+		if ( null === $group_id ) {
+			$group_id = $source_menu_id;
+		}
+		$siblings = TranslationGroups::get_term_siblings( $group_id );
+		$existing = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+		if ( $existing > 0 ) {
+			return $existing;
 		}
 
-		$target_menu_id = TermTranslator::duplicate( $source_menu_id, 'nav_menu', $target_lang );
+		// Menus differ from regular taxonomies: wp_insert_term rejects
+		// duplicate names within the same taxonomy. TermTranslator::duplicate
+		// (which we use for product_cat / category etc.) would re-use the
+		// source name and fail here, so we do the create + language-tag
+		// inline with a language-suffixed name.
+		$target_menu_id = self::create_translated_menu_term( $source, $target_lang, $group_id );
 		if ( $target_menu_id <= 0 ) {
 			return 0;
 		}
@@ -93,6 +99,59 @@ final class MenuTranslator {
 
 		do_action( 'cml_menu_translation_created', $target_menu_id, $source_menu_id, $target_lang );
 		return $target_menu_id;
+	}
+
+	/**
+	 * Create the nav_menu term for the translation. Adds the language label
+	 * to the name so wp_insert_term's name-uniqueness check passes, then
+	 * writes the cml_term_language row directly so TranslationGroups picks
+	 * up the new sibling without going through TermTranslator's hooks.
+	 */
+	private static function create_translated_menu_term( WP_Term $source, string $target_lang, int $group_id ): int {
+		$lang_obj   = Languages::get( $target_lang );
+		$suffix     = $lang_obj ? (string) $lang_obj->native : strtoupper( $target_lang );
+		$base_name  = (string) $source->name;
+		$candidate  = $base_name . ' (' . $suffix . ')';
+
+		// Disambiguate if a menu with that exact name already exists (e.g.
+		// admin previously created one manually). get_term_by returns false
+		// for no-match (NOT null), so guard against falsy explicitly.
+		$counter = 2;
+		while ( false !== get_term_by( 'name', $candidate, 'nav_menu' ) ) {
+			$candidate = $base_name . ' (' . $suffix . ' ' . $counter . ')';
+			++$counter;
+			if ( $counter > 50 ) {
+				return 0;
+			}
+		}
+
+		$inserted = wp_insert_term(
+			$candidate,
+			'nav_menu',
+			array( 'description' => $source->description )
+		);
+		if ( is_wp_error( $inserted ) || ! is_array( $inserted ) || empty( $inserted['term_id'] ) ) {
+			return 0;
+		}
+		$new_term_id = (int) $inserted['term_id'];
+
+		// Write the language row directly. The `created_nav_menu` hook (if
+		// any) may have already tagged this term with the default language;
+		// REPLACE INTO clobbers that with the correct target language and
+		// the source's group id, so the new menu joins the existing group.
+		global $wpdb;
+		$wpdb->query(
+			$wpdb->prepare(
+				"REPLACE INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language) VALUES (%d, %d, %s)",
+				$new_term_id,
+				$group_id,
+				$target_lang
+			)
+		);
+		TranslationGroups::invalidate_term( (int) $source->term_id );
+		TranslationGroups::invalidate_term( $new_term_id );
+
+		return $new_term_id;
 	}
 
 	/**
