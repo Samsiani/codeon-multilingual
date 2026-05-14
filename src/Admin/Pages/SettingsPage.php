@@ -123,6 +123,22 @@ final class SettingsPage {
 					</tr>
 				</table>
 
+				<h2><?php esc_html_e( 'Compatibility', 'codeon-multilingual' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'WPML compatibility shim', 'codeon-multilingual' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="wpml_compat_enabled" value="1" <?php checked( (bool) $settings['wpml_compat_enabled'] ); ?>>
+								<?php esc_html_e( 'Declare WPML-compatible functions and filters (icl_object_id, wpml_current_language, wpml_active_languages, …) so themes and plugins written against WPML\'s public API work without code changes.', 'codeon-multilingual' ); ?>
+							</label>
+							<p class="description">
+								<?php esc_html_e( 'On by default. Turn off only if you actually have WPML installed alongside (we replace it; you shouldn\'t need both), or if a specific plugin conflicts with the shim.', 'codeon-multilingual' ); ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+
 				<h2><?php esc_html_e( 'Performance — native .l10n.php files', 'codeon-multilingual' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<tr>
@@ -201,6 +217,7 @@ final class SettingsPage {
 				'frontend_switcher_show_flag' => ! empty( $_POST['frontend_switcher_show_flag'] ),
 				'auto_discover_strings'       => ! empty( $_POST['auto_discover_strings'] ),
 				'use_native_l10n_files'       => $new_l10n,
+				'wpml_compat_enabled'         => ! empty( $_POST['wpml_compat_enabled'] ),
 			)
 		);
 

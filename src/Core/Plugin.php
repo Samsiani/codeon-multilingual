@@ -11,6 +11,7 @@ use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
+use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
 use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
@@ -94,6 +95,9 @@ final class Plugin {
 		// REST.
 		LangParam::register();
 		StringsApi::register();
+
+		// Compatibility shims.
+		WpmlFunctions::register();
 
 		// Admin.
 		AdminMenu::register();
