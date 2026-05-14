@@ -24,6 +24,28 @@ final class TermsClauses {
 	private static ?string $where_sql   = null;
 	private static ?string $cached_code = null;
 
+	/**
+	 * Temporary scope for admin queries. When non-empty, the clauses filter
+	 * applies the language WHERE even in admin context. Set by hooks that
+	 * need a short window of language-scoped admin queries (e.g.
+	 * `wp_update_term`'s duplicate-slug check during a translation save).
+	 */
+	private static string $admin_lang_scope = '';
+
+	public static function set_admin_lang_scope( string $lang ): void {
+		self::$admin_lang_scope = $lang;
+		self::reset_cache();
+	}
+
+	public static function clear_admin_lang_scope(): void {
+		self::$admin_lang_scope = '';
+		self::reset_cache();
+	}
+
+	public static function admin_lang_scope(): string {
+		return self::$admin_lang_scope;
+	}
+
 	public static function register(): void {
 		if ( self::$registered ) {
 			return;
@@ -61,7 +83,10 @@ final class TermsClauses {
 	 * @return array{0:string,1:string}
 	 */
 	private static function sql_fragments(): array {
-		$code = CurrentLanguage::code();
+		// The admin scope (set during wp_update_term on a translation) takes
+		// priority over the request's CurrentLanguage so the duplicate-slug
+		// check sees only siblings of the term being saved.
+		$code = '' !== self::$admin_lang_scope ? self::$admin_lang_scope : CurrentLanguage::code();
 		if (
 			self::$cached_code === $code
 			&& null !== self::$join_sql
@@ -108,8 +133,10 @@ final class TermsClauses {
 			return true;
 		}
 		// Admin defaults to "show all languages", except when our
-		// TermsListLanguage screen opts in explicitly via this query arg.
-		if ( is_admin() && empty( $args['cml_admin_lang_filter'] ) ) {
+		// TermsListLanguage screen opts in explicitly via this query arg
+		// OR `admin_lang_scope` was set (e.g. during wp_update_term's
+		// duplicate-slug check on a translation save).
+		if ( is_admin() && empty( $args['cml_admin_lang_filter'] ) && '' === self::$admin_lang_scope ) {
 			return true;
 		}
 		return false;

@@ -2,6 +2,12 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.35] — 2026-05-14
+
+### Fixed
+- **Editing a translated term failed with "The slug … is already in use by another term".** WP 6.x `wp_update_term` calls `get_term_by('slug', $slug, $taxonomy)` to detect duplicate slugs. That helper uses `get_terms` with `suppress_filter=true`, but the underlying `terms_clauses` filter still fires — and our `TermsClauses` blanket-skipped all admin queries, so the duplicate check saw the **source** Georgian term as a "duplicate" of the Russian translation being saved. Result: every Update click on a translated term errored out.
+- Fix: scope `terms_clauses` to the term's own language for the duration of `wp_update_term`. New `TermsClauses::set_admin_lang_scope()` / `clear_admin_lang_scope()` API, driven by `wp_update_term_parent` (fires immediately before the duplicate check per WP source) and `edit_term` (clears it after). Same-language siblings are still flagged as real duplicates; cross-language siblings (the whole point of translations) are correctly invisible.
+
 ## [0.7.34] — 2026-05-14
 
 ### Added

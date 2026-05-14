@@ -35,6 +35,36 @@ final class TermTranslator {
 		add_action( 'init', array( self::class, 'register_taxonomy_hooks' ), 99 );
 		add_filter( 'wp_unique_term_slug', array( self::class, 'filter_unique_slug' ), 10, 3 );
 		add_action( 'admin_post_' . self::ACTION_ADD, array( self::class, 'handle_add_translation' ) );
+
+		// WP's wp_update_term checks for duplicate slugs via get_term_by(),
+		// which fires `terms_clauses` but is blanket-skipped by our admin
+		// guard. Scope the clauses to the term's own language for the
+		// duration of the update so the check only finds same-language
+		// siblings (which would be a real duplicate). Filter fires
+		// immediately before the duplicate check per wp-includes/taxonomy.php;
+		// the matching `edit_term` action clears the scope.
+		add_filter( 'wp_update_term_parent', array( self::class, 'set_update_lang_scope' ), 10, 3 );
+		add_action( 'edit_term', array( self::class, 'clear_update_lang_scope' ) );
+	}
+
+	/**
+	 * @param mixed $parent   WP passes int but we don't touch it.
+	 * @param mixed $term_id  cast to int internally
+	 * @param mixed $taxonomy unused
+	 * @return mixed parent passed through unchanged
+	 */
+	public static function set_update_lang_scope( $parent, $term_id = 0, $taxonomy = '' ) {
+		unset( $taxonomy );
+		$id   = (int) $term_id;
+		$lang = $id > 0 ? TranslationGroups::get_term_language( $id ) : null;
+		if ( null !== $lang ) {
+			\Samsiani\CodeonMultilingual\Query\TermsClauses::set_admin_lang_scope( (string) $lang );
+		}
+		return $parent;
+	}
+
+	public static function clear_update_lang_scope(): void {
+		\Samsiani\CodeonMultilingual\Query\TermsClauses::clear_admin_lang_scope();
 	}
 
 	public static function register_taxonomy_hooks(): void {
