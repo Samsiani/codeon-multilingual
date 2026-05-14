@@ -1,97 +1,116 @@
 # CodeOn Multilingual
 
-A lightweight multilingual plugin for WordPress and WooCommerce — WPML-compatible feature surface at a fraction of the weight.
+A lightweight multilingual plugin for WordPress and WooCommerce. WPML-compatible feature surface at a fraction of the weight.
+
+[![CI](https://github.com/Samsiani/codeon-multilingual/actions/workflows/ci.yml/badge.svg)](https://github.com/Samsiani/codeon-multilingual/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/Samsiani/codeon-multilingual?label=release)](https://github.com/Samsiani/codeon-multilingual/releases/latest)
+
+## Why this exists
+
+WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables, polymorphic indexes that MySQL plans poorly, React-heavy admin bundles, translation-workflow surface most sites never use. We deliver the same outcomes at **~10% of the disk weight** and **~10–20% of the per-request query/memory cost**.
+
+| Dimension | CodeOn Multilingual | Polylang | WPML |
+|---|---|---|---|
+| PHP code (LOC) | ~7 240 | ~30–50k | ~100k+ across the suite |
+| Release ZIP | ~370 KB | ~3 MB | ~50–150 MB |
+| DB tables added | 5 | 2 + reused taxonomy | 17+ |
+| Frontend JS shipped by default | 0 KB | ~30 KB | ~200 KB+ |
+| Admin JS bundle | ~6 KB vanilla | ~120 KB jQuery+UI | 400 KB+ React |
+| Extra queries per WP_Query | 1 LEFT JOIN | 2–3 (taxonomy joins) | 3–7 |
+| `gettext` hot path overhead | off by default | filter per call | filter + DB hit |
+| Memory per request | <1.5 MB | 3–5 MB | 8–15 MB |
 
 ## Status
 
-v0.1.0 — feature-complete MVP. Live-tested on artcase.ge (WP 6.9, WC 10.7, PHP 8.3).
+**v0.6.0** — live in production on artcase.ge. ~80% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, and the WP 6.5+ native `.l10n.php` translation path.
 
-## Features
+See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
-- Subdirectory URL routing (`/ka/`, `/en/`) with virtual prefix (no rewrite rules to flush)
-- Post / page / CPT translation via duplicate-and-link
-- Taxonomy term translation with slug-by-language scoping
-- WooCommerce sync — price, stock, sale dates, dimensions, tax, SKU fanned across translations
-- Variable products auto-duplicate variations on parent translation
-- String translations via `gettext` interceptor with hash-keyed compiled cache
-- REST API `?lang=` parameter on every show_in_rest endpoint
-- WP-CLI ready (planned)
-- Single LEFT JOIN per `WP_Query` / `WP_Term_Query` — request-memoized SQL
+## Features at a glance
+
+**Routing**
+- Subdirectory URL strategy (`/ka/`, `/en/`), virtual prefix, no flush_rewrite_rules() needed
+- Single `LEFT JOIN` injection on every `WP_Query` and `WP_Term_Query`
+- Per-language locale switching (`<html lang>`, `.mo` bundle selection, hreflang)
+
+**Content**
+- Post / Page / CPT / Attachment translation via deep `post_meta` clone
+- Taxonomy term translation with hierarchical parent mapping
+- Slug uniqueness scoped per (post_type, post_parent, language)
+- Auto-tag new posts on `save_post`
+- Cron-driven backfill for legacy content
+
+**WooCommerce**
+- Product translation with full variation auto-clone
+- 20 prop sync across translation group (price, stock, sale dates, dimensions, tax, SKU…)
+- Group-keyed lock prevents recursion
+
+**Strings**
+- Hash-keyed compiled map in wp_cache (default fallback path)
+- Opt-in WP 6.5+ native `.l10n.php` writer (atomic + opcache-aware)
+- File-system scanner with regex for `__`, `_e`, `_x`, `_ex`, `esc_*`
+- Inline popup editor (vanilla JS, click-outside-saves)
+- Per-string source-language detection + badge
+
+**Frontend**
+- Shortcode `[cml_language_switcher]` + classic widget + auto-floating switcher
+- Hreflang link tags + `x-default`
+- `<html lang>` + `dir` rewriting per current view
+- WP-core sitemap participation (all-language enumeration)
+
+**Admin**
+- Per-post-type language quick-link row above the list table
+- "Languages" column with translate icons (globe / pen / +)
+- Cookie-persisted language selection
+- WPML data migration tool (5-statement SQL importer)
+
+**REST**
+- `?lang=` parameter on every `show_in_rest` endpoint
+- `POST /cml/v1/strings/<id>/translations` for inline editor
 
 ## Requirements
 
 - PHP 8.1+
 - WordPress 6.5+
-- WooCommerce 8.0+ (optional — only required for product sync)
+- WooCommerce 8.0+ (optional, only for product sync)
 
-## Install (production)
+## Install
 
-Download the latest release ZIP from [Releases](https://github.com/Samsiani/codeon-multilingual/releases) and install via WP Admin → Plugins → Add New → Upload.
+### Production (auto-updates)
 
-### Auto-update via GitHub
+Download the latest ZIP from [Releases](https://github.com/Samsiani/codeon-multilingual/releases) and install via **Plugins → Add New → Upload**. Plugin Update Checker keeps it current as new tags are pushed.
 
-The repo is currently public — PUC fetches releases token-less. WP will surface a "new version available" prompt for each tagged release.
-
-When the repo flips back to private (planned post-1.0), each WP install needs a fine-grained PAT in `wp-config.php`:
-
-```php
-define( 'CML_GITHUB_TOKEN', 'github_pat_…' );
-```
-
-**Token scope:** repository access limited to `Samsiani/codeon-multilingual`, permissions: `Contents: Read`, `Metadata: Read` (auto-included). Without the token PUC silently reports "no updates available" while the repo is private.
-
-## Install (dev)
+### Development
 
 ```bash
-git clone https://github.com/Samsiani/codeon-multilingual codeon-multilingual
+git clone https://github.com/Samsiani/codeon-multilingual.git
 cd codeon-multilingual
 composer install
 ln -s "$(pwd)" /path/to/wp-content/plugins/codeon-multilingual
 ```
 
-Activate in WP admin → Plugins.
+Then activate in **Plugins**.
 
-## Tests
+See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full dev workflow.
 
-```bash
-composer install
-vendor/bin/phpunit --testsuite=Unit
-```
+## Quick start
 
-Unit tests use Brain Monkey to stub WP globals. The `Integration` testsuite is scaffolded for when wp-phpunit setup is added.
+1. Activate the plugin
+2. **Multilingual → Languages** — add a second language (the site default is seeded from `get_locale()` on activation)
+3. **Multilingual → Settings** — choose frontend switcher position/style; optionally enable native `.l10n.php` files for faster string lookups
+4. Edit any post — use the **Translations** meta box to create translations
+5. Visit `/{lang}/` on the front-end to see the translated site
 
-Run on every PR / push to main via `.github/workflows/ci.yml` (PHP 8.1, 8.2, 8.3 matrix).
+## Documentation
 
-## Release process
-
-1. Bump `Version:` header in `codeon-multilingual.php`.
-2. Commit + push to `main`.
-3. Tag: `git tag v0.1.1 && git push --tags`.
-4. `.github/workflows/release.yml` builds the release ZIP, stamps `CML_BUILD_ID` with `version+sha`, and publishes the release with the ZIP attached.
-
-The release workflow refuses to publish if the plugin header version doesn't match the tag.
-
-## Architecture
-
-See `src/` for the full module layout. Top-level subdirs:
-
-| Dir | Purpose |
+| Doc | Purpose |
 |---|---|
-| `Core/` | Bootstrap, languages, schema, backfill, translation groups |
-| `Url/` | Routing (router + strategy interface + subdirectory impl), post/term link filters |
-| `Query/` | `posts_clauses` and `terms_clauses` JOIN injection |
-| `Content/` | Post and term translators (duplicate engines) |
-| `Strings/` | Gettext interceptor + compiled translation cache + discovery |
-| `Woo/` | WooCommerce product sync + variation auto-translation |
-| `Rest/` | REST API `?lang=` parameter |
-| `Admin/` | Top-level menu, admin bar, language and string pages |
+| [`README.md`](README.md) | This file — overview and quick start |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Deep dive: modules, design decisions, hot paths, schema, request lifecycle |
+| [`ROADMAP.md`](ROADMAP.md) | Current state, gap analysis, prioritised next steps |
+| [`CHANGELOG.md`](CHANGELOG.md) | Per-release notes |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | Dev environment, tests, release workflow |
 
-## Roadmap
+## License
 
-| Version | Focus |
-|---|---|
-| 0.1 | MVP — done |
-| 0.2 | Frontend switcher, hreflang, html lang attr, sitemap filter |
-| 0.3 | WPML migration tool, page builder JSON walker, query-param URL strategy |
-| 0.4 | Multi-currency add-on, subdomain routing, translation workflow |
-| 1.0 | Battle-tested, full WPML compat shim, one-click WPML migration |
+GPL-2.0-or-later. See plugin header.
