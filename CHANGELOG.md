@@ -2,6 +2,26 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.2] — 2026-05-14
+
+### Added
+- **First-run setup wizard** at `admin.php?page=cml-setup` — 4-step guide mirroring WPML's onboarding flow:
+  1. Welcome screen with detected site locale.
+  2. Default-language picker with search + 66-entry catalog (major languages grouped first).
+  3. Multi-select for additional active languages.
+  4. Summary + deep links to Languages, Settings, and Migration pages.
+- **Auto-redirect on first activation** — `Admin\SetupRedirector` arms a 30-second transient on activate, then `admin_init` p1 redirects an admin with `manage_options` to the wizard. Guarded against AJAX/CLI/cron/network admin. Subsequent activations skip the redirect once `cml_settings['setup_complete']` is true.
+- **"Run setup wizard" page-title action** on the Languages screen so admins can re-run the wizard after dismissing it.
+- **Bundled language catalog** `res/languages.json` (66 entries, ~9 KB) sourced from WPML's curated list. Each entry: `code`, `name`, `native`, `locale`, `flag` (ISO 3166-1 alpha-2 for emoji rendering), `rtl`, `major`. Loaded once per request and cached.
+- **`Core\LanguageCatalog` service** — `all() / get() / search() / major() / by_locale() / flag_emoji()`. Search is case-insensitive and ranks major-flagged languages first to keep common picks at the top.
+- **`Settings` keys**: `setup_complete`, `setup_skipped`, `setup_step` (defaults all falsy so existing installs are not affected).
+
+### Tests
+- 12 new unit tests in `LanguageCatalogTest` covering catalog shape, exact lookup, native-script search, case-insensitivity, major-first ranking, locale prefix fallback (`en_GB` → `en`), flag-emoji codepoint composition, and RTL flagging. Total: 43 → 55 passing.
+
+### Notes
+- No image assets bundled. Flags render as Unicode regional-indicator emoji pairs, in keeping with the plugin's lightweight pitch.
+
 ## [0.7.1] — 2026-05-14
 
 ### Added

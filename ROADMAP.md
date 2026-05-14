@@ -1,6 +1,6 @@
 # Roadmap & gap analysis
 
-Current version: **v0.7.1** (released 2026-05-14)
+Current version: **v0.7.2** (released 2026-05-14)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
@@ -112,7 +112,8 @@ This file is the single source of truth for "what's done vs what's planned." Eve
 |---|---|---|---|
 | ~~v0.7.0~~ | Compatibility | WPML compat shim (`icl_*` + `wpml_*` filters), foundational adoption move | ✅ shipped |
 | ~~v0.7.1~~ | Ops | WP-CLI command surface (`wp cml language / translate / strings / migrate / backfill`) | ✅ shipped |
-| **v0.7.2** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
+| ~~v0.7.2~~ | Onboarding | First-run setup wizard + bundled 66-language catalog | ✅ shipped |
+| **v0.7.3** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
 | **v0.8.0** | WC depth | WC curated string registration, attribute-term slug mapping for variations, shipping/payment/email strings | planned |
 | **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
 | **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |

@@ -10,7 +10,9 @@ use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
+use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
 use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
@@ -108,6 +110,8 @@ final class Plugin {
 		ScanPage::register();
 		SettingsPage::register();
 		MigrationPage::register();
+		SetupWizard::register();
+		SetupRedirector::register();
 
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 		add_action( 'admin_init', array( Activator::class, 'maybe_upgrade' ) );

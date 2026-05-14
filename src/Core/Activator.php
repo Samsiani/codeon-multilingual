@@ -6,6 +6,7 @@ namespace Samsiani\CodeonMultilingual\Core;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
 
 /**
  * Activation hook target.
@@ -24,6 +25,10 @@ final class Activator {
 
 		update_option( 'cml_db_version', Schema::VERSION, true );
 		update_option( 'cml_activated_at', time(), false );
+
+		// Arm the first-run redirect to the setup wizard. No-op if the admin
+		// has already completed (or skipped) the wizard on a prior activation.
+		SetupRedirector::arm();
 	}
 
 	/**

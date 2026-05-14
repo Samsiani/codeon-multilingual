@@ -6,6 +6,7 @@ namespace Samsiani\CodeonMultilingual\Admin\Pages;
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Core\Backfill;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 
 /**
  * Languages list + add/edit form + delete + set-default handlers.
@@ -60,6 +61,7 @@ final class LanguagesPage {
 		<div class="wrap">
 			<h1 class="wp-heading-inline"><?php esc_html_e( 'Languages', 'codeon-multilingual' ); ?></h1>
 			<a href="<?php echo esc_url( $add_url ); ?>" class="page-title-action"><?php esc_html_e( 'Add New', 'codeon-multilingual' ); ?></a>
+			<a href="<?php echo esc_url( SetupWizard::url( 1 ) ); ?>" class="page-title-action"><?php esc_html_e( 'Run setup wizard', 'codeon-multilingual' ); ?></a>
 			<hr class="wp-header-end">
 
 			<?php self::render_notices(); ?>

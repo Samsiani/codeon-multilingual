@@ -1,4 +1,4 @@
-# Architecture — CodeOn Multilingual v0.7.1
+# Architecture — CodeOn Multilingual v0.7.2
 
 This document describes how the plugin is structured, why each design choice was made, and how data flows through the system at request time.
 
@@ -17,10 +17,13 @@ src/
 ├── Migration/           — WPML importer (icl_* tables → ours)
 ├── Compat/              — WPML compatibility shim (icl_* functions + wpml_* filters)
 ├── Cli/                 — WP-CLI command classes (language, translate, strings, migrate, backfill)
-└── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers
+└── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers, setup wizard
+
+res/
+└── languages.json       — bundled catalog (66 entries) used by the setup wizard
 ```
 
-51 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
+54 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
 
 ## Bootstrap and hook timing
 
@@ -320,6 +323,9 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | ScanPage | `Admin/Pages/ScanPage.php` | `admin_post_cml_run_scan` |
 | SettingsPage | `Admin/Pages/SettingsPage.php` | `admin_post_cml_save_settings` |
 | MigrationPage | `Admin/Pages/MigrationPage.php` | `admin_post_cml_run_wpml_import` |
+| SetupWizard | `Admin/Pages/SetupWizard.php` | hidden submenu `admin.php?page=cml-setup`, `admin_post_cml_setup_step/skip/finish` |
+| SetupRedirector | `Admin/SetupRedirector.php` | `admin_init` p1 — one-shot redirect to wizard after first activation |
+| LanguageCatalog | `Core/LanguageCatalog.php` | invoked by SetupWizard; reads `res/languages.json` |
 | PoExporter | `Strings/PoExporter.php` | pure render (PO + JSON), consumed by `StringsCommand::export` |
 | PoImporter | `Strings/PoImporter.php` | pure parse (PO + JSON), consumed by `StringsCommand::import` |
 | CommandLoader | `Cli/CommandLoader.php` | invoked at plugin-file load time, guarded by `defined('WP_CLI') && WP_CLI` |

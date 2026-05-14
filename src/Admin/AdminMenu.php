@@ -7,6 +7,7 @@ use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 
 /**
@@ -83,6 +84,17 @@ final class AdminMenu {
 			self::CAPABILITY,
 			SettingsPage::PAGE_SLUG,
 			array( SettingsPage::class, 'render' )
+		);
+
+		// Hidden submenu — accessible via the setup-wizard redirect or the
+		// "Run setup wizard" link, but not shown in the sidebar.
+		add_submenu_page(
+			'', // null parent — page is dispatched but not listed
+			__( 'Setup', 'codeon-multilingual' ),
+			__( 'Setup', 'codeon-multilingual' ),
+			self::CAPABILITY,
+			SetupWizard::PAGE_SLUG,
+			array( SetupWizard::class, 'render' )
 		);
 	}
 }

@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.7.1** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), and a full **WP-CLI command surface** for ops/CI workflows.
+**v0.7.2** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, and a **first-run setup wizard** with a bundled 66-language catalog.
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -110,11 +110,12 @@ See [`DEVELOPMENT.md`](DEVELOPMENT.md) for the full dev workflow.
 
 ## Quick start
 
-1. Activate the plugin
-2. **Multilingual → Languages** — add a second language (the site default is seeded from `get_locale()` on activation)
-3. **Multilingual → Settings** — choose frontend switcher position/style; optionally enable native `.l10n.php` files for faster string lookups
-4. Edit any post — use the **Translations** meta box to create translations
-5. Visit `/{lang}/` on the front-end to see the translated site
+1. Activate the plugin — the setup wizard opens automatically on first run, walking you through default + secondary language selection from a bundled catalog of 66 curated languages.
+2. (After the wizard) Edit any post — use the **Translations** meta box to create translations.
+3. Visit `/{lang}/` on the front-end to see the translated site.
+4. **Multilingual → Settings** — tune the floating switcher and the optional native `.l10n.php` translation path.
+
+If you skipped the wizard, "Run setup wizard" stays available as a link on the Languages page.
 
 ## Documentation
 
