@@ -2,6 +2,15 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.30] — 2026-05-14
+
+### Fixed
+- **"Sync to EN" did nothing after deleting an existing translated menu.** WP's `wp_delete_nav_menu` removes the `nav_menu` term but does NOT touch our `cml_term_language` row that pointed at it. So `TranslationGroups::get_term_siblings()` still listed `{1042: 'en'}` after the term was gone; `sync_menu()` happily picked that dead term_id as the target, wiped its (nonexistent) items, and cloned source items into a phantom term that has no `wp_term_taxonomy` row — zero visible menu, zero feedback to the user.
+- Two coordinated changes:
+  1. `MenuTranslator::on_nav_menu_deleted()` hooks `delete_nav_menu` and removes the language row + flushes the request-static caches whenever a menu is deleted (Appearance → Menus, `wp_delete_nav_menu()`, anywhere).
+  2. `sync_menu()` validates the candidate target term still exists via `get_term()` before reusing it; if it's a stale ID, the row is dropped on the spot and the method falls through to create-fresh. So today's already-broken rows self-heal on the next sync.
+- Wrapped the existing-target `wp_get_nav_menu_items()` call with the `NavMenuSwitcher::bypass_expansion` flag too, so CLI / wp-cron-context syncs don't accidentally read expanded placeholder items as "existing items to wipe".
+
 ## [0.7.29] — 2026-05-14
 
 ### Added

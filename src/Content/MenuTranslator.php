@@ -52,6 +52,13 @@ final class MenuTranslator {
 		add_action( 'admin_post_' . self::ACTION_TRANSLATE, array( self::class, 'handle_translate' ) );
 		add_action( 'admin_post_' . self::ACTION_SYNC,      array( self::class, 'handle_sync' ) );
 
+		// Clean up the cml_term_language row when a nav_menu is deleted via
+		// any path (Appearance → Menus delete, wp_delete_nav_menu(), etc.).
+		// Without this, stale rows survive the term and confuse sibling
+		// lookups — sync_menu() would think a long-dead translation still
+		// exists and "re-sync" into a phantom term that has no items.
+		add_action( 'delete_nav_menu', array( self::class, 'on_nav_menu_deleted' ), 10, 1 );
+
 		// Frontend: swap each theme location's menu for the current-language sibling.
 		add_filter( 'theme_mod_nav_menu_locations', array( self::class, 'filter_theme_locations' ) );
 	}
@@ -131,8 +138,17 @@ final class MenuTranslator {
 		if ( null === $group_id ) {
 			$group_id = $source_menu_id;
 		}
-		$siblings   = TranslationGroups::get_term_siblings( $group_id );
-		$target_id  = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+		$siblings  = TranslationGroups::get_term_siblings( $group_id );
+		$target_id = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+
+		// Validate the candidate target term still exists. A previous delete
+		// may have removed the term but left an orphan cml_term_language row
+		// behind — in that case treat the target as missing and re-create.
+		if ( $target_id > 0 && ! ( get_term( $target_id, 'nav_menu' ) instanceof WP_Term ) ) {
+			self::orphan_language_row( $target_id );
+			TranslationGroups::flush();
+			$target_id = 0;
+		}
 
 		if ( $target_id <= 0 ) {
 			$target_id = self::create_translated_menu_term( $source, $target_lang, $group_id );
@@ -141,7 +157,12 @@ final class MenuTranslator {
 			}
 		} else {
 			// Existing target — wipe items so the sync is authoritative.
-			$existing_items = wp_get_nav_menu_items( $target_id, array( 'update_post_term_cache' => false ) );
+			\Samsiani\CodeonMultilingual\Frontend\NavMenuSwitcher::bypass_expansion( true );
+			try {
+				$existing_items = wp_get_nav_menu_items( $target_id, array( 'update_post_term_cache' => false ) );
+			} finally {
+				\Samsiani\CodeonMultilingual\Frontend\NavMenuSwitcher::bypass_expansion( false );
+			}
 			if ( is_array( $existing_items ) ) {
 				foreach ( $existing_items as $item ) {
 					wp_delete_post( (int) $item->db_id, true );
@@ -629,5 +650,28 @@ final class MenuTranslator {
 	 */
 	public static function reset_cache(): void {
 		self::$location_cache = array();
+	}
+
+	/**
+	 * `delete_nav_menu` action handler — remove the cml_term_language row
+	 * for the deleted menu so it stops appearing in sibling lookups.
+	 *
+	 * @param int|object $term  WP passes the term object on this action.
+	 */
+	public static function on_nav_menu_deleted( $term ): void {
+		$term_id = is_object( $term ) && isset( $term->term_id ) ? (int) $term->term_id : (int) $term;
+		if ( $term_id <= 0 ) {
+			return;
+		}
+		self::orphan_language_row( $term_id );
+		TranslationGroups::flush();
+		self::reset_cache();
+	}
+
+	/** Delete the cml_term_language row for a term — used after a real or detected delete. */
+	private static function orphan_language_row( int $term_id ): void {
+		global $wpdb;
+		$wpdb->delete( $wpdb->prefix . 'cml_term_language', array( 'term_id' => $term_id ), array( '%d' ) );
+		TranslationGroups::invalidate_term( $term_id );
 	}
 }
