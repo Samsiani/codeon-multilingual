@@ -36,6 +36,21 @@
 				wrapper.setAttribute('data-cml-open', '');
 				toggle.setAttribute('aria-expanded', 'true');
 				menu.removeAttribute('hidden');
+
+				// CSS `width: max-content` is unreliable for position-absolute
+				// menus anchored with right:0 (browsers can clamp the width to
+				// the containing block). Measure each link's actual content
+				// width and pin the menu's minWidth so the longest item
+				// (e.g. "ქართული") always fits.
+				var widest = 0;
+				menu.querySelectorAll('a').forEach(function (a) {
+					widest = Math.max(widest, a.scrollWidth);
+				});
+				if (widest > 0) {
+					// Add 2 px to absorb sub-pixel rounding in some browsers.
+					menu.style.minWidth = (widest + 2) + 'px';
+				}
+
 				var firstLink = menu.querySelector('a');
 				if (firstLink) firstLink.focus();
 			}

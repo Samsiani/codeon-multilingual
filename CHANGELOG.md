@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.14] — 2026-05-14
+
+### Fixed
+- **Dropdown menu width: measure-and-pin via JS.** CSS `width: max-content` was being clamped by the position-absolute layout when the menu was anchored with `right: 0` and the toggle was narrow, so "ქართული" still got cut. The dropdown JS now measures each link's `scrollWidth` on open and pins the menu's `min-width` to the widest item + 2 px for sub-pixel rounding. Guaranteed correct regardless of browser layout quirks. CSS `max-content` is left in place as a no-JS fallback.
+
 ## [0.7.13] — 2026-05-14
 
 ### Fixed
