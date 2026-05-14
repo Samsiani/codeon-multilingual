@@ -2,6 +2,13 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.7] — 2026-05-14
+
+### Fixed
+- **Legacy rows showed emoji instead of SVG.** `Schema::seed_default_language()` and pre-wizard admin inserts wrote the *language* code (e.g. `ka`, `en`) into `wp_cml_languages.flag` instead of the ISO 3166 *country* code (`ge`, `us`), so the new SVG renderer couldn't find a matching file. New `Activator::backfill_flag_codes()` walks every row on the next `admin_init` after upgrade and replaces unresolvable flag values with the catalog's authoritative country code. Existing custom flags are preserved.
+- **Seed for new installs** now consults `LanguageCatalog::get()` and uses the catalog's flag, falling back to the language code only when the catalog doesn't know the locale.
+- Bumped `Schema::VERSION` to `3` so the backfill triggers on every existing install.
+
 ## [0.7.6] — 2026-05-14
 
 ### Added

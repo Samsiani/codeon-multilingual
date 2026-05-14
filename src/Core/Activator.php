@@ -52,6 +52,47 @@ final class Activator {
 
 		// One-time backfill for the new source_language column on existing rows.
 		self::backfill_source_languages();
+
+		// One-time backfill for legacy rows seeded with the language code as
+		// flag (e.g. flag='ka' instead of 'ge'). Reconciles against the bundled
+		// catalog so the admin Languages list shows real SVG flags.
+		self::backfill_flag_codes();
+	}
+
+	/**
+	 * Walk wp_cml_languages and replace flag values that don't match a bundled
+	 * SVG with the catalog's ISO 3166 country code for that language code.
+	 * Skips rows where the admin set a custom flag that already resolves.
+	 */
+	public static function backfill_flag_codes(): void {
+		global $wpdb;
+		$rows = $wpdb->get_results( "SELECT code, flag FROM {$wpdb->prefix}cml_languages" );
+		if ( empty( $rows ) ) {
+			return;
+		}
+		$updated = 0;
+		foreach ( $rows as $row ) {
+			$code = (string) $row->code;
+			$flag = (string) $row->flag;
+			if ( '' !== $flag && \Samsiani\CodeonMultilingual\Core\LanguageCatalog::flag_svg_exists( $flag ) ) {
+				continue;
+			}
+			$catalog = \Samsiani\CodeonMultilingual\Core\LanguageCatalog::get( $code );
+			if ( ! is_array( $catalog ) || '' === $catalog['flag'] ) {
+				continue;
+			}
+			$wpdb->update(
+				$wpdb->prefix . 'cml_languages',
+				array( 'flag' => $catalog['flag'] ),
+				array( 'code' => $code ),
+				array( '%s' ),
+				array( '%s' )
+			);
+			++$updated;
+		}
+		if ( $updated > 0 ) {
+			\Samsiani\CodeonMultilingual\Core\Languages::flush_cache();
+		}
 	}
 
 	/**

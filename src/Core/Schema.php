@@ -18,7 +18,7 @@ namespace Samsiani\CodeonMultilingual\Core;
  */
 final class Schema {
 
-	public const VERSION = '2';
+	public const VERSION = '3';
 
 	public static function install(): void {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -135,6 +135,15 @@ final class Schema {
 		$locale = get_locale();
 		$info   = self::locale_to_info( $locale );
 
+		// Prefer the bundled catalog's ISO 3166 country code for the flag — the
+		// language code (en, ka) and the country code (us, ge) often differ and
+		// we ship SVGs keyed by country. Fall back to the language code only
+		// when the catalog doesn't know it.
+		$catalog_entry = \Samsiani\CodeonMultilingual\Core\LanguageCatalog::get( $info['code'] );
+		$flag          = is_array( $catalog_entry ) && '' !== $catalog_entry['flag']
+			? $catalog_entry['flag']
+			: $info['code'];
+
 		$wpdb->insert(
 			$table,
 			array(
@@ -142,7 +151,7 @@ final class Schema {
 				'locale'     => $locale,
 				'name'       => $info['name'],
 				'native'     => $info['native'],
-				'flag'       => $info['code'],
+				'flag'       => $flag,
 				'rtl'        => $info['rtl'],
 				'active'     => 1,
 				'is_default' => 1,
