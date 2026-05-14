@@ -2,6 +2,16 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.21] — 2026-05-14
+
+### Added
+- **`Woo/PageMapping`** — WooCommerce stores cart/checkout/my-account/shop/etc. as single-ID page options (`woocommerce_cart_page_id`, …). On `/en/cart/` WP_Query correctly resolved to the English cart page, but `wc_get_page_id('cart')` still returned the Georgian original, so `is_cart()` mismatched, the cart shortcode/block never fired, and the page rendered as a 404-ish blank page. This module filters every `option_woocommerce_*_page_id` to return the sibling that matches the current language, falling back to the original when no translation exists. Covers: shop, cart, checkout, my-account, terms, pay, view-order.
+- **`Woo/CartTranslation`** — items in the cart, mini-cart, checkout review, order-received page, and emails now render in the current request language. Filters `woocommerce_cart_item_product` to swap the `WC_Product` object to the sibling in the current language; falls back to the original when no translation exists (so a user can add a not-yet-translated product to the cart, switch languages, and still see that product correctly). Synced data (price, stock, SKU, dimensions) is identical across the group via `ProductSync`, so the swap only touches display fields.
+
+### Fixed
+- `/en/cart/`, `/en/checkout/`, `/en/my-account/`, `/en/order-received/...` now render the correct WooCommerce templates in the current language.
+- Adding a product to cart from `/en/product/...` and being redirected to the cart now lands on `/en/cart/` (not the Georgian original).
+
 ## [0.7.20] — 2026-05-14
 
 ### Fixed
