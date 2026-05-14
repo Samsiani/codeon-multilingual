@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.24] — 2026-05-14
+
+### Fixed
+- **Nav-menu placeholder lost its identity on save → custom-fields panel never rendered.** WP's `wp_update_nav_menu_item` forces `object='custom'` for every custom-type item, overwriting the `cml_language_switcher` value our meta-box was sending. The placeholder ended up indistinguishable from a regular custom link and our display/layout settings panel + frontend expansion both skipped it. Now `NavMenuSwitcher::on_save_menu_item` watches for the marker URL (`#cml-languages`) and stamps a `_cml_language_switcher = 1` postmeta flag on the menu item; every check (`is_placeholder()`) consults that flag instead of `$item->object`. Placeholders already in production menus get auto-stamped on the next save, and `label_placeholder` restores the marker URL if it was emptied.
+
 ## [0.7.23] — 2026-05-14
 
 ### Added

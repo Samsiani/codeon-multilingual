@@ -34,10 +34,21 @@ use WP_Post;
  */
 final class NavMenuSwitcher {
 
-	/** Marker on the placeholder so the render filter recognises it. */
-	public const PLACEHOLDER_OBJECT = 'cml_language_switcher';
+	/**
+	 * Marker URL the meta-box assigns to the placeholder so we can detect
+	 * it after save. WP forces `object='custom'` for custom-type items
+	 * (overriding any `menu-item-object` we send), so we can't rely on the
+	 * object field as a marker — but it does preserve the URL verbatim.
+	 *
+	 * The wp_update_nav_menu_item hook below sets a postmeta flag on every
+	 * item whose URL matches this string, so subsequent reads can use the
+	 * flag instead of the URL (admins are free to edit the URL field after
+	 * inserting; the flag survives).
+	 */
+	public const PLACEHOLDER_URL = '#cml-languages';
 
 	/** Postmeta keys on the nav_menu_item post. */
+	private const META_FLAG    = '_cml_language_switcher';
 	private const META_DISPLAY = '_cml_switcher_display';
 	private const META_LAYOUT  = '_cml_switcher_layout';
 
@@ -61,13 +72,37 @@ final class NavMenuSwitcher {
 
 		// Per-item customization in the menu editor.
 		add_action( 'wp_nav_menu_item_custom_fields', array( self::class, 'render_custom_fields' ), 10, 2 );
-		add_action( 'wp_update_nav_menu_item', array( self::class, 'save_custom_fields' ), 10, 3 );
+
+		// Single save handler: stamps the placeholder flag AND persists the
+		// display/layout settings. Runs after WP's own save so postmeta is
+		// already in place when we read it.
+		add_action( 'wp_update_nav_menu_item', array( self::class, 'on_save_menu_item' ), 10, 3 );
 
 		// Frontend expansion.
 		add_filter( 'wp_get_nav_menu_items', array( self::class, 'expand_placeholder' ), 10, 3 );
 
 		// Make the placeholder render in the menu editor with a helpful label.
 		add_filter( 'wp_setup_nav_menu_item', array( self::class, 'label_placeholder' ), 10, 1 );
+	}
+
+	/**
+	 * True when this menu item is one of our switcher placeholders. Detected
+	 * via postmeta flag (set on save), with a fallback to the placeholder URL
+	 * for items inserted by older code paths or whose flag was somehow lost.
+	 *
+	 * @param object|null $item
+	 */
+	public static function is_placeholder( $item ): bool {
+		if ( ! is_object( $item ) ) {
+			return false;
+		}
+		$id = isset( $item->db_id ) ? (int) $item->db_id : (int) ( property_exists( $item, 'ID' ) ? $item->ID : 0 );
+		if ( $id > 0 && '1' === (string) get_post_meta( $id, self::META_FLAG, true ) ) {
+			return true;
+		}
+		// Belt-and-braces: also accept the marker URL on items that haven't
+		// been re-saved since installing this module.
+		return self::PLACEHOLDER_URL === ( $item->url ?? '' );
 	}
 
 	// ---- Admin: meta-box + custom fields ------------------------------------
@@ -97,9 +132,8 @@ final class NavMenuSwitcher {
 							<?php esc_html_e( 'Language switcher (auto-expands)', 'codeon-multilingual' ); ?>
 						</label>
 						<input type="hidden" class="menu-item-type"     name="menu-item[-1][menu-item-type]"   value="custom">
-						<input type="hidden" class="menu-item-object"   name="menu-item[-1][menu-item-object]" value="<?php echo esc_attr( self::PLACEHOLDER_OBJECT ); ?>">
 						<input type="hidden" class="menu-item-title"    name="menu-item[-1][menu-item-title]" value="<?php echo esc_attr__( 'Languages', 'codeon-multilingual' ); ?>">
-						<input type="hidden" class="menu-item-url"      name="menu-item[-1][menu-item-url]"   value="#cml-languages">
+						<input type="hidden" class="menu-item-url"      name="menu-item[-1][menu-item-url]"   value="<?php echo esc_attr( self::PLACEHOLDER_URL ); ?>">
 					</li>
 				</ul>
 			</div>
@@ -124,7 +158,7 @@ final class NavMenuSwitcher {
 	 * @param object $item    full menu item
 	 */
 	public static function render_custom_fields( $item_id, $item = null ): void {
-		if ( ! is_object( $item ) || self::PLACEHOLDER_OBJECT !== ( $item->object ?? '' ) ) {
+		if ( ! self::is_placeholder( $item ) ) {
 			return;
 		}
 		$display = self::get_display_mode( (int) $item_id );
@@ -153,21 +187,33 @@ final class NavMenuSwitcher {
 	}
 
 	/**
-	 * Persist the custom-field values when the menu is saved.
+	 * Save handler — stamps the placeholder flag if the saved item matches
+	 * our marker URL, then persists per-item display/layout settings.
 	 *
-	 * @param int   $menu_id
-	 * @param int   $menu_item_db_id
+	 * @param int                  $menu_id
+	 * @param int                  $menu_item_db_id
 	 * @param array<string, mixed> $args
 	 */
-	public static function save_custom_fields( $menu_id, $menu_item_db_id, $args = array() ): void {
-		unset( $menu_id, $args );
+	public static function on_save_menu_item( $menu_id, $menu_item_db_id, $args = array() ): void {
+		unset( $menu_id );
 		$id = (int) $menu_item_db_id;
 		if ( $id <= 0 ) {
 			return;
 		}
-		if ( self::PLACEHOLDER_OBJECT !== (string) get_post_meta( $id, '_menu_item_object', true ) ) {
+
+		// Stamp the placeholder flag for items that:
+		//   - have the marker URL (#cml-languages), OR
+		//   - already had the flag (idempotent re-save)
+		$url           = isset( $args['menu-item-url'] ) ? (string) $args['menu-item-url'] : (string) get_post_meta( $id, '_menu_item_url', true );
+		$already_flag  = '1' === (string) get_post_meta( $id, self::META_FLAG, true );
+		$is_placeholder = $already_flag || self::PLACEHOLDER_URL === $url;
+		if ( $is_placeholder && ! $already_flag ) {
+			update_post_meta( $id, self::META_FLAG, '1' );
+		}
+		if ( ! $is_placeholder ) {
 			return;
 		}
+
 		// phpcs:disable WordPress.Security.NonceVerification.Missing — menu save is nonced upstream by wp-admin/nav-menus.php.
 		$display_raw = isset( $_POST['menu-item-cml-display'][ $id ] ) ? sanitize_key( (string) $_POST['menu-item-cml-display'][ $id ] ) : '';
 		$layout_raw  = isset( $_POST['menu-item-cml-layout'][ $id ] )  ? sanitize_key( (string) $_POST['menu-item-cml-layout'][ $id ] )  : '';
@@ -197,13 +243,15 @@ final class NavMenuSwitcher {
 	 * @return WP_Post|object
 	 */
 	public static function label_placeholder( $menu_item ) {
-		if ( ! is_object( $menu_item ) ) {
-			return $menu_item;
-		}
-		if ( self::PLACEHOLDER_OBJECT !== ( $menu_item->object ?? '' ) ) {
+		if ( ! self::is_placeholder( $menu_item ) ) {
 			return $menu_item;
 		}
 		$menu_item->type_label = __( 'Language switcher', 'codeon-multilingual' );
+		// Restore the URL marker if a save lost it (e.g. admin cleared the
+		// field). Without it the placeholder would just be a custom link.
+		if ( '' === ( $menu_item->url ?? '' ) ) {
+			$menu_item->url = self::PLACEHOLDER_URL;
+		}
 		return $menu_item;
 	}
 
@@ -229,10 +277,7 @@ final class NavMenuSwitcher {
 		if ( empty( $active_languages ) ) {
 			// No languages configured — drop placeholders silently.
 			return array_values(
-				array_filter(
-					$items,
-					static fn( $i ) => self::PLACEHOLDER_OBJECT !== ( is_object( $i ) ? ( $i->object ?? '' ) : '' )
-				)
+				array_filter( $items, static fn( $i ) => ! self::is_placeholder( $i ) )
 			);
 		}
 
@@ -242,9 +287,11 @@ final class NavMenuSwitcher {
 
 		foreach ( $items as $item ) {
 			++$position;
-			if ( ! is_object( $item ) || self::PLACEHOLDER_OBJECT !== ( $item->object ?? '' ) ) {
-				$item->menu_order = $position;
-				$expanded[]       = $item;
+			if ( ! self::is_placeholder( $item ) ) {
+				if ( is_object( $item ) ) {
+					$item->menu_order = $position;
+				}
+				$expanded[] = $item;
 				continue;
 			}
 
@@ -295,7 +342,7 @@ final class NavMenuSwitcher {
 		$item->db_id         = $item->ID;
 		$item->menu_item_parent = 0;
 		$item->object_id     = 0;
-		$item->object        = self::PLACEHOLDER_OBJECT . '_parent';
+		$item->object        = 'cml_language_switcher_parent';
 		$item->type          = 'custom';
 		$item->title         = self::build_label( $current_code, $current_lang, $display );
 		$item->url           = '#cml-languages';
@@ -321,7 +368,7 @@ final class NavMenuSwitcher {
 		$item->db_id         = 0;
 		$item->menu_item_parent = $parent_id;
 		$item->object_id     = 0;
-		$item->object        = self::PLACEHOLDER_OBJECT . '_item';
+		$item->object        = 'cml_language_switcher_item';
 		$item->type          = 'custom';
 		$item->type_label    = __( 'Language switcher', 'codeon-multilingual' );
 		$item->title         = self::build_label( $code, $lang, $display );
