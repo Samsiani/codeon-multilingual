@@ -198,27 +198,56 @@ final class TermTranslator {
 	private static function do_duplicate( WP_Term $source, string $taxonomy, string $target_lang, int $group_id ): int {
 		$target_parent = self::resolve_translated_parent( (int) $source->parent, $taxonomy, $target_lang );
 
-		$inserted = wp_insert_term(
-			$source->name,
-			$taxonomy,
-			array(
-				'description' => $source->description,
-				'slug'        => $source->slug,
-				'parent'      => $target_parent,
-			)
-		);
+		global $wpdb;
 
-		if ( is_wp_error( $inserted ) ) {
+		// `wp_insert_term` rejects duplicate names within the same taxonomy
+		// (including hierarchical product_cat / category at the same parent),
+		// AND rejects identical slugs before our `wp_unique_term_slug` filter
+		// gets a chance to scope-allow them per language. Inserting directly
+		// to `wp_terms` + `wp_term_taxonomy` sidesteps both gates — our
+		// schema scopes slug uniqueness per language so the duplicate is
+		// legitimate. We fire the standard `create_term` / `created_term`
+		// hooks afterwards so third-party plugins (Yoast, WC analytics, etc.)
+		// still see the term lifecycle.
+		$ok = $wpdb->insert(
+			$wpdb->terms,
+			array(
+				'name'       => (string) $source->name,
+				'slug'       => (string) $source->slug,
+				'term_group' => 0,
+			),
+			array( '%s', '%s', '%d' )
+		);
+		if ( false === $ok ) {
+			return 0;
+		}
+		$new_term_id = (int) $wpdb->insert_id;
+		if ( $new_term_id <= 0 ) {
 			return 0;
 		}
 
-		$new_term_id = (int) $inserted['term_id'];
+		$ok_tt = $wpdb->insert(
+			$wpdb->term_taxonomy,
+			array(
+				'term_id'     => $new_term_id,
+				'taxonomy'    => $taxonomy,
+				'description' => (string) $source->description,
+				'parent'      => $target_parent,
+				'count'       => 0,
+			),
+			array( '%d', '%s', '%s', '%d', '%d' )
+		);
+		if ( false === $ok_tt ) {
+			$wpdb->delete( $wpdb->terms, array( 'term_id' => $new_term_id ), array( '%d' ) );
+			return 0;
+		}
+		$new_tt_id = (int) $wpdb->insert_id;
 
 		self::clone_term_meta( (int) $source->term_id, $new_term_id );
 
-		// REPLACE INTO: created_<tax> hook already wrote a default-lang row;
-		// stamp it back to the actual target.
-		global $wpdb;
+		// Stamp the language row BEFORE firing `created_<taxonomy>` so our
+		// own `tag_new_term` callback (also hooked to that action) sees a
+		// row already in place and skips its default-language seed.
 		$wpdb->query(
 			$wpdb->prepare(
 				"REPLACE INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language) VALUES (%d, %d, %s)",
@@ -229,6 +258,11 @@ final class TermTranslator {
 		);
 
 		clean_term_cache( $new_term_id, $taxonomy );
+
+		do_action( 'create_term', $new_term_id, $new_tt_id, $taxonomy );
+		do_action( "create_{$taxonomy}", $new_term_id, $new_tt_id );
+		do_action( 'created_term', $new_term_id, $new_tt_id, $taxonomy );
+		do_action( "created_{$taxonomy}", $new_term_id, $new_tt_id );
 		TranslationGroups::invalidate_term( (int) $source->term_id );
 		TranslationGroups::invalidate_term( $new_term_id );
 

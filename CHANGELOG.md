@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.32] — 2026-05-14
+
+### Fixed
+- **"Failed to create term translation" on every category / tag / attribute translate click.** `TermTranslator::do_duplicate` called `wp_insert_term($source->name, $taxonomy, ['slug' => $source->slug, …])`. WP's term insert checks name + slug uniqueness before our `wp_unique_term_slug` filter (which scopes per-language) ever gets a chance — so the duplicate was always rejected with `WP_Error('term_exists')`. Same family of bug as the v0.7.27 menu-name issue; same fix shape applied. Direct `$wpdb->insert` into `wp_terms` + `wp_term_taxonomy` bypasses the gate; our schema legitimately allows a duplicate name/slug as long as the language differs. WP's `create_term` / `created_<taxonomy>` hooks are still fired manually so third-party listeners (Yoast, WooCommerce analytics, Polylang/WPML compat shims) keep working.
+
 ## [0.7.31] — 2026-05-14
 
 ### Fixed
