@@ -2,6 +2,13 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.8] — 2026-05-14
+
+### Changed
+- **Frontend dropdown switcher uses SVG flags too.** Native `<select>`/`<option>` can't render `<img>` children, so the dropdown was the only switcher style still falling back to emoji. Replaced it with a small custom `<button>` + `<ul>` pair (the pattern WPML uses) so each item can show its bundled SVG flag.
+- New `assets/dropdown-switcher.js` (~1.4 KB) wires open/close, click-outside, Escape-to-close, and focus management. ARIA roles (`listbox` / `option`, `aria-expanded`, `aria-selected`) added for keyboard / screen-reader access.
+- CSS for the new dropdown lives alongside the floating-switcher styles. Enqueued lazily — the JS/CSS load only when a dropdown switcher actually renders (floating, shortcode, or widget).
+
 ## [0.7.7] — 2026-05-14
 
 ### Fixed

@@ -40,6 +40,16 @@ final class FloatingSwitcher {
 			array(),
 			defined( 'CML_BUILD_ID' ) ? CML_BUILD_ID : '0'
 		);
+		// JS only needed when the switcher style is the custom dropdown — but
+		// the shortcode/widget can render dropdowns independently, so just
+		// enqueue once whenever the switcher is on. Tiny payload (~1.4 KB).
+		wp_enqueue_script(
+			'cml-dropdown-switcher',
+			CML_URL . 'assets/dropdown-switcher.js',
+			array(),
+			defined( 'CML_BUILD_ID' ) ? CML_BUILD_ID : '0',
+			true
+		);
 	}
 
 	public static function render(): void {

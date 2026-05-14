@@ -197,25 +197,70 @@ final class LanguageSwitcher {
 	 * @param array<int, array{code:string,native:string,name:string,flag:string,url:string,is_current:bool}> $items
 	 */
 	private static function render_dropdown( array $items, bool $show_flag, bool $show_native, bool $show_code ): string {
-		// Pure HTML select — onchange via small inline script.
-		$out  = '<form class="cml-language-switcher cml-style-dropdown" method="get" action="" onsubmit="event.preventDefault();window.location.href=this.elements.cml_lang_url.value;">';
-		$out .= '<select name="cml_lang_url" onchange="window.location.href=this.value">';
+		// Custom button + list so flag <img> tags can sit inside the menu —
+		// native <select>/<option> can't render images.
+		$current = null;
 		foreach ( $items as $i ) {
-			$label = '';
-			if ( $show_flag && '' !== $i['flag'] ) {
-				$label .= self::flag_emoji( $i['flag'] ) . ' ';
+			if ( $i['is_current'] ) {
+				$current = $i;
+				break;
+			}
+		}
+		if ( null === $current && ! empty( $items ) ) {
+			$current = $items[0];
+		}
+
+		$current_label = '';
+		if ( null !== $current ) {
+			$parts = array();
+			if ( $show_flag && '' !== $current['flag'] ) {
+				$parts[] = self::flag_markup( $current['flag'], $current['name'] );
 			}
 			if ( $show_native ) {
-				$label .= $i['native'];
+				$parts[] = '<span class="cml-native">' . esc_html( $current['native'] ) . '</span>';
 			} else {
-				$label .= $i['name'];
+				$parts[] = '<span class="cml-name">' . esc_html( $current['name'] ) . '</span>';
 			}
 			if ( $show_code ) {
-				$label .= ' (' . $i['code'] . ')';
+				$parts[] = '<span class="cml-code">(' . esc_html( $current['code'] ) . ')</span>';
 			}
-			$out .= '<option value="' . esc_url( $i['url'] ) . '"' . selected( $i['is_current'], true, false ) . '>' . esc_html( $label ) . '</option>';
+			$current_label = implode( ' ', $parts );
 		}
-		$out .= '</select></form>';
+
+		// Ensure the dropdown's toggle JS is loaded even when the floating
+		// switcher is off (shortcode / widget use). wp_enqueue_script is
+		// idempotent, so calling it again from FloatingSwitcher is harmless.
+		if ( function_exists( 'wp_enqueue_script' ) && ! wp_script_is( 'cml-dropdown-switcher', 'enqueued' ) ) {
+			wp_enqueue_script(
+				'cml-dropdown-switcher',
+				CML_URL . 'assets/dropdown-switcher.js',
+				array(),
+				defined( 'CML_BUILD_ID' ) ? CML_BUILD_ID : '0',
+				true
+			);
+		}
+		if ( function_exists( 'wp_enqueue_style' ) && ! wp_style_is( 'cml-floating-switcher', 'enqueued' ) ) {
+			wp_enqueue_style(
+				'cml-floating-switcher',
+				CML_URL . 'assets/floating-switcher.css',
+				array(),
+				defined( 'CML_BUILD_ID' ) ? CML_BUILD_ID : '0'
+			);
+		}
+
+		$out  = '<div class="cml-language-switcher cml-style-dropdown" data-cml-dropdown>';
+		$out .= '<button type="button" class="cml-dropdown-toggle" aria-haspopup="listbox" aria-expanded="false">';
+		$out .= $current_label;
+		$out .= '<span class="cml-dropdown-arrow" aria-hidden="true">▾</span>';
+		$out .= '</button>';
+		$out .= '<ul class="cml-dropdown-menu" role="listbox" hidden>';
+		foreach ( $items as $i ) {
+			$out .= '<li role="option"' . ( $i['is_current'] ? ' aria-selected="true"' : '' ) . '>';
+			$out .= '<a href="' . esc_url( $i['url'] ) . '" lang="' . esc_attr( $i['code'] ) . '">';
+			$out .= self::render_label( $i, $show_flag, $show_native, $show_code );
+			$out .= '</a></li>';
+		}
+		$out .= '</ul></div>';
 		return $out;
 	}
 
