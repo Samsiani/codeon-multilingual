@@ -2,6 +2,18 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.28] — 2026-05-14
+
+### Changed
+- **Menu translation flow → "Menu sync".** Renamed the user-facing action and added a `sync_menu()` API:
+  - The meta-box on Appearance → Menus now reads "Sync to **EN**" for missing siblings and "Edit **EN** menu · Re-sync" for existing ones. Uppercase 2-letter codes (`RU` / `KA` / `EN`) match the user's preferred convention.
+  - The created menu is now named `{Source name} ({CODE})` — e.g. *"Main navigation (EN)"* instead of *"Main navigation (English)"*.
+  - New `sync_menu()` is idempotent and authoritative: on an existing target it wipes all items and re-clones from source, so newly-translated posts/terms appear and removed source items disappear from the translation. `translate_menu()` is preserved as a non-destructive "create if missing" path.
+- **Menu item titles use the translated post's title.** When the admin left the menu item's "Navigation Label" blank (i.e. `menu_item.post_title === ''`), the clone now also passes an empty title so the linked translated post's title renders. Before, a Georgian-source menu cloned into English carried over the Georgian display title (`მთავარი` instead of `Home`). Admin overrides are still preserved.
+
+### Fixed
+- `get_term_by()` returns `false` (not `null`) for no-match — my counter loop in `create_translated_menu_term` used `null !== get_term_by(...)`, which is always true for `false`, so the loop spun until the 50-step safety bail and the method returned 0. That's why every translate-menu click died with "Failed to create menu translation" even after the v0.7.27 attempt.
+
 ## [0.7.27] — 2026-05-14
 
 ### Fixed

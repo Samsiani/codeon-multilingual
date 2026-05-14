@@ -33,6 +33,8 @@ final class MenuTranslator {
 
 	public const ACTION_TRANSLATE = 'cml_translate_menu';
 	public const NONCE_TRANSLATE  = 'cml_translate_menu';
+	public const ACTION_SYNC      = 'cml_sync_menu';
+	public const NONCE_SYNC       = 'cml_sync_menu';
 
 	private static bool $registered = false;
 
@@ -48,6 +50,7 @@ final class MenuTranslator {
 		// Admin: side meta-box on nav-menus.php + handler.
 		add_action( 'admin_init', array( self::class, 'register_meta_box' ) );
 		add_action( 'admin_post_' . self::ACTION_TRANSLATE, array( self::class, 'handle_translate' ) );
+		add_action( 'admin_post_' . self::ACTION_SYNC,      array( self::class, 'handle_sync' ) );
 
 		// Frontend: swap each theme location's menu for the current-language sibling.
 		add_filter( 'theme_mod_nav_menu_locations', array( self::class, 'filter_theme_locations' ) );
@@ -62,6 +65,11 @@ final class MenuTranslator {
 	 *
 	 * @return int new menu's term_id, or 0 on failure
 	 */
+	/**
+	 * Create the target-language menu if it doesn't exist, then clone items.
+	 * Idempotent: existing sibling short-circuits and returns its ID without
+	 * re-cloning (use sync_menu() for that).
+	 */
 	public static function translate_menu( int $source_menu_id, string $target_lang ): int {
 		if ( $source_menu_id <= 0 || '' === $target_lang ) {
 			return 0;
@@ -74,7 +82,6 @@ final class MenuTranslator {
 			return 0;
 		}
 
-		// Idempotency: existing sibling short-circuits.
 		$group_id = TranslationGroups::get_term_group_id( $source_menu_id );
 		if ( null === $group_id ) {
 			$group_id = $source_menu_id;
@@ -85,11 +92,6 @@ final class MenuTranslator {
 			return $existing;
 		}
 
-		// Menus differ from regular taxonomies: wp_insert_term rejects
-		// duplicate names within the same taxonomy. TermTranslator::duplicate
-		// (which we use for product_cat / category etc.) would re-use the
-		// source name and fail here, so we do the create + language-tag
-		// inline with a language-suffixed name.
 		$target_menu_id = self::create_translated_menu_term( $source, $target_lang, $group_id );
 		if ( $target_menu_id <= 0 ) {
 			return 0;
@@ -102,16 +104,66 @@ final class MenuTranslator {
 	}
 
 	/**
+	 * Sync items from the source menu into the target-language menu.
+	 * Creates the target if it doesn't exist, otherwise empties it and
+	 * re-clones from the source so newly-translated posts/terms show up
+	 * and removed source items disappear from the translation.
+	 *
+	 * Source title overrides are preserved; missing translations fall
+	 * back to the original post/term (matches "if not translated, copy
+	 * original" rule).
+	 *
+	 * @return int target menu id, or 0 on failure
+	 */
+	public static function sync_menu( int $source_menu_id, string $target_lang ): int {
+		if ( $source_menu_id <= 0 || '' === $target_lang ) {
+			return 0;
+		}
+		if ( ! Languages::exists_and_active( $target_lang ) ) {
+			return 0;
+		}
+		$source = get_term( $source_menu_id, 'nav_menu' );
+		if ( ! ( $source instanceof WP_Term ) ) {
+			return 0;
+		}
+
+		$group_id = TranslationGroups::get_term_group_id( $source_menu_id );
+		if ( null === $group_id ) {
+			$group_id = $source_menu_id;
+		}
+		$siblings   = TranslationGroups::get_term_siblings( $group_id );
+		$target_id  = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+
+		if ( $target_id <= 0 ) {
+			$target_id = self::create_translated_menu_term( $source, $target_lang, $group_id );
+			if ( $target_id <= 0 ) {
+				return 0;
+			}
+		} else {
+			// Existing target — wipe items so the sync is authoritative.
+			$existing_items = wp_get_nav_menu_items( $target_id, array( 'update_post_term_cache' => false ) );
+			if ( is_array( $existing_items ) ) {
+				foreach ( $existing_items as $item ) {
+					wp_delete_post( (int) $item->db_id, true );
+				}
+			}
+		}
+
+		self::clone_items( $source_menu_id, $target_id, $target_lang );
+		do_action( 'cml_menu_translation_synced', $target_id, $source_menu_id, $target_lang );
+		return $target_id;
+	}
+
+	/**
 	 * Create the nav_menu term for the translation. Adds the language label
 	 * to the name so wp_insert_term's name-uniqueness check passes, then
 	 * writes the cml_term_language row directly so TranslationGroups picks
 	 * up the new sibling without going through TermTranslator's hooks.
 	 */
 	private static function create_translated_menu_term( WP_Term $source, string $target_lang, int $group_id ): int {
-		$lang_obj   = Languages::get( $target_lang );
-		$suffix     = $lang_obj ? (string) $lang_obj->native : strtoupper( $target_lang );
-		$base_name  = (string) $source->name;
-		$candidate  = $base_name . ' (' . $suffix . ')';
+		$suffix    = strtoupper( $target_lang );
+		$base_name = (string) $source->name;
+		$candidate = $base_name . ' (' . $suffix . ')';
 
 		// Disambiguate if a menu with that exact name already exists (e.g.
 		// admin previously created one manually). get_term_by returns false
@@ -176,10 +228,23 @@ final class MenuTranslator {
 	// ---- Cloning ------------------------------------------------------------
 
 	private static function clone_items( int $source_menu_id, int $target_menu_id, string $target_lang ): void {
-		$source_items = wp_get_nav_menu_items(
-			$source_menu_id,
-			array( 'update_post_term_cache' => false )
-		);
+		// Bypass our own placeholder-expansion filter via the explicit
+		// switcher flag — otherwise the language-switcher placeholders
+		// would already be expanded into rendered <img> + native-name
+		// markup and we'd clone those synthesized rows instead of the
+		// raw placeholder. remove_filter() proved too brittle here
+		// because the static-method callback identity isn't always equal
+		// across class autoload paths.
+		\Samsiani\CodeonMultilingual\Frontend\NavMenuSwitcher::bypass_expansion( true );
+		try {
+			$source_items = wp_get_nav_menu_items(
+				$source_menu_id,
+				array( 'update_post_term_cache' => false )
+			);
+		} finally {
+			\Samsiani\CodeonMultilingual\Frontend\NavMenuSwitcher::bypass_expansion( false );
+		}
+
 		if ( ! is_array( $source_items ) || empty( $source_items ) ) {
 			return;
 		}
@@ -227,13 +292,37 @@ final class MenuTranslator {
 			$target_lang
 		);
 
+		// Title resolution. WP fills `$source->title` from the LINKED post's
+		// title when the menu_item's own post_title is empty. So we can't
+		// just copy $source->title — that would carry the source-language
+		// page title (e.g. "მთავარი") into the translated menu.
+		//
+		// Strategy:
+		//   1. Read menu_item.post_title from the DB. Empty → admin used the
+		//      linked post's title automatically → pass empty so the
+		//      translated post's title renders in the new menu.
+		//   2. Non-empty BUT identical to the source page's current title
+		//      → almost certainly auto-filled (older WP behaviour) → also
+		//      pass empty so the translated title shows.
+		//   3. Non-empty AND different → admin override → preserve verbatim.
+		$source_post = get_post( (int) $source->db_id );
+		$raw_title   = $source_post instanceof \WP_Post ? (string) $source_post->post_title : '';
+
+		$title = $raw_title;
+		if ( '' !== $raw_title && 'post_type' === (string) $source->type ) {
+			$linked = get_post( (int) $source->object_id );
+			if ( $linked instanceof \WP_Post && (string) $linked->post_title === $raw_title ) {
+				$title = '';
+			}
+		}
+
 		$args = array(
 			'menu-item-type'        => (string) $source->type,
 			'menu-item-object'      => (string) $source->object,
 			'menu-item-object-id'   => $translated_object_id,
 			'menu-item-parent-id'   => 0, // wired in pass 2
 			'menu-item-position'    => (int) $source->menu_order,
-			'menu-item-title'       => (string) $source->title,
+			'menu-item-title'       => $title,
 			'menu-item-url'         => (string) $source->url,
 			'menu-item-description' => (string) $source->description,
 			'menu-item-attr-title'  => (string) $source->attr_title,
@@ -412,23 +501,28 @@ final class MenuTranslator {
 				if ( $code === $source_lang ) {
 					continue;
 				}
-				$sibling = (int) ( array_search( $code, $siblings, true ) ?: 0 );
+				$sibling   = (int) ( array_search( $code, $siblings, true ) ?: 0 );
+				$code_upper = strtoupper( (string) $code );
 				?>
 				<li style="margin-bottom:6px">
 					<?php if ( $sibling > 0 ) : ?>
 						<span class="dashicons dashicons-yes-alt" style="color:#46b450"></span>
 						<a href="<?php echo esc_url( self::menu_edit_url( $sibling ) ); ?>">
 							<?php
-							/* translators: %s: language native name */
-							printf( esc_html__( 'Edit %s menu', 'codeon-multilingual' ), esc_html( $lang->native ) );
+							/* translators: %s: language code uppercase, e.g. RU */
+							printf( esc_html__( 'Edit %s menu', 'codeon-multilingual' ), esc_html( $code_upper ) );
 							?>
+						</a>
+						&nbsp;·&nbsp;
+						<a href="<?php echo esc_url( self::sync_url( $menu_id, (string) $code ) ); ?>" title="<?php esc_attr_e( 'Re-sync items from the source menu — translated post/term references are refreshed, untranslated items copy the source.', 'codeon-multilingual' ); ?>">
+							<?php esc_html_e( 'Re-sync', 'codeon-multilingual' ); ?>
 						</a>
 					<?php else : ?>
 						<span class="dashicons dashicons-plus-alt" style="color:#2271b1"></span>
-						<a href="<?php echo esc_url( self::translate_url( $menu_id, (string) $code ) ); ?>">
+						<a href="<?php echo esc_url( self::sync_url( $menu_id, (string) $code ) ); ?>">
 							<?php
-							/* translators: %s: language native name */
-							printf( esc_html__( 'Create %s translation', 'codeon-multilingual' ), esc_html( $lang->native ) );
+							/* translators: %s: language code uppercase, e.g. RU */
+							printf( esc_html__( 'Sync to %s', 'codeon-multilingual' ), esc_html( $code_upper ) );
 							?>
 						</a>
 					<?php endif; ?>
@@ -436,7 +530,7 @@ final class MenuTranslator {
 			<?php endforeach; ?>
 		</ul>
 		<p class="description">
-			<?php esc_html_e( 'Translating a menu copies its items into the new language. Each item is rewired to the translated post/term when one exists; untranslated targets stay pointed at the source.', 'codeon-multilingual' ); ?>
+			<?php esc_html_e( 'Syncing creates / refreshes a per-language copy of this menu. Each item is rewired to the translated post / term when one exists; untranslated items copy the source. The new menu is named with the original name plus the language code in parentheses.', 'codeon-multilingual' ); ?>
 		</p>
 		<?php
 	}
@@ -476,6 +570,41 @@ final class MenuTranslator {
 			),
 			self::NONCE_TRANSLATE . '_' . $source_menu_id . '_' . $target_lang
 		);
+	}
+
+	public static function sync_url( int $source_menu_id, string $target_lang ): string {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => self::ACTION_SYNC,
+					'source' => $source_menu_id,
+					'target' => $target_lang,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			self::NONCE_SYNC . '_' . $source_menu_id . '_' . $target_lang
+		);
+	}
+
+	public static function handle_sync(): void {
+		if ( ! current_user_can( 'edit_theme_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
+		}
+		$source = isset( $_GET['source'] ) ? (int) $_GET['source'] : 0;
+		$target = isset( $_GET['target'] ) ? sanitize_key( wp_unslash( (string) $_GET['target'] ) ) : '';
+		check_admin_referer( self::NONCE_SYNC . '_' . $source . '_' . $target );
+
+		if ( $source <= 0 || '' === $target ) {
+			wp_die( esc_html__( 'Invalid request.', 'codeon-multilingual' ) );
+		}
+
+		$new_id = self::sync_menu( $source, $target );
+		if ( $new_id <= 0 ) {
+			wp_die( esc_html__( 'Failed to sync menu.', 'codeon-multilingual' ) );
+		}
+
+		wp_safe_redirect( self::menu_edit_url( $new_id ) );
+		exit;
 	}
 
 	public static function menu_edit_url( int $menu_id ): string {

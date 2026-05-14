@@ -62,6 +62,18 @@ final class NavMenuSwitcher {
 
 	private static bool $registered = false;
 
+	/**
+	 * Bypass flag — set by callers that need the RAW menu items without
+	 * placeholder expansion (e.g. MenuTranslator cloning source items into
+	 * a translated menu). `remove_filter()` is too brittle here because the
+	 * static-method callback identity depends on autoload class resolution.
+	 */
+	private static bool $bypass_expansion = false;
+
+	public static function bypass_expansion( bool $on ): void {
+		self::$bypass_expansion = $on;
+	}
+
 	public static function register(): void {
 		if ( self::$registered ) {
 			return;
@@ -266,6 +278,11 @@ final class NavMenuSwitcher {
 	public static function expand_placeholder( $items, $menu = null, $args = array() ) {
 		unset( $menu, $args );
 		if ( ! is_array( $items ) || empty( $items ) ) {
+			return $items;
+		}
+		// Hard bypass — set by callers cloning raw menu items
+		// (MenuTranslator) so they don't see synthesized rows.
+		if ( self::$bypass_expansion ) {
 			return $items;
 		}
 		// Skip in admin so the menu editor shows the placeholder, not the expansion.
