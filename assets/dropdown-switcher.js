@@ -37,17 +37,28 @@
 				toggle.setAttribute('aria-expanded', 'true');
 				menu.removeAttribute('hidden');
 
-				// CSS `width: max-content` is unreliable for position-absolute
-				// menus anchored with right:0 (browsers can clamp the width to
-				// the containing block). Measure each link's actual content
-				// width and pin the menu's minWidth so the longest item
-				// (e.g. "ქართული") always fits.
-				var widest = 0;
+				// Equalise toggle, menu and the floating-switcher container
+				// so all three share the same width when the menu is open.
+				// Step 1: find the widest natural content (toggle or any
+				// menu link) and widen the toggle to fit it.
+				var widest = toggle.scrollWidth;
 				menu.querySelectorAll('a').forEach(function (a) {
 					widest = Math.max(widest, a.scrollWidth);
 				});
 				if (widest > 0) {
-					// Add 2 px to absorb sub-pixel rounding in some browsers.
+					toggle.style.minWidth = (widest + 2) + 'px';
+				}
+
+				// Step 2: the floating-switcher (if any) wraps the toggle
+				// with its own padding, so its outer width is `toggle + pad`.
+				// Pin the menu's min-width to the floating-switcher's
+				// offsetWidth so the menu visually matches the box that
+				// triggered it. Reading offsetWidth here forces a reflow,
+				// so the new toggle width is already applied.
+				var floatingBox = wrapper.closest('.cml-floating-switcher');
+				if (floatingBox) {
+					menu.style.minWidth = floatingBox.offsetWidth + 'px';
+				} else if (widest > 0) {
 					menu.style.minWidth = (widest + 2) + 'px';
 				}
 

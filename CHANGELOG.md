@@ -2,6 +2,13 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.15] — 2026-05-14
+
+### Fixed
+- **Menu now matches floating-switcher box width exactly.** Two changes:
+  - CSS: inside `.cml-floating-switcher`, the dropdown wrapper is `position: static` so the menu's `right: 0` anchors to the floating-switcher's outer edge (not 10 px inside it).
+  - JS: after the toggle widens to fit the longest item, the menu's `min-width` is pinned to `floatingBox.offsetWidth`, so the menu visually equals the box that triggered it.
+
 ## [0.7.14] — 2026-05-14
 
 ### Fixed

@@ -83,6 +83,12 @@ ul.cml-language-switcher,
     position: relative;
     display: inline-block;
 }
+/* Inside the floating switcher, defer the menu's containing block to the
+   floating-switcher itself so right:0 anchors to the OUTER (padded) edge
+   and the menu visually matches the floating-switcher card width. */
+.cml-floating-switcher .cml-language-switcher.cml-style-dropdown {
+    position: static;
+}
 .cml-language-switcher .cml-dropdown-toggle {
     display: inline-flex !important;
     align-items: center;
