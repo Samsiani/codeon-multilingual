@@ -165,6 +165,45 @@ final class LanguageCatalog {
 		return __DIR__ . '/../../res/languages.json';
 	}
 
+	/**
+	 * Public URL of the bundled SVG flag for an ISO 3166-1 alpha-2 country code,
+	 * or null when no SVG ships for that code (we bundle ~60 — the catalog's
+	 * coverage, not every WPML code). Callers should fall back to flag_emoji()
+	 * for unknown codes so rendering never breaks.
+	 */
+	public static function flag_svg_url( string $country_code ): ?string {
+		$code = strtolower( trim( $country_code ) );
+		if ( ! self::flag_svg_exists( $code ) ) {
+			return null;
+		}
+		if ( defined( 'CML_URL' ) ) {
+			return CML_URL . 'res/flags/' . $code . '.svg';
+		}
+		return 'res/flags/' . $code . '.svg';
+	}
+
+	/** Filesystem path of the SVG asset; null when missing. */
+	public static function flag_svg_path( string $country_code ): ?string {
+		$code = strtolower( trim( $country_code ) );
+		$path = self::flags_dir() . '/' . $code . '.svg';
+		return is_readable( $path ) ? $path : null;
+	}
+
+	public static function flag_svg_exists( string $country_code ): bool {
+		$code = strtolower( trim( $country_code ) );
+		if ( 2 !== strlen( $code ) || ! ctype_alpha( $code ) ) {
+			return false;
+		}
+		return is_readable( self::flags_dir() . '/' . $code . '.svg' );
+	}
+
+	private static function flags_dir(): string {
+		if ( defined( 'CML_PATH' ) ) {
+			return rtrim( CML_PATH, '/' ) . '/res/flags';
+		}
+		return __DIR__ . '/../../res/flags';
+	}
+
 	/** Reset the request-static cache. Call this from tests after pointing file_path elsewhere. */
 	public static function flush_cache(): void {
 		self::$cache = null;

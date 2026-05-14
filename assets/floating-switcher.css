@@ -39,6 +39,15 @@
     color: #fff;
 }
 
+.cml-floating-switcher .cml-flag-svg,
+.cml-language-switcher .cml-flag-svg {
+    height: 14px;
+    width: auto;
+    vertical-align: -2px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
 .cml-floating-switcher .cml-style-dropdown select {
     border: 1px solid #ddd;
     padding: 4px 22px 4px 8px;

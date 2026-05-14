@@ -111,7 +111,8 @@ final class SetupWizard {
 				.cml-lang-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 3px; cursor: pointer; }
 				.cml-lang-item:hover { background: #f0f6fc; }
 				.cml-lang-item input { margin: 0; }
-				.cml-lang-flag { font-size: 18px; line-height: 1; }
+				.cml-lang-flag { font-size: 18px; line-height: 1; display: inline-flex; align-items: center; width: 22px; justify-content: center; }
+				.cml-lang-flag-svg { display: block; width: 22px; height: auto; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
 				.cml-lang-meta { display: flex; flex-direction: column; }
 				.cml-lang-name { font-weight: 500; color: #1d2327; }
 				.cml-lang-native { font-size: 12px; color: #646970; }
@@ -490,6 +491,10 @@ final class SetupWizard {
 					continue;
 				}
 				$is_checked = isset( $preselected_set[ $entry['code'] ] );
+				$svg_url    = LanguageCatalog::flag_svg_url( $entry['flag'] );
+				$flag_html  = null !== $svg_url
+					? '<img class="cml-lang-flag-svg" src="' . esc_url( $svg_url ) . '" alt="" loading="lazy">'
+					: esc_html( LanguageCatalog::flag_emoji( $entry['flag'] ) );
 				printf(
 					'<label class="cml-lang-item" data-haystack="%1$s">
 						<input type="%2$s" name="%3$s" value="%4$s"%5$s>
@@ -504,7 +509,7 @@ final class SetupWizard {
 					esc_attr( $field_name ),
 					esc_attr( $entry['code'] ),
 					$is_checked ? ' checked' : '',
-					esc_html( LanguageCatalog::flag_emoji( $entry['flag'] ) ),
+					$flag_html,
 					esc_html( $entry['name'] ),
 					esc_html( $entry['native'] ),
 					esc_html( $entry['code'] )

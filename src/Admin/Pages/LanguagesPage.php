@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Admin\Pages;
 
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Core\Backfill;
+use Samsiani\CodeonMultilingual\Core\LanguageCatalog;
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 
@@ -310,6 +311,78 @@ final class LanguagesPage {
 					<?php esc_html_e( 'Cancel', 'codeon-multilingual' ); ?>
 				</a>
 			</form>
+
+			<?php if ( ! $is_edit ) : ?>
+				<?php
+				// Trim the catalog to just the fields the JS uses so we don't ship
+				// `major` / `description` bytes to every admin page load.
+				$catalog_map = array();
+				foreach ( LanguageCatalog::all() as $entry ) {
+					$catalog_map[ $entry['code'] ] = array(
+						'locale' => $entry['locale'],
+						'name'   => $entry['name'],
+						'native' => $entry['native'],
+						'flag'   => $entry['flag'],
+						'rtl'    => $entry['rtl'],
+					);
+				}
+				?>
+				<script>
+					(function () {
+						const CATALOG = <?php echo wp_json_encode( $catalog_map ); ?>;
+						const codeInput   = document.getElementById('cml-code');
+						const localeInput = document.getElementById('cml-locale');
+						const nameInput   = document.getElementById('cml-name');
+						const nativeInput = document.getElementById('cml-native');
+						const flagInput   = document.getElementById('cml-flag');
+						const rtlInput    = document.querySelector('input[name="rtl"]');
+						if (!codeInput) return;
+
+						function applyEntry(entry) {
+							// Only overwrite fields the admin hasn't manually customised.
+							if (!localeInput.value || localeInput.dataset.cmlAuto) {
+								localeInput.value = entry.locale;
+								localeInput.dataset.cmlAuto = '1';
+							}
+							if (!nameInput.value || nameInput.dataset.cmlAuto) {
+								nameInput.value = entry.name;
+								nameInput.dataset.cmlAuto = '1';
+							}
+							if (!nativeInput.value || nativeInput.dataset.cmlAuto) {
+								nativeInput.value = entry.native;
+								nativeInput.dataset.cmlAuto = '1';
+							}
+							if (!flagInput.value || flagInput.dataset.cmlAuto) {
+								flagInput.value = entry.flag;
+								flagInput.dataset.cmlAuto = '1';
+							}
+							if (rtlInput && rtlInput.dataset.cmlAuto !== 'manual') {
+								rtlInput.checked = entry.rtl === 1;
+								rtlInput.dataset.cmlAuto = '1';
+							}
+						}
+
+						codeInput.addEventListener('input', function () {
+							const code = codeInput.value.trim().toLowerCase();
+							if (CATALOG[code]) {
+								applyEntry(CATALOG[code]);
+							}
+						});
+
+						// Clear the auto-fill marker once the admin actively edits a field;
+						// from then on we won't overwrite it.
+						[localeInput, nameInput, nativeInput, flagInput].forEach(function (el) {
+							if (!el) return;
+							el.addEventListener('input', function () { delete el.dataset.cmlAuto; });
+						});
+						if (rtlInput) {
+							rtlInput.addEventListener('change', function () {
+								rtlInput.dataset.cmlAuto = 'manual';
+							});
+						}
+					})();
+				</script>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

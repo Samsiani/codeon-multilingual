@@ -141,4 +141,54 @@ final class LanguageCatalogTest extends TestCase {
 		$this->assertNotNull( $en );
 		$this->assertSame( 0, $en['rtl'] );
 	}
+
+	public function test_flag_svg_url_returns_url_for_bundled_codes(): void {
+		$url = LanguageCatalog::flag_svg_url( 'ge' );
+		$this->assertNotNull( $url );
+		$this->assertStringEndsWith( 'res/flags/ge.svg', (string) $url );
+	}
+
+	public function test_flag_svg_url_lowercases_input(): void {
+		$lower = LanguageCatalog::flag_svg_url( 'ge' );
+		$upper = LanguageCatalog::flag_svg_url( 'GE' );
+		$this->assertSame( $lower, $upper );
+	}
+
+	public function test_flag_svg_url_returns_null_for_unbundled_or_invalid_codes(): void {
+		// 'zz' isn't an ISO 3166 code; the others fail the length / alpha check.
+		$this->assertNull( LanguageCatalog::flag_svg_url( 'zz' ) );
+		$this->assertNull( LanguageCatalog::flag_svg_url( '' ) );
+		$this->assertNull( LanguageCatalog::flag_svg_url( 'g' ) );
+		$this->assertNull( LanguageCatalog::flag_svg_url( '12' ) );
+		$this->assertNull( LanguageCatalog::flag_svg_url( 'usa' ) );
+	}
+
+	public function test_flag_svg_path_points_at_readable_svg_file(): void {
+		$path = LanguageCatalog::flag_svg_path( 'us' );
+		$this->assertNotNull( $path );
+		$this->assertFileExists( (string) $path );
+		$head = (string) file_get_contents( (string) $path, false, null, 0, 64 );
+		$this->assertStringStartsWith( '<svg', $head );
+	}
+
+	public function test_flag_svg_exists_matches_path_resolution(): void {
+		$this->assertTrue( LanguageCatalog::flag_svg_exists( 'ge' ) );
+		$this->assertFalse( LanguageCatalog::flag_svg_exists( 'zz' ) );
+	}
+
+	public function test_every_catalog_entry_with_a_flag_code_ships_an_svg(): void {
+		// Catalog and SVG bundle must travel together. If you add a language to
+		// res/languages.json, drop the matching SVG into res/flags/ — otherwise
+		// the wizard and switcher fall back to emoji unnecessarily.
+		$missing = array();
+		foreach ( LanguageCatalog::all() as $entry ) {
+			if ( '' === $entry['flag'] ) {
+				continue;
+			}
+			if ( ! LanguageCatalog::flag_svg_exists( $entry['flag'] ) ) {
+				$missing[] = $entry['code'] . ' → ' . $entry['flag'];
+			}
+		}
+		$this->assertSame( array(), $missing, 'Catalog entries missing SVG flags: ' . implode( ', ', $missing ) );
+	}
 }

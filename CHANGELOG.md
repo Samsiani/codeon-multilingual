@@ -2,6 +2,24 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.5] — 2026-05-14
+
+### Added
+- **Bundled SVG flag library** under `res/flags/` — 60 country flags (4×3 aspect ratio) sourced from [lipis/flag-icons](https://github.com/lipis/flag-icons) (MIT, license bundled at `res/flags/LICENSE`). Total payload ~560 KB; loaded lazily via `<img loading="lazy">` so they don't block page renders.
+- **`LanguageCatalog::flag_svg_url()` / `flag_svg_path()` / `flag_svg_exists()`** — resolve a country code to the bundled SVG asset, returning `null` for unbundled codes so callers fall back to the existing emoji renderer gracefully.
+- **Auto-fill in the admin "Add Language" form** — typing a code (e.g. `ka`) auto-populates locale, English name, native name, flag, and RTL from the catalog. Admin can still edit any field; once edited, the field is marked manual and the auto-fill stops overwriting it.
+
+### Changed
+- **Frontend switcher** (`LanguageSwitcher`, floating + shortcode + widget) now renders flags as bundled `<img>` SVGs by default, with emoji fallback when no SVG ships for the code. Fixes the long-standing Windows desktop rendering issue (Microsoft doesn't ship flag emoji glyphs, so users saw letter pairs).
+- **Setup wizard catalog grid** uses SVG flags too.
+
+### Tests
+- 6 new tests in `LanguageCatalogTest` covering SVG URL resolution, case-insensitivity, invalid input, file readability, and a contract check that every catalog entry with a flag code ships a matching SVG. Total: 55 → 61 passing.
+
+### Notes
+- Plugin zip grows by ~250 KB compressed (SVG payload) — still in the lightweight pitch range.
+- Emoji rendering path is preserved as a fallback, so older / very stripped-down installs that delete `res/flags/` keep working.
+
 ## [0.7.4] — 2026-05-14
 
 ### Fixed

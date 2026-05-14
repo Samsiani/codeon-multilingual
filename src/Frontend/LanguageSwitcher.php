@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Frontend;
 
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
+use Samsiani\CodeonMultilingual\Core\LanguageCatalog;
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 use Samsiani\CodeonMultilingual\Url\Router;
@@ -224,7 +225,7 @@ final class LanguageSwitcher {
 	private static function render_label( array $i, bool $show_flag, bool $show_native, bool $show_code ): string {
 		$parts = array();
 		if ( $show_flag && '' !== $i['flag'] ) {
-			$parts[] = '<span class="cml-flag">' . esc_html( self::flag_emoji( $i['flag'] ) ) . '</span>';
+			$parts[] = self::flag_markup( $i['flag'], $i['name'] );
 		}
 		if ( $show_native ) {
 			$parts[] = '<span class="cml-native">' . esc_html( $i['native'] ) . '</span>';
@@ -235,6 +236,19 @@ final class LanguageSwitcher {
 			$parts[] = '<span class="cml-code">(' . esc_html( $i['code'] ) . ')</span>';
 		}
 		return implode( ' ', $parts );
+	}
+
+	/**
+	 * Prefer the bundled SVG flag (consistent rendering on Windows / older
+	 * systems that lack flag-emoji glyphs) and fall back to the Unicode emoji
+	 * when no SVG ships for the country code.
+	 */
+	private static function flag_markup( string $country_code, string $alt ): string {
+		$svg_url = LanguageCatalog::flag_svg_url( $country_code );
+		if ( null !== $svg_url ) {
+			return '<img class="cml-flag cml-flag-svg" src="' . esc_url( $svg_url ) . '" alt="' . esc_attr( $alt ) . '" loading="lazy">';
+		}
+		return '<span class="cml-flag">' . esc_html( self::flag_emoji( $country_code ) ) . '</span>';
 	}
 
 	/**
