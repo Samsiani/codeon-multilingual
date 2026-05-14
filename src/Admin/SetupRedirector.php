@@ -33,6 +33,24 @@ final class SetupRedirector {
 		self::$registered = true;
 
 		add_action( 'admin_init', array( self::class, 'maybe_redirect' ), 1 );
+
+		// Defensive: WP's admin-post.php fires `admin_post` (no suffix) when the
+		// request has no `action` parameter. v0.7.2's welcome form pointed there
+		// by accident, so bookmarks / browser-history entries can still hit
+		// `admin-post.php?page=cml-setup` and white-screen. Redirect those to
+		// admin.php so the wizard renders instead of dying silently.
+		add_action( 'admin_post_nopriv', array( self::class, 'rescue_admin_post_url' ) );
+		add_action( 'admin_post', array( self::class, 'rescue_admin_post_url' ) );
+	}
+
+	public static function rescue_admin_post_url(): void {
+		$page = isset( $_REQUEST['page'] ) ? sanitize_key( wp_unslash( (string) $_REQUEST['page'] ) ) : '';
+		if ( SetupWizard::PAGE_SLUG !== $page ) {
+			return;
+		}
+		$step = isset( $_REQUEST['step'] ) ? max( 1, min( 4, (int) $_REQUEST['step'] ) ) : 1;
+		wp_safe_redirect( SetupWizard::url( $step ) );
+		exit;
 	}
 
 	/** Called from Activator::activate on the activation hook. */

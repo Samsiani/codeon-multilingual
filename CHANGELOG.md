@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.4] — 2026-05-14
+
+### Fixed
+- **Defensive rescue for `admin-post.php?page=cml-setup` URLs.** The v0.7.2 bug pointed the welcome-step form at `admin-post.php`; v0.7.3 fixed the form, but bookmarks and browser-history entries can still hit the bad URL and white-screen (admin-post.php dies silently when no `action` is set). `SetupRedirector::rescue_admin_post_url` now hooks `admin_post` + `admin_post_nopriv`, recognises `page=cml-setup`, and 302-redirects to the canonical `admin.php?page=cml-setup&step=<n>` URL so the wizard always opens instead of going blank.
+
 ## [0.7.3] — 2026-05-14
 
 ### Fixed
