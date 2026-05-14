@@ -87,7 +87,6 @@ ul.cml-language-switcher,
     display: inline-flex !important;
     align-items: center;
     gap: 8px;
-    padding: 5px 10px;
     border: 1px solid #dcdcde;
     border-radius: 4px;
     background: #fff;
@@ -226,5 +225,4 @@ ul.cml-language-switcher.cml-style-flags {
         font-size: 12px;
         padding: 4px 8px;
     }
-    .cml-language-switcher .cml-dropdown-toggle { padding: 4px 8px; }
 }

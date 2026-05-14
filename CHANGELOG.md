@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.12] — 2026-05-14
+
+### Changed
+- Dropped the `padding: 5px 10px` from the dropdown toggle button so it sits flush against its container. Mobile media-query override removed too.
+
 ## [0.7.11] — 2026-05-14
 
 ### Fixed
