@@ -2,6 +2,16 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.37] — 2026-05-14
+
+### Added
+- **WooCommerce attribute labels now translatable.** Labels at `/wp-admin/edit.php?post_type=product&page=product_attributes` (e.g. "Color", "Size", "ფერი") live in `wp_woocommerce_attribute_taxonomies` and never pass through `__()`, so until now they rendered the source value in every language. New `Woo/AttributeLabels` registers each label as a source string in the existing strings catalog and hooks `woocommerce_attribute_label` to translate it per language. Translate them under **Multilingual → Strings** (filter by domain = `wc-attribute-label`).
+- **`StringTranslator::register_source()` / `lookup_translation()`** — public API for plugin integrations that bypass gettext. INSERT IGNORE registration + hash-based lookup against the existing per-request compiled map (no extra DB hit on the hot path). Will be reused by v0.8.0's curated WC string registration (page titles, gateway titles, email subjects).
+- **`cml_activated` / `cml_upgraded` actions** — fired from the Activator so modules can re-sync their catalog entries without coupling to specific classes.
+
+### Notes on attribute *terms* (Red / Blue / Small / Large)
+These are already handled. Every `pa_*` taxonomy is in `TermTranslator::translatable_taxonomies()`, so `/wp-admin/edit-tags.php?taxonomy=pa_color&post_type=product` now shows the same per-language column UI categories have (post v0.7.36). Variation attribute slug routing for translated `pa_*` terms is still queued for v0.8.0.
+
 ## [0.7.36] — 2026-05-14
 
 ### Changed

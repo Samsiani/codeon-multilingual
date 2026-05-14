@@ -252,6 +252,66 @@ final class StringTranslator {
 	}
 
 	/**
+	 * Look up a translation for an explicit (domain, context, source) tuple in
+	 * the current language. Used by integrations that bypass `gettext` (e.g.
+	 * WooCommerce attribute labels are returned raw from a custom table — they
+	 * never pass through __() so we hook the dedicated filter instead).
+	 *
+	 * Returns the translation string when one exists for the current language,
+	 * `null` when none has been entered (caller should fall back to source).
+	 * One isset() lookup against the compiled per-request map; no DB hit on
+	 * the hot path.
+	 */
+	public static function lookup_translation( string $domain, string $context, string $source ): ?string {
+		if ( '' === $source ) {
+			return null;
+		}
+		$hash = self::hash( $domain, $context, $source );
+		$map  = self::compiled_map();
+		return $map[ $hash ] ?? null;
+	}
+
+	/**
+	 * Idempotently register a source string in the catalog. Use from integration
+	 * points that produce stable, finite source sets (WC attribute labels, page
+	 * titles, gateway titles, email subjects) so the admin can translate them
+	 * without waiting for organic gettext discovery.
+	 *
+	 * INSERT IGNORE keeps the call cheap and race-safe. Caches are flushed only
+	 * when a row was actually inserted, so re-registering known strings is a
+	 * no-op (~1 SQL round-trip).
+	 */
+	public static function register_source( string $domain, string $context, string $source, ?string $source_language = null ): void {
+		if ( '' === $source ) {
+			return;
+		}
+		if ( strlen( $source ) > self::SOURCE_MAX_LENGTH ) {
+			return;
+		}
+
+		global $wpdb;
+		$hash = self::hash( $domain, $context, $source );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at) VALUES (UNHEX(%s), %s, %s, %s, %s, %d)",
+				$hash,
+				$domain,
+				$context,
+				$source,
+				$source_language ?? self::detect_source_language( $source ),
+				time()
+			)
+		);
+
+		if ( $wpdb->rows_affected > 0 ) {
+			// Row was new — invalidate known-hash + compiled caches so the
+			// new source becomes visible to the admin without a manual flush.
+			self::flush_cache();
+		}
+	}
+
+	/**
 	 * Character-set heuristic for source-language detection.
 	 *
 	 * Most plugin code uses English sources, so 'en' is the fallback. We test

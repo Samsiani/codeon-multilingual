@@ -36,6 +36,7 @@ use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use Samsiani\CodeonMultilingual\Url\PostLinkFilter;
 use Samsiani\CodeonMultilingual\Url\Router;
 use Samsiani\CodeonMultilingual\Url\TermLinkFilter;
+use Samsiani\CodeonMultilingual\Woo\AttributeLabels;
 use Samsiani\CodeonMultilingual\Woo\CartTranslation;
 use Samsiani\CodeonMultilingual\Woo\PageMapping;
 use Samsiani\CodeonMultilingual\Woo\ProductSync;
@@ -93,6 +94,7 @@ final class Plugin {
 		TranslationLock::register();
 		PageMapping::register();
 		CartTranslation::register();
+		AttributeLabels::register();
 
 		// Strings.
 		StringTranslator::register();

@@ -29,6 +29,10 @@ final class Activator {
 		// Arm the first-run redirect to the setup wizard. No-op if the admin
 		// has already completed (or skipped) the wizard on a prior activation.
 		SetupRedirector::arm();
+
+		// Integration point — lets modules (AttributeLabels, …) re-sync their
+		// catalog entries on activation without coupling to specific classes.
+		do_action( 'cml_activated' );
 	}
 
 	/**
@@ -57,6 +61,9 @@ final class Activator {
 		// flag (e.g. flag='ka' instead of 'ge'). Reconciles against the bundled
 		// catalog so the admin Languages list shows real SVG flags.
 		self::backfill_flag_codes();
+
+		// Integration point — same as activation, but for the auto-update path.
+		do_action( 'cml_upgraded' );
 	}
 
 	/**
