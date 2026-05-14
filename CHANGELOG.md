@@ -2,6 +2,15 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.11] — 2026-05-14
+
+### Fixed
+- **Bottom-anchored floating switcher had its menu clipped by the viewport.** When the switcher sits in `bottom-right` / `bottom-left`, the dropdown menu now opens upward (`bottom: calc(100% + 4px)`) instead of downward, so it stays on-screen.
+- **Right-anchored positions align the menu to the toggle's right edge** (`right: 0`) so the menu doesn't push past the viewport.
+- **Arrow indicator flips** depending on whether the menu opens up or down.
+- **Toggle button auto-sizes** to fit flag + native name. Removed the `max-width: 200px` clamp and the `text-overflow: ellipsis` truncation on inner spans so names like "Português (Brasil)" or "中文 (繁體)" render in full.
+- **Dropdown menu auto-sizes** to its widest item — dropped the `max-width: 240px` clamp.
+
 ## [0.7.10] — 2026-05-14
 
 ### Fixed

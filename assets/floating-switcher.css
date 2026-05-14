@@ -95,23 +95,27 @@ ul.cml-language-switcher,
     font: inherit;
     line-height: 1.4;
     cursor: pointer;
-    max-width: 200px;
+    width: auto !important;
+    max-width: none !important;
     white-space: nowrap;
 }
 .cml-language-switcher .cml-dropdown-toggle:hover { background: #f6f7f7; }
 .cml-language-switcher .cml-dropdown-toggle:focus { outline: 2px solid #2271b1; outline-offset: 1px; }
+/* Let language names dictate the button width — no ellipsis truncation. */
 .cml-language-switcher .cml-dropdown-toggle > .cml-name,
 .cml-language-switcher .cml-dropdown-toggle > .cml-native,
 .cml-language-switcher .cml-dropdown-toggle > .cml-code {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
+    overflow: visible;
+    text-overflow: clip;
+    max-width: none !important;
+    white-space: nowrap;
 }
 .cml-language-switcher .cml-dropdown-arrow {
     font-size: 10px;
     opacity: 0.6;
-    margin-left: auto;
+    margin-left: 4px;
     transition: transform 0.15s;
+    flex: 0 0 auto;
 }
 .cml-language-switcher .cml-dropdown-menu {
     position: absolute;
@@ -127,7 +131,8 @@ ul.cml-language-switcher,
     border-radius: 6px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
     min-width: 100%;
-    max-width: 240px;
+    max-width: none !important;
+    width: auto !important;
 }
 /* Defeat themes that override [hidden] { display: block }. */
 .cml-language-switcher .cml-dropdown-menu[hidden] { display: none !important; }
@@ -176,6 +181,32 @@ ul.cml-language-switcher,
     display: block !important;
 }
 
+/* Floating switcher position-aware menu placement.
+   When the toggle button is pinned to the bottom of the viewport the menu
+   would extend below it and get clipped, so flip it to open upward. Same
+   logic for horizontal alignment on right-anchored positions. */
+.cml-floating-switcher.cml-pos-bottom-right .cml-dropdown-menu,
+.cml-floating-switcher.cml-pos-bottom-left .cml-dropdown-menu {
+    top: auto;
+    bottom: calc(100% + 4px);
+}
+.cml-floating-switcher.cml-pos-bottom-right .cml-dropdown-menu,
+.cml-floating-switcher.cml-pos-top-right .cml-dropdown-menu {
+    left: auto;
+    right: 0;
+}
+
+/* When the menu opens upward, flip the arrow so it points up (it's
+   pointing down by default, which would be misleading). */
+.cml-floating-switcher.cml-pos-bottom-right .cml-dropdown-arrow,
+.cml-floating-switcher.cml-pos-bottom-left .cml-dropdown-arrow {
+    transform: rotate(180deg);
+}
+.cml-floating-switcher.cml-pos-bottom-right .cml-language-switcher.cml-style-dropdown[data-cml-open] .cml-dropdown-arrow,
+.cml-floating-switcher.cml-pos-bottom-left .cml-language-switcher.cml-style-dropdown[data-cml-open] .cml-dropdown-arrow {
+    transform: rotate(0deg);
+}
+
 /* ---------- flags-only style ---------- */
 
 ul.cml-language-switcher.cml-style-flags {
@@ -196,6 +227,4 @@ ul.cml-language-switcher.cml-style-flags {
         padding: 4px 8px;
     }
     .cml-language-switcher .cml-dropdown-toggle { padding: 4px 8px; }
-    .cml-language-switcher .cml-dropdown-toggle > .cml-name,
-    .cml-language-switcher .cml-dropdown-toggle > .cml-native { max-width: 100px; }
 }
