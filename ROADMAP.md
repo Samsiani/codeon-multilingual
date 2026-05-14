@@ -1,6 +1,6 @@
 # Roadmap & gap analysis
 
-Current version: **v0.7.22** (released 2026-05-14)
+Current version: **v0.7.23** (released 2026-05-14)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
@@ -34,8 +34,8 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | Language switcher — shortcode | ✅ done | `[cml_language_switcher]` |
 | Language switcher — classic widget | ✅ done | `Frontend/LanguageSwitcherWidget.php` |
 | Language switcher — auto-floating | ✅ done | `Frontend/FloatingSwitcher.php`, v0.5.0 |
-| **Language switcher — Gutenberg block** | ❌ **missing** | Legacy-widget block covers it indirectly |
-| **Language switcher — nav menu item** | ❌ **missing** | No `wp_nav_menu_items` integration |
+| Language switcher — Gutenberg block | ✅ done | `Frontend/SwitcherBlock.php`, v0.7.23 — server-rendered, ServerSideRender preview, style + show-flag/native/code attributes |
+| Language switcher — nav menu item | ✅ done | `Frontend/NavMenuSwitcher.php`, v0.7.23 — one placeholder expands at render, per-item display + layout settings |
 | Hreflang + x-default | ✅ done | `Frontend/Hreflang.php` |
 | `<html lang>` + `dir` rewriting | ✅ done | fixed regex bug in v0.5.3 |
 | Locale override for `.mo` selection | ✅ done | `Frontend/LocaleOverride.php`, v0.5.5 |
@@ -101,11 +101,9 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 - Email subjects + headings
 - Cart/checkout notices and labels
 
-### 3. Language switcher — nav menu item ❌
+### 3. Language switcher — nav menu item ✅ shipped v0.7.23
 
-**Why it matters:** Themes that don't render the floating switcher have no in-menu language option. Common WPML pattern — admin picks "Languages" under Appearance → Menus and gets per-language items.
-
-**Scope:** ~200 LOC. Register a virtual menu item type via `customize_register` + filter `wp_nav_menu_items`.
+Implemented in `Frontend/NavMenuSwitcher.php`. Side meta-box on Appearance → Menus + per-item display/layout settings; placeholder auto-expands at render so new languages appear in every menu without editing.
 
 ### 4. Polylang compat shim ❌
 
@@ -113,11 +111,9 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 **Scope:** ~300 LOC, single file `Compat/PolylangFunctions.php`.
 
-### 5. Language switcher — Gutenberg block ❌
+### 5. Language switcher — Gutenberg block ✅ shipped v0.7.23
 
-**Why it matters:** Modern editors expect a block. Right now the legacy-widget block covers it but feels dated.
-
-**Scope:** ~200 LOC PHP + a small block.json registration. Server-rendered so no JS bundle.
+Implemented in `Frontend/SwitcherBlock.php`. Server-rendered (`render_callback`); editor uses ServerSideRender for live preview. Style + show-flag/native/code attributes; wide/full alignment + spacing controls.
 
 ### 6. Admin per-user UI language ❌
 
@@ -138,7 +134,8 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | ~~v0.7.17 – v0.7.18~~ | String cache correctness | Default-lang translations apply; per-language compiled-map cache | ✅ shipped |
 | ~~v0.7.19 – v0.7.20~~ | Translation editing UX | WPML-style product field locks; admin permalink + admin-bar follow post's language | ✅ shipped |
 | ~~v0.7.21 – v0.7.22~~ | WC translation stack | Shop-page mapping per language, cart items per language, source-fallback for untranslated pages | ✅ shipped |
-| **v0.7.23** | UX gap closure | Menu translation flow, language switcher nav menu item, Gutenberg block | next |
+| ~~v0.7.23~~ | UX gap closure (part 1) | Nav-menu language switcher + Gutenberg block, both with display + layout customisation | ✅ shipped |
+| **v0.7.24** | UX gap closure (part 2) | Menu translation flow (dedicated admin action on nav-menus.php) | next |
 | **v0.8.0** | WC depth | WC curated string registration, attribute-term slug mapping for variations, shipping/payment/email strings | planned |
 | **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
 | **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |

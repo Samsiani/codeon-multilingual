@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "codeon-multilingual/switcher",
+	"title": "Language Switcher",
+	"description": "A language switcher rendered via CodeOn Multilingual. Pick a style (list / dropdown / flags) and the block server-renders the same markup the shortcode + floating switcher use.",
+	"category": "widgets",
+	"icon": "translation",
+	"keywords": ["language", "switcher", "translate", "multilingual"],
+	"textdomain": "codeon-multilingual",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"attributes": {
+		"style":      { "type": "string",  "default": "dropdown",   "enum": ["list", "dropdown", "flags"] },
+		"showFlag":   { "type": "boolean", "default": true },
+		"showNative": { "type": "boolean", "default": true },
+		"showCode":   { "type": "boolean", "default": false }
+	},
+	"editorScript": "file:./editor.js"
+}

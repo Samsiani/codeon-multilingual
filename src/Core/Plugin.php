@@ -21,7 +21,9 @@ use Samsiani\CodeonMultilingual\Frontend\Hreflang;
 use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
 use Samsiani\CodeonMultilingual\Frontend\LanguageSwitcher;
 use Samsiani\CodeonMultilingual\Frontend\LocaleOverride;
+use Samsiani\CodeonMultilingual\Frontend\NavMenuSwitcher;
 use Samsiani\CodeonMultilingual\Frontend\SitemapFilter;
+use Samsiani\CodeonMultilingual\Frontend\SwitcherBlock;
 use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Query\TermsClauses;
 use Samsiani\CodeonMultilingual\Rest\LangParam;
@@ -95,6 +97,8 @@ final class Plugin {
 		// Frontend (switcher, hreflang, html lang, locale override, sitemap).
 		LanguageSwitcher::register();
 		FloatingSwitcher::register();
+		NavMenuSwitcher::register();
+		SwitcherBlock::register();
 		Hreflang::register();
 		HtmlLangAttribute::register();
 		LocaleOverride::register();

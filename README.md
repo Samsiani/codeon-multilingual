@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.7.22** — live in production on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), and a complete **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart items follow current language with fallback to original).
+**v0.7.23** — live in production on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), and a complete **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart items follow current language with fallback to original).
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -59,7 +59,9 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - Per-string source-language detection + badge
 
 **Frontend**
-- Shortcode `[cml_language_switcher]` + classic widget + auto-floating switcher
+- Shortcode `[cml_language_switcher]` + classic widget + auto-floating switcher + nav-menu item + Gutenberg block — five drop-in surfaces wrapping the same `LanguageSwitcher::render()`
+- Nav-menu item: side meta-box on Appearance → Menus inserts a single placeholder that auto-expands at render time, with per-item display (names / flags / both) and layout (inline / dropdown) settings
+- Gutenberg block (`codeon-multilingual/switcher`): server-rendered, `ServerSideRender` preview in the editor, style + show-flag/native/code attributes, wide/full alignment + spacing controls
 - Custom button/menu dropdown with bundled SVG flags (60 countries, MIT-licensed from lipis/flag-icons; Windows desktop without flag-emoji glyphs renders properly now)
 - Dropdown menu auto-sizes to the widest item, opens upward when anchored at the bottom of the viewport, and locks to the floating-switcher box width with a measure-and-pin JS pass that's stable across repeat clicks
 - Hreflang link tags + `x-default`

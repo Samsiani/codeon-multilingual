@@ -2,6 +2,16 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.23] — 2026-05-14
+
+### Added
+- **`Frontend/NavMenuSwitcher`** — drop-in language switcher for **Appearance → Menus**. Side meta-box "Languages" inserts one placeholder item that auto-expands into one link per active active language at render time, so adding a new language later updates every menu without re-editing. Per-item customisation (via `wp_nav_menu_item_custom_fields`):
+  - **Display**: language names / flags only / flags + language names
+  - **Layout**: inline (flat siblings) / dropdown (current language wraps the others as children)
+  - Settings persist as nav_menu_item postmeta; defaults are `display=both`, `layout=inline`.
+  Each rendered item links to the translated permalink of the queried object (e.g. on a single product, the `Русский` link points to the Russian product), falling back to the language's home URL when no specific object is queried. Current language gets `current-menu-item` + `cml-current` classes.
+- **`Frontend/SwitcherBlock`** — server-rendered Gutenberg block `codeon-multilingual/switcher`. Wraps `LanguageSwitcher::render()` with attributes: `style` (`list` / `dropdown` / `flags`), `showFlag`, `showNative`, `showCode`. Editor uses `ServerSideRender` for a live preview; rendered fresh each request so language changes show up without re-saving any post. Supports wide/full alignment + margin/padding spacing controls. Assets at `assets/blocks/switcher/` (block.json + editor.js — no build step, uses WP-bundled globals).
+
 ## [0.7.22] — 2026-05-14
 
 ### Fixed

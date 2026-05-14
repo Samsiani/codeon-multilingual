@@ -1,4 +1,4 @@
-# Architecture — CodeOn Multilingual v0.7.22
+# Architecture — CodeOn Multilingual v0.7.23
 
 This document describes how the plugin is structured, why each design choice was made, and how data flows through the system at request time.
 
@@ -27,10 +27,11 @@ assets/
 ├── admin.css / admin.js                 — admin styles + posts-list filter JS
 ├── strings-admin.css / .js              — inline strings editor (popup)
 ├── floating-switcher.css                — frontend switcher styles (incl. custom dropdown)
-└── dropdown-switcher.js                 — ~1.4 KB toggle + measure-and-pin width JS
+├── dropdown-switcher.js                 — ~1.4 KB toggle + measure-and-pin width JS
+└── blocks/switcher/                     — Gutenberg block: block.json + editor.js (no build, uses wp.* globals)
 ```
 
-59 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
+61 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order. CLI commands are registered separately via `Cli\CommandLoader::register()` from the main plugin file, guarded by `defined('WP_CLI') && WP_CLI` so command classes never load on a normal web request.
 
 ## Bootstrap and hook timing
 
@@ -317,6 +318,8 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | LanguageSwitcher | `Frontend/LanguageSwitcher.php` | `cml_language_switcher` shortcode, `widgets_init` |
 | LanguageSwitcherWidget | `Frontend/LanguageSwitcherWidget.php` | classic widget API |
 | FloatingSwitcher | `Frontend/FloatingSwitcher.php` | `wp_footer`, `wp_enqueue_scripts` |
+| NavMenuSwitcher | `Frontend/NavMenuSwitcher.php` | `admin_init` (meta-box), `wp_nav_menu_item_custom_fields` (per-item settings), `wp_update_nav_menu_item` (save), `wp_get_nav_menu_items` (frontend expansion) |
+| SwitcherBlock | `Frontend/SwitcherBlock.php` | `init` — registers `codeon-multilingual/switcher` block from `assets/blocks/switcher/block.json` |
 | Hreflang | `Frontend/Hreflang.php` | `wp_head` p1 |
 | HtmlLangAttribute | `Frontend/HtmlLangAttribute.php` | `language_attributes` |
 | LocaleOverride | `Frontend/LocaleOverride.php` | `determine_locale`, `locale` |
