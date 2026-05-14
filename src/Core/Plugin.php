@@ -14,6 +14,7 @@ use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
 use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
+use Samsiani\CodeonMultilingual\Content\MenuTranslator;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
 use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
@@ -82,6 +83,7 @@ final class Plugin {
 		// Content translation.
 		PostTranslator::register();
 		TermTranslator::register();
+		MenuTranslator::register();
 
 		// WooCommerce.
 		ProductSync::register();

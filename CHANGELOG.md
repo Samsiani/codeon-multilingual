@@ -2,6 +2,20 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.26] — 2026-05-14
+
+### Added
+- **`Content/MenuTranslator`** — proper menu-translation flow that admins were missing.
+  - Side meta-box on Appearance → Menus shows per-language "✓ Edit Russian menu" (when sibling exists) or "+ Create Russian translation" (when it doesn't). One click clones the source menu term into the target language and replicates every item.
+  - Two-pass item cloning: pass 1 inserts each item with `object_id` rewritten to the translation of its target post/term (falling back to the source object_id when no sibling exists, so an untranslated page still works); pass 2 rewires `menu_item_parent` using the source→target ID map so hierarchical menus stay intact.
+  - Nav-menu language-switcher placeholder items (`_cml_language_switcher = 1`) preserve their flag, display, and layout meta in the cloned menu.
+  - Theme-location mapping via `theme_mod_nav_menu_locations`: every registered location now serves the language-matching menu at render time; falls back to the source menu when no translation exists (matches the user's stated rule "if menu is not translated, display original"). Cached per request.
+  - Idempotent: `translate_menu()` returns the existing sibling's ID without re-cloning when one already exists.
+- **`MenuTranslator::pick_sibling_or_fallback()`** — pure helper (siblings map, target lang, source ID → translated ID) extracted so the contract can be unit-tested without touching the DB-backed TranslationGroups service.
+
+### Tests
+- 8 new tests in `MenuTranslatorTest` covering the sibling-picker contract: target found, target missing, empty map, string-keyed wpdb results, zero/negative keys, custom-link pass-through, unknown-type pass-through. Total: 62 → 70 passing.
+
 ## [0.7.25] — 2026-05-14
 
 ### Changed
