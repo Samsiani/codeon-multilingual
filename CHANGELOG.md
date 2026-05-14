@@ -2,6 +2,26 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.0] — 2026-05-14
+
+### Added
+- **WPML compatibility shim** — `src/Compat/WpmlFunctions.php` + `src/Compat/wpml-functions-bootstrap.php`. Implements 13 API surfaces that real-world themes/plugins (Astra, GeneratePress, WoodMart, Elementor, YITH, Woo extensions) consume:
+  - Global functions: `icl_object_id`, `icl_get_languages`, `icl_get_default_language`, `icl_get_current_language`
+  - Filters: `wpml_object_id`, `wpml_current_language`, `wpml_default_language`, `wpml_active_languages` (full WPML keyed-by-code array shape with 11 fields per language), `wpml_post_language_details`, `wpml_element_has_translations`, `wpml_translate_single_string`
+  - Actions: `wpml_register_single_string` (inserts into our `cml_strings`), `wpml_switch_language`
+- **Settings toggle** `wpml_compat_enabled` (default `true`) with admin UI under Settings → Compatibility.
+- **Self-disabling guard**: every global function declaration goes through `function_exists()` so a real WPML install (defensive — they shouldn't coexist) wins the namespace and our shim becomes a no-op.
+- **Element-type detection** for `icl_object_id` covers all four WPML conventions: literal core slugs (`post`/`page`/`category`/`post_tag`), `post_*` / `tax_*` prefix conventions, registry lookup (`taxonomy_exists` / `post_type_exists`), and a sensible default.
+
+### Fixed
+- **`post_tag` mis-classified as a post** — initial implementation tested the `post_*` prefix branch before the explicit core-taxonomies list, so `'post_tag'` matched the prefix branch first. Caught by the new `WpmlElementTypeTest`. Reordered checks: literal lists first, prefix conventions second.
+
+### Tests
+- 8 new unit tests in `tests/Unit/WpmlElementTypeTest.php` covering all four element-type conventions. Total: 22 → 30 passing tests.
+
+### Performance
+- Filter registration cost: ~10 μs total at `plugins_loaded` p5. Strict zero per-request thereafter when no WPML-aware code calls the filters.
+
 ## [0.6.0] — 2026-05-14
 
 ### Added

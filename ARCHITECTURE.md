@@ -1,4 +1,4 @@
-# Architecture — CodeOn Multilingual v0.6.0
+# Architecture — CodeOn Multilingual v0.7.0
 
 This document describes how the plugin is structured, why each design choice was made, and how data flows through the system at request time.
 
@@ -15,10 +15,11 @@ src/
 ├── Frontend/            — Switcher, hreflang, html lang, locale override, sitemap
 ├── Rest/                — REST language detection + strings API
 ├── Migration/           — WPML importer (icl_* tables → ours)
+├── Compat/              — WPML compatibility shim (icl_* functions + wpml_* filters)
 └── Admin/               — Top-level menu, admin bar, posts-list integration, page renderers
 ```
 
-41 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order.
+44 source files. Every module exposes a static `register()` that wires its hooks. `Core\Plugin::boot()` is the single source of truth for what's loaded — calling all `register()` methods in dependency order.
 
 ## Bootstrap and hook timing
 
@@ -309,6 +310,7 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | LangParam | `Rest/LangParam.php` | `rest_pre_dispatch`, `rest_*_collection_params` |
 | StringsApi | `Rest/StringsApi.php` | `rest_api_init` (registers `cml/v1/strings/<id>/translations`) |
 | WpmlImporter | `Migration/WpmlImporter.php` | invoked by MigrationPage |
+| WpmlFunctions | `Compat/WpmlFunctions.php` | `plugins_loaded` p5 (defers registration); registers ~9 filters + 2 actions and declares `icl_*` global functions via `wpml-functions-bootstrap.php` |
 | AdminMenu | `Admin/AdminMenu.php` | `admin_menu` |
 | AdminBar | `Admin/AdminBar.php` | `admin_bar_menu` |
 | PostsListLanguage | `Admin/PostsListLanguage.php` | `views_edit-*`, `manage_*_posts_columns`, `pre_get_posts`, `the_posts`, `admin_init` (cookie) |

@@ -11,7 +11,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 | Dimension | CodeOn Multilingual | Polylang | WPML |
 |---|---|---|---|
-| PHP code (LOC) | ~7 240 | ~30–50k | ~100k+ across the suite |
+| PHP code (LOC) | ~7 710 | ~30–50k | ~100k+ across the suite |
 | Release ZIP | ~370 KB | ~3 MB | ~50–150 MB |
 | DB tables added | 5 | 2 + reused taxonomy | 17+ |
 | Frontend JS shipped by default | 0 KB | ~30 KB | ~200 KB+ |
@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.6.0** — live in production on artcase.ge. ~80% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, and the WP 6.5+ native `.l10n.php` translation path.
+**v0.7.0** — live in production on artcase.ge. ~90% of the locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, and the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified).
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -67,6 +67,12 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 **REST**
 - `?lang=` parameter on every `show_in_rest` endpoint
 - `POST /cml/v1/strings/<id>/translations` for inline editor
+
+**WPML compatibility**
+- `icl_object_id`, `icl_get_languages`, `icl_get_default_language`, `icl_get_current_language` functions
+- `wpml_object_id`, `wpml_current_language`, `wpml_default_language`, `wpml_active_languages`, `wpml_post_language_details`, `wpml_element_has_translations`, `wpml_translate_single_string` filters
+- `wpml_register_single_string`, `wpml_switch_language` actions
+- Astra, GeneratePress, WoodMart, Elementor, YITH, Woo extensions work without code changes
 
 ## Requirements
 

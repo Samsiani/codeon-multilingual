@@ -91,10 +91,11 @@ composer install
 vendor/bin/phpunit --testsuite=Unit
 ```
 
-22 tests passing as of v0.6.0. Coverage:
+30 tests passing as of v0.7.0. Coverage:
 - `Url\SubdirectoryStrategy` — 12 tests (detect, build_url, strip_lang_prefix, strip_from_request)
 - `Frontend\HtmlLangAttribute` — 5 tests (regex edge cases, admin pass-through)
 - `Strings\StringTranslator::hash` — 5 tests (determinism, domain/context discrimination)
+- `Compat\WpmlFunctions::is_term_element_type` — 8 tests (core post types, core taxonomies, post_/tax_ prefixes, registry fallback, edge cases)
 
 ### Add a new unit test
 
