@@ -2,6 +2,12 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.25] — 2026-05-14
+
+### Changed
+- **Nav-menu switcher label layout:** flag is now guaranteed to render to the **left** of the language name (and the flag-only mode stays centred). Inline `display:inline-flex; align-items:center; gap:6px` style on the label wrapper bypasses any theme CSS that would otherwise reorder or stack the flag and the text.
+- **Current-language menu item** no longer renders with a blue-on-white inverted background. It now uses the theme's link colour with `font-weight:600` so the current language reads as "selected" without clashing with the site palette.
+
 ## [0.7.24] — 2026-05-14
 
 ### Fixed

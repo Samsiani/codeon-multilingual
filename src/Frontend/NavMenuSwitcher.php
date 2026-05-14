@@ -402,18 +402,30 @@ final class NavMenuSwitcher {
 		$flag_code = (string) ( $lang->flag ?? '' );
 		$native    = (string) ( $lang->native ?? $code );
 
+		// Inline layout style so flag (first child) sits to the LEFT of the
+		// name regardless of theme CSS — bulletproof against menu walkers
+		// that override flex/inline-block defaults on <a> children.
+		$wrap_style = 'display:inline-flex;align-items:center;gap:6px;line-height:1;';
+		$img_style  = 'display:inline-block;max-height:14px;width:auto;vertical-align:middle;border-radius:2px;flex:0 0 auto;';
+
 		switch ( $display ) {
 			case 'flags':
-				$flag = self::flag_html( $flag_code, $native );
-				return '<span class="cml-language-item-content cml-flag-only">' . $flag . '<span class="screen-reader-text">' . esc_html( $native ) . '</span></span>';
+				$flag = self::flag_html( $flag_code, $native, $img_style );
+				return '<span class="cml-language-item-content cml-flag-only" style="' . esc_attr( $wrap_style ) . '">'
+					. $flag
+					. '<span class="screen-reader-text">' . esc_html( $native ) . '</span>'
+					. '</span>';
 
 			case 'names':
 				return esc_html( $native );
 
 			case 'both':
 			default:
-				$flag = self::flag_html( $flag_code, $native );
-				return '<span class="cml-language-item-content">' . $flag . '<span class="cml-language-item-name">' . esc_html( $native ) . '</span></span>';
+				$flag = self::flag_html( $flag_code, $native, $img_style );
+				return '<span class="cml-language-item-content" style="' . esc_attr( $wrap_style ) . '">'
+					. $flag
+					. '<span class="cml-language-item-name">' . esc_html( $native ) . '</span>'
+					. '</span>';
 		}
 	}
 
@@ -421,16 +433,19 @@ final class NavMenuSwitcher {
 	 * Render the flag — bundled SVG when available, emoji fallback otherwise,
 	 * empty string when neither resolves (Esperanto / Yiddish have no country).
 	 */
-	private static function flag_html( string $country_code, string $alt ): string {
+	private static function flag_html( string $country_code, string $alt, string $inline_style = '' ): string {
 		if ( '' === $country_code ) {
 			return '';
 		}
-		$svg_url = LanguageCatalog::flag_svg_url( $country_code );
+		$style_attr = '' !== $inline_style ? ' style="' . esc_attr( $inline_style ) . '"' : '';
+		$svg_url    = LanguageCatalog::flag_svg_url( $country_code );
 		if ( null !== $svg_url ) {
-			return '<img class="cml-flag cml-flag-svg" src="' . esc_url( $svg_url ) . '" alt="' . esc_attr( $alt ) . '" loading="lazy">';
+			return '<img class="cml-flag cml-flag-svg" src="' . esc_url( $svg_url ) . '" alt="' . esc_attr( $alt ) . '" loading="lazy"' . $style_attr . '>';
 		}
 		$emoji = LanguageCatalog::flag_emoji( $country_code );
-		return '' !== $emoji ? '<span class="cml-flag cml-flag-emoji" aria-hidden="true">' . esc_html( $emoji ) . '</span>' : '';
+		return '' !== $emoji
+			? '<span class="cml-flag cml-flag-emoji" aria-hidden="true"' . $style_attr . '>' . esc_html( $emoji ) . '</span>'
+			: '';
 	}
 
 	/**
