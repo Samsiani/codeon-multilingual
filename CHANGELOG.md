@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.13] — 2026-05-14
+
+### Fixed
+- **Dropdown menu was clipping non-Latin items** like "ქართული" when the toggle button was narrow (e.g. while showing "English"). Position-absolute shrink-to-fit on the menu wasn't picking up the children's intrinsic width. Pinned `width: max-content !important` on the menu so it sizes to its widest item; kept `min-width: 100%` so short languages stay flush under wider toggles.
+
 ## [0.7.12] — 2026-05-14
 
 ### Changed

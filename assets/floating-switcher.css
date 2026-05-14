@@ -129,9 +129,14 @@ ul.cml-language-switcher,
     border: 1px solid #dcdcde;
     border-radius: 6px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+    /* `max-content` makes the menu exactly as wide as its widest item,
+       overriding the position-absolute shrink-to-fit logic that was
+       clipping non-Latin scripts (e.g. "ქართული"). min-width keeps it
+       at least as wide as the toggle so short languages don't look
+       cramped under a wider button. */
+    width: max-content !important;
     min-width: 100%;
     max-width: none !important;
-    width: auto !important;
 }
 /* Defeat themes that override [hidden] { display: block }. */
 .cml-language-switcher .cml-dropdown-menu[hidden] { display: none !important; }
