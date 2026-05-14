@@ -2,6 +2,17 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.19] — 2026-05-14
+
+### Added
+- **`Woo/TranslationLock`** — lock non-translatable WooCommerce fields on translated products (WPML-style UX). When the current product is NOT the source of its translation group (i.e. `group_id != post_id`), the edit screen renders:
+  - A blue-bordered banner under the title: *"You're editing a translation of '<Source>' (Georgian). Synced fields below are locked — edit the original to change them."* The source title is a link to the original.
+  - Each synced field gets a per-field "Locked — copies from the original language" italic note and is rendered disabled + read-only.
+  - Locked containers (Attributes panel) get a sticky lock notice and `pointer-events: none`.
+- Fields locked: `_regular_price`, `_sale_price`, `_sale_price_dates_from/to`, sale-schedule toggles, `_sku`, `_global_unique_id` (GTIN/UPC/EAN/ISBN), `_manage_stock`, `_stock`, `_stock_status`, `_low_stock_amount`, `_sold_individually`, `_backorders`, `_weight`, `_length`/`_width`/`_height`, `product_shipping_class`, `_tax_status`, `_tax_class`, `_virtual`, `_downloadable`, plus the `#product_attributes` panel.
+- **SKU duplicate-validation suppression for siblings.** `wc_product_has_unique_sku` filter now returns `false` when the SKU "conflict" is just another product in the same translation group. Lets `PostTranslator::duplicate()` copy the source's SKU into the translation without WooCommerce later complaining "Invalid or duplicated SKU" on save.
+- **`Woo/ProductSync` now syncs two more props** that admins expect to be shared across translations: `global_unique_id` (GTIN/UPC/EAN/ISBN) and `shipping_class_id`.
+
 ## [0.7.18] — 2026-05-14
 
 ### Fixed

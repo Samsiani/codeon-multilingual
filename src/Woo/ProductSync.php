@@ -45,6 +45,8 @@ final class ProductSync {
 		'downloadable',
 		'virtual',
 		'sku',
+		'global_unique_id',
+		'shipping_class_id',
 	);
 
 	/** @var array<int, true> group_id => lock present */
