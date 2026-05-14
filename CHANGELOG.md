@@ -2,6 +2,11 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.6] — 2026-05-14
+
+### Added
+- **Flag column on the admin Languages list.** Each row now shows the language's bundled SVG flag (or emoji fallback / em-dash when neither is available) so the table matches the wizard's visual style.
+
 ## [0.7.5] — 2026-05-14
 
 ### Added

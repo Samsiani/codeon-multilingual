@@ -67,9 +67,32 @@ final class LanguagesPage {
 
 			<?php self::render_notices(); ?>
 
-			<table class="wp-list-table widefat fixed striped">
+			<style>
+				.cml-langs-table .cml-row-flag {
+					display: inline-block;
+					vertical-align: middle;
+					margin-right: 6px;
+					width: 22px;
+					text-align: center;
+					line-height: 0;
+				}
+				.cml-langs-table .cml-row-flag img {
+					display: inline-block;
+					width: 22px;
+					height: auto;
+					border-radius: 2px;
+					box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+					vertical-align: middle;
+				}
+				.cml-langs-table .cml-row-flag .cml-flag-emoji {
+					font-size: 18px;
+					line-height: 1;
+				}
+			</style>
+			<table class="wp-list-table widefat fixed striped cml-langs-table">
 				<thead>
 					<tr>
+						<th scope="col" style="width:32px"><span class="screen-reader-text"><?php esc_html_e( 'Flag', 'codeon-multilingual' ); ?></span></th>
 						<th scope="col"><?php esc_html_e( 'Code', 'codeon-multilingual' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Name', 'codeon-multilingual' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Native', 'codeon-multilingual' ); ?></th>
@@ -82,10 +105,13 @@ final class LanguagesPage {
 				</thead>
 				<tbody>
 					<?php if ( array() === $languages ) : ?>
-						<tr><td colspan="8"><?php esc_html_e( 'No languages configured.', 'codeon-multilingual' ); ?></td></tr>
+						<tr><td colspan="9"><?php esc_html_e( 'No languages configured.', 'codeon-multilingual' ); ?></td></tr>
 					<?php else : ?>
 						<?php foreach ( $languages as $lang ) : ?>
 							<tr>
+								<td class="cml-row-flag-cell">
+									<span class="cml-row-flag"><?php echo self::flag_html( (string) $lang->flag, (string) $lang->name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — already escaped inside helper ?></span>
+								</td>
 								<td>
 									<strong><code><?php echo esc_html( $lang->code ); ?></code></strong>
 									<?php self::render_row_actions( $lang, $default ); ?>
@@ -143,6 +169,27 @@ final class LanguagesPage {
 			</table>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Render the flag for a row: bundled SVG <img> when one ships for the
+	 * country code, Unicode emoji fallback when not. Returned markup is
+	 * already escaped — caller must NOT re-escape.
+	 */
+	private static function flag_html( string $country_code, string $alt ): string {
+		$code = trim( $country_code );
+		if ( '' === $code ) {
+			return '<span class="cml-flag-emoji" aria-hidden="true">—</span>';
+		}
+		$svg_url = LanguageCatalog::flag_svg_url( $code );
+		if ( null !== $svg_url ) {
+			return '<img src="' . esc_url( $svg_url ) . '" alt="' . esc_attr( $alt ) . '" loading="lazy">';
+		}
+		$emoji = LanguageCatalog::flag_emoji( $code );
+		if ( '' !== $emoji ) {
+			return '<span class="cml-flag-emoji" aria-hidden="true">' . esc_html( $emoji ) . '</span>';
+		}
+		return '<span class="cml-flag-emoji" aria-hidden="true">—</span>';
 	}
 
 	private static function render_row_actions( object $lang, string $default ): void {
