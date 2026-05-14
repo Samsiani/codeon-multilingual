@@ -37,8 +37,15 @@ final class StringTranslator {
 	private const SOURCE_MAX_LENGTH = 2048;
 	private const FLUSH_LOCK_TTL    = 60;
 
-	/** @var array<string, string>|null hash => translation */
-	private static ?array $compiled = null;
+	/**
+	 * Per-language compiled maps. Keyed by language code so a single request
+	 * that touches multiple languages (e.g. WP loads __() before our router
+	 * sets the current language) doesn't bind the first language's map to
+	 * every subsequent call.
+	 *
+	 * @var array<string, array<string, string>> lang => (hash => translation)
+	 */
+	private static array $compiled = array();
 
 	/** @var array<string, true>|null hash => true */
 	private static ?array $known = null;
@@ -174,16 +181,15 @@ final class StringTranslator {
 	 * @return array<string, string>
 	 */
 	private static function compiled_map(): array {
-		if ( null !== self::$compiled ) {
-			return self::$compiled;
+		$code = CurrentLanguage::code();
+		if ( isset( self::$compiled[ $code ] ) ) {
+			return self::$compiled[ $code ];
 		}
 
-		$code      = CurrentLanguage::code();
 		$cache_key = 'compiled_' . $code;
-
-		$cached = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
 		if ( is_array( $cached ) ) {
-			self::$compiled = $cached;
+			self::$compiled[ $code ] = $cached;
 			return $cached;
 		}
 
@@ -206,7 +212,7 @@ final class StringTranslator {
 		}
 
 		wp_cache_set( $cache_key, $map, self::CACHE_GROUP, self::COMPILED_TTL );
-		self::$compiled = $map;
+		self::$compiled[ $code ] = $map;
 		return $map;
 	}
 
@@ -287,7 +293,7 @@ final class StringTranslator {
 	 * Flush all string caches. Call after admin saves / deletes translations.
 	 */
 	public static function flush_cache(): void {
-		self::$compiled = null;
+		self::$compiled = array();
 		self::$known    = null;
 
 		wp_cache_delete( 'known_hashes', self::CACHE_GROUP );

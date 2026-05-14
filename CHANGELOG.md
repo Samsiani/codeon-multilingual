@@ -2,6 +2,19 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.7.18] — 2026-05-14
+
+### Fixed
+- **One language's translations bled into every other language during the same request.** `StringTranslator::compiled_map()` cached the loaded map in a single static `self::$compiled` property, so whichever language fired the first `__()` / `_x()` call bound that map to every subsequent call — even after `CurrentLanguage::set()` switched to another locale. Result on artcase.ge: `/ru/` and `/en/` URLs rendered the Georgian "ძიება" because the default-language map loaded first during WP boot, before the router set the request's actual language.
+- Refactored the static cache from `array<hash,translation>|null` to `array<lang, array<hash,translation>>`. Each language gets its own per-request map; switching language inside a request just looks up the right key.
+- `flush_cache()` now empties the array rather than nulling a flat map.
+
+### Verified
+- Live trace on artcase.ge:
+  - `_x('Search for products', 'submit button', 'woodmart')` after `CurrentLanguage::set('ka')` → `ძიება` ✓
+  - …then `set('ru')` in the same request → `lala` ✓ (was `ძიება` before the fix)
+  - …then `set('en')` → `Search for products` (English source, no `en` translation exists) ✓
+
 ## [0.7.17] — 2026-05-14
 
 ### Fixed
