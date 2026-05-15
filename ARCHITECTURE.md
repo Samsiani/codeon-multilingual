@@ -312,7 +312,9 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | TranslationLock | `Woo/TranslationLock.php` | `add_meta_boxes_product` (p100, footer-injected JS); `wc_product_has_unique_sku` filter swallows duplicates within the same group |
 | PageMapping | `Woo/PageMapping.php` | `option_woocommerce_*_page_id` filters — cart, checkout, my-account, shop, terms, pay, view-order |
 | CartTranslation | `Woo/CartTranslation.php` | `woocommerce_cart_item_product`, `woocommerce_cart_item_permalink` |
-| StringTranslator | `Strings/StringTranslator.php` | `gettext`, `gettext_with_context`, `shutdown` (flush discovery). Per-language compiled-map cache: `array<lang, array<hash, translation>>` so a request that switches languages mid-flight doesn't bleed one language's map into another |
+| AttributeLabels | `Woo/AttributeLabels.php` | `woocommerce_attribute_label` (translate at runtime); `woocommerce_attribute_added` / `..._updated` (keep strings catalog in sync); `cml_activated` / `cml_upgraded` / `admin_init` (lazy sync). Bridges WC attribute labels (which never pass through `__()`) to the strings catalog under domain `wc-attribute-label`. |
+| MenuTranslator | `Content/MenuTranslator.php` | `admin_post_cml_translate_menu` / `admin_post_cml_sync_menu` (per-menu Sync action); `delete_nav_menu` (drop orphan `cml_term_language` row). Sync clones items from source, copies missing translations as-is, validates target term via `get_term()` before reuse. |
+| StringTranslator | `Strings/StringTranslator.php` | `gettext`, `gettext_with_context`, `shutdown` (flush discovery). Per-language compiled-map cache: `array<lang, array<hash, translation>>` so a request that switches languages mid-flight doesn't bleed one language's map into another. Public API: `register_source(domain, context, source, ?lang)` + `lookup_translation(domain, context, source)` for sources that bypass gettext (WC attribute labels, gateway titles). |
 | Scanner | `Strings/Scanner.php` | invoked by ScanPage |
 | L10nFileWriter | `Strings/L10nFileWriter.php` | `load_textdomain` p99 (when setting enabled) |
 | LanguageSwitcher | `Frontend/LanguageSwitcher.php` | `cml_language_switcher` shortcode, `widgets_init` |
@@ -330,7 +332,9 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | WpmlFunctions | `Compat/WpmlFunctions.php` | `plugins_loaded` p5 (defers registration); registers ~9 filters + 2 actions and declares `icl_*` global functions via `wpml-functions-bootstrap.php` |
 | AdminMenu | `Admin/AdminMenu.php` | `admin_menu` |
 | AdminBar | `Admin/AdminBar.php` | `admin_bar_menu` |
-| PostsListLanguage | `Admin/PostsListLanguage.php` | `views_edit-*`, `manage_*_posts_columns`, `pre_get_posts`, `the_posts`, `admin_init` (cookie) |
+| PostsListLanguage | `Admin/PostsListLanguage.php` | `views_edit-*`, `manage_*_posts_columns` (one column per active language), `manage_*_posts_custom_column`, `pre_get_posts`, `the_posts`, `admin_init` (cookie) |
+| TermsListLanguage | `Admin/TermsListLanguage.php` | `views_edit-*`, `manage_edit-*_columns` (one column per active language), `manage_*_custom_column`, `pre_get_terms`, `admin_init` (cookie). Mirrors PostsListLanguage for every translatable taxonomy. |
+| MenusPage | `Admin/Pages/MenusPage.php` | Multilingual → Menus admin page — lists every nav menu term with first-language detection + per-other-language Sync button |
 | LanguagesPage | `Admin/Pages/LanguagesPage.php` | `admin_post_*` for CRUD |
 | StringsPage | `Admin/Pages/StringsPage.php` | `admin_post_cml_purge_strings`, `admin_enqueue_scripts` |
 | ScanPage | `Admin/Pages/ScanPage.php` | `admin_post_cml_run_scan` |
@@ -363,6 +367,8 @@ The string export/import path is built on two pure helpers (`PoExporter` / `PoIm
 | `cml_translatable_post_types` | filter | `array $types` | Override which post types are translatable |
 | `cml_translatable_taxonomies` | filter | `array $taxonomies` | Override which taxonomies are translatable |
 | `cml_woo_synced_props` | filter | `array $props` | Add/remove props from the WC sync list |
+| `cml_activated` | action | — | Fires from `Activator::activate()`; integration point for modules to seed catalog entries (consumed by AttributeLabels) |
+| `cml_upgraded` | action | — | Fires from `Activator::maybe_upgrade()` after a schema bump; same integration point for auto-update path |
 
 ## REST API surface
 

@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.7.23** — live in production on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), and a complete **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart items follow current language with fallback to original).
+**v0.7.37** — live in production on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), a complete **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart items follow current language with fallback to original, **WC attribute label translation**), a dedicated **menu translation flow** (Multilingual → Menus with per-language Sync actions; missing items copy from source), **per-language columns** on every posts/taxonomy admin list (one narrow column per active language with ✓/+ icons — at-a-glance translation status across all WP and WC content types including attributes and tags).
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -46,6 +46,8 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - Field-lock UI on translations (WPML-style): pricing, SKU, GTIN, stock controls, dimensions, shipping class, tax, virtual/downloadable, and the entire Attributes panel render disabled + read-only on translated products; banner reads "You're editing a translation of <Source> — edit the original to change these"
 - Shop-page mapping per language: on `/en/cart/`, `wc_get_page_id('cart')` returns the English cart page so `is_cart()` matches and the cart template fires
 - Cart items follow current language: line items, mini-cart, checkout review, order-received page, and emails swap to the translation; items without a translation stay in their original language
+- Attribute *labels* translatable (Color / Size / ფერი → translate from Multilingual → Strings; filter `woocommerce_attribute_label` swaps per language)
+- Attribute *terms* translatable (each `pa_*` taxonomy has the same per-language column UI as categories)
 - WC's "duplicate SKU" validator suppresses errors when the conflict is just another sibling in the same translation group
 - Translated WP pages without a sibling in the current language fall back to the source page rather than 404
 - Group-keyed lock prevents recursion during sibling sync
@@ -57,6 +59,7 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - File-system scanner with regex for `__`, `_e`, `_x`, `_ex`, `esc_*`
 - Inline popup editor (vanilla JS, click-outside-saves)
 - Per-string source-language detection + badge
+- **Plugin integration API**: `StringTranslator::register_source()` + `lookup_translation()` for sources that bypass gettext (e.g. WooCommerce attribute labels, gateway titles, email subjects). One hash lookup against the request-static compiled map on the hot path.
 
 **Frontend**
 - Shortcode `[cml_language_switcher]` + classic widget + auto-floating switcher + nav-menu item + Gutenberg block — five drop-in surfaces wrapping the same `LanguageSwitcher::render()`
@@ -73,8 +76,10 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - Defensive redirect: `admin-post.php?page=cml-setup&step=N` 302s to the canonical `admin.php?...` so stale bookmarks don't white-screen
 - Languages admin list shows SVG flag per row + "Run setup wizard" page-title action
 - "Add Language" form auto-fills locale, English name, native name, flag, RTL from the catalog as the admin types a code
-- Per-post-type language quick-link row above the list table
-- "Languages" column with translate icons (globe / pen / +)
+- Per-post-type and per-taxonomy language quick-link row above each list table
+- **Per-language columns** — one narrow column per active language on every translatable posts list AND taxonomy list. Header shows flag + uppercase code (`🇬🇪 KA / 🇷🇺 RU / 🇺🇸 EN`); each cell renders the flag for the row's source language and a green ✓ / grey + for every other (linked to the sibling edit screen or "create translation" respectively)
+- Menu translation flow: Multilingual → Menus lists every nav menu with per-language "Sync" actions. Untranslated items copy from source so translated menus are never half-empty
+- Translation slug derived from translated title: drafts keep `post_name` empty until publish, so a Georgian `ვაშლი` → translated as `Apple` → published with `/apple/`, not `/ვაშლი/`
 - Admin bar language indicator reflects the **edited post's** language (not the admin user's) on edit screens; sub-menu jumps directly to sibling edit screens; "Add translation" always creates from the group source
 - "Permalink:" preview on the translation edit screen now reflects the post's own language URL
 - Translation meta box distinguishes the **source** ("Edit X (original)") from translations ("Edit X translation")
