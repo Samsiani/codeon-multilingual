@@ -115,6 +115,10 @@ final class WpmlImporter {
 		$language_settings = 0;
 		if ( self::table_exists( $prefix . 'icl_languages' ) ) {
 			$native_select     = self::wpml_native_name_select();
+			$default_language  = self::default_language_from_options();
+			$default_clause    = null === $default_language
+				? ''
+				: $wpdb->prepare( ' OR cl.is_default != CASE WHEN l.code = %s THEN 1 ELSE 0 END', $default_language );
 			$language_settings = (int) $wpdb->get_var(
 				"SELECT COUNT(*)
 				 FROM {$prefix}icl_languages l
@@ -122,7 +126,8 @@ final class WpmlImporter {
 				 WHERE cl.locale != COALESCE(l.default_locale, l.code)
 				    OR cl.name != l.english_name
 				    OR cl.native != {$native_select}
-				    OR cl.active != COALESCE(l.active, 1)"
+				    OR cl.active != COALESCE(l.active, 1)
+				    {$default_clause}"
 			);
 		}
 
@@ -149,12 +154,29 @@ final class WpmlImporter {
 			);
 		}
 
-		$string_translations = 0;
+		$string_source_conflicts      = 0;
+		$string_translation_conflicts = 0;
+		if ( self::table_exists( $prefix . 'icl_strings' ) ) {
+			$string_source_conflicts = (int) $wpdb->get_var(
+				"SELECT COUNT(*)
+				 FROM {$prefix}icl_strings src
+				 INNER JOIN {$prefix}cml_strings cs ON cs.hash = UNHEX(MD5(CONCAT(
+					COALESCE(src.context, ''),
+					'|',
+					COALESCE(src.gettext_context, ''),
+					'|',
+					src.value
+				 )))
+				 WHERE src.value IS NOT NULL
+				   AND src.value != ''
+				   AND cs.source_language != COALESCE(src.language, 'en')"
+			);
+		}
 		if (
 			self::table_exists( $prefix . 'icl_strings' )
 			&& self::table_exists( $prefix . 'icl_string_translations' )
 		) {
-			$string_translations = (int) $wpdb->get_var(
+			$string_translation_conflicts = (int) $wpdb->get_var(
 				$wpdb->prepare(
 					"SELECT COUNT(*)
 					 FROM {$prefix}icl_string_translations t
@@ -180,7 +202,7 @@ final class WpmlImporter {
 			'language_settings'   => $language_settings,
 			'post_mappings'       => $post_mappings,
 			'term_mappings'       => $term_mappings,
-			'string_translations' => $string_translations,
+			'string_translations' => $string_source_conflicts + $string_translation_conflicts,
 		);
 	}
 
@@ -337,9 +359,11 @@ final class WpmlImporter {
 		}
 
 		// Compute md5(domain|context|source) server-side via UNHEX(MD5(CONCAT())).
-		// source_language uses WPML's authoritative s.language; ON DUPLICATE
-		// updates it so reruns correct any prior detect-only values.
-		$sql = "INSERT INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at)
+		// Existing sources are left untouched. If a matching CodeOn source
+		// already has a different source_language, preflight reports a conflict
+		// and import_all() refuses to write unless the operator explicitly
+		// allows importing only the missing rows.
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at)
 			SELECT
 				UNHEX(MD5(CONCAT(
 					COALESCE(s.context, ''),
@@ -354,9 +378,7 @@ final class WpmlImporter {
 				COALESCE(s.language, 'en'),
 				UNIX_TIMESTAMP()
 			FROM {$wpdb->prefix}icl_strings s
-			WHERE s.value IS NOT NULL AND s.value != ''
-			ON DUPLICATE KEY UPDATE
-				source_language = VALUES(source_language)";
+			WHERE s.value IS NOT NULL AND s.value != ''";
 
 		self::query_or_throw( $sql, 'string sources' );
 		return (int) $wpdb->rows_affected;

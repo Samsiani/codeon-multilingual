@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Woo;
 
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
+use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 
 /**
@@ -31,6 +32,7 @@ final class VariationTranslator {
 		self::$registered = true;
 
 		add_action( 'cml_post_translation_created', array( self::class, 'on_translation_created' ), 10, 4 );
+		add_filter( 'woocommerce_variation_option_name', array( self::class, 'translate_variation_option_name' ), 10, 4 );
 	}
 
 	public static function on_translation_created( int $new_id, int $source_id, string $target_lang, int $group_id ): void {
@@ -59,6 +61,43 @@ final class VariationTranslator {
 				self::remap_variation_attributes( $new_variation_id, $target_lang );
 			}
 		}
+	}
+
+	/**
+	 * Woo calls this for variation attribute values in classic templates and
+	 * Store API cart/order schemas. When a cart item still carries the source
+	 * attribute slug after a language switch, render the translated sibling's
+	 * term name for the current request language.
+	 *
+	 * @param mixed $name
+	 * @param mixed $term
+	 * @param mixed $taxonomy
+	 * @param mixed $product
+	 */
+	public static function translate_variation_option_name( $name, $term = null, $taxonomy = '', $product = null ): string {
+		unset( $product );
+
+		$term_id = self::term_id_from_object( $term );
+		if ( $term_id <= 0 ) {
+			return (string) $name;
+		}
+
+		$group_id = TranslationGroups::get_term_group_id( $term_id );
+		if ( null === $group_id ) {
+			return (string) $name;
+		}
+
+		$target_lang = CurrentLanguage::code();
+		$siblings    = TranslationGroups::get_term_siblings( $group_id );
+		$target_id   = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+		if ( $target_id <= 0 || $target_id === $term_id || ! function_exists( 'get_term' ) ) {
+			return (string) $name;
+		}
+
+		$target = get_term( $target_id, is_scalar( $taxonomy ) ? (string) $taxonomy : '' );
+		return is_object( $target ) && isset( $target->name ) && is_scalar( $target->name )
+			? (string) $target->name
+			: (string) $name;
 	}
 
 	private static function remap_variation_attributes( int $variation_id, string $target_lang ): void {
@@ -104,5 +143,16 @@ final class VariationTranslator {
 
 		$target = get_term( $translated_term, $taxonomy );
 		return $target instanceof \WP_Term ? (string) $target->slug : null;
+	}
+
+	/**
+	 * @param mixed $term
+	 */
+	private static function term_id_from_object( $term ): int {
+		if ( is_object( $term ) && isset( $term->term_id ) && is_scalar( $term->term_id ) ) {
+			return (int) $term->term_id;
+		}
+
+		return 0;
 	}
 }

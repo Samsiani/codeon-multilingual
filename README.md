@@ -85,6 +85,7 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - Translation meta box distinguishes the **source** ("Edit X (original)") from translations ("Edit X translation")
 - Cookie-persisted language selection
 - WPML data migration tool (5-statement SQL importer)
+- Polylang object migration tool for languages, post mappings, and term mappings
 
 **REST**
 - `?lang=` parameter on every `show_in_rest` endpoint
@@ -103,11 +104,19 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml strings export --lang=<code> [--format=po|json] [--domain=<d>] [--output=<file>]`
 - `wp cml strings import <file> [--format=auto|po|json] [--lang=<code>]`
 - `wp cml migrate wpml [--dry-run] [--snapshot=<file>]`
+- `wp cml migrate polylang [--dry-run] [--snapshot=<file>]`
+- `wp cml migrate sources`
 - `wp cml migrate export --output=<file>`
 - `wp cml migrate rollback <file> [--dry-run|--confirm-rollback]`
 - `wp cml backfill run [--all]` / `status` / `reset`
 - `wp cml health summary` / `report [--failed-only]`
+- `wp cml health repair [--dry-run|--apply] [--scope=all|orphaned-post-rows|orphaned-term-rows|orphaned-string-rows|missing-post-rows|missing-term-rows|unknown-source-languages]`
 - `wp cml benchmark report` / `seed --yes`
+
+**v1 hardening branch**
+- WPML/Polylang migration preflight is stricter about default-language and source-language conflicts.
+- WooCommerce product relationship IDs and variation option display labels remap to current-language siblings where possible.
+- Yoast SEO and Rank Math breadcrumb/schema arrays localize URLs, post IDs, and term IDs through CodeOn translation groups.
 
 ## Requirements
 

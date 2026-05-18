@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Samsiani\CodeonMultilingual\Core\HealthReport;
+use Samsiani\CodeonMultilingual\Core\HealthRepair;
 
 /**
  * Pure health-report inspectors. Full report generation needs a real wpdb.
@@ -84,5 +85,19 @@ final class HealthReportTest extends TestCase {
 		$this->assertSame( HealthReport::STATUS_CRITICAL, HealthReport::status_from_counts( 1, 0 ) );
 		$this->assertSame( HealthReport::STATUS_WARNING, HealthReport::status_from_counts( 0, 1 ) );
 		$this->assertSame( HealthReport::STATUS_OK, HealthReport::status_from_counts( 0, 0 ) );
+	}
+
+	public function test_health_repair_classifies_internal_term_taxonomies(): void {
+		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'product_type' ) );
+		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'product_visibility' ) );
+		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'language' ) );
+		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'post_translations' ) );
+		$this->assertFalse( HealthRepair::is_system_term_taxonomy( 'product_cat' ) );
+		$this->assertFalse( HealthRepair::is_system_term_taxonomy( 'pa_color' ) );
+	}
+
+	public function test_health_repair_normalizes_unknown_scopes_to_all(): void {
+		$this->assertSame( 'all', HealthRepair::normalize_scope( 'unknown' ) );
+		$this->assertSame( 'missing-term-rows', HealthRepair::normalize_scope( 'missing-term-rows' ) );
 	}
 }

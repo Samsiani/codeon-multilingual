@@ -161,4 +161,29 @@ final class CliHelpersTest extends TestCase {
 		$this->assertSame( 'duplicate_language_locales', $failed[0]['key'] );
 		$this->assertSame( '1', $failed[0]['count'] );
 	}
+
+	public function test_health_repair_rows_for_display_formats_action_rows(): void {
+		$rows = HealthCommand::repair_rows_for_display(
+			array(
+				'actions' => array(
+					'orphaned-post-rows' => array(
+						'label'   => 'Delete orphaned post language rows',
+						'count'   => 7,
+						'applied' => true,
+					),
+					'missing-term-rows'   => array(
+						'label'   => 'Backfill missing public term language rows',
+						'count'   => 3,
+						'applied' => false,
+					),
+				),
+			)
+		);
+
+		$this->assertCount( 2, $rows );
+		$this->assertSame( 'Delete orphaned post language rows', $rows[0]['action'] );
+		$this->assertSame( '7', $rows[0]['count'] );
+		$this->assertSame( 'yes', $rows[0]['applied'] );
+		$this->assertSame( 'no', $rows[1]['applied'] );
+	}
 }

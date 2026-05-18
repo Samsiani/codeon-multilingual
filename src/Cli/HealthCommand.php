@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Cli;
 
 use Samsiani\CodeonMultilingual\Core\HealthReport;
+use Samsiani\CodeonMultilingual\Core\HealthRepair;
 use WP_CLI;
 use WP_CLI\Utils;
 use WP_CLI_Command;
@@ -16,6 +17,8 @@ use WP_CLI_Command;
  *     wp cml health summary
  *     wp cml health report --failed-only
  *     wp cml health report --format=json
+ *     wp cml health repair --dry-run
+ *     wp cml health repair --apply --scope=orphaned-post-rows
  */
 final class HealthCommand extends WP_CLI_Command {
 
@@ -82,6 +85,73 @@ final class HealthCommand extends WP_CLI_Command {
 	}
 
 	/**
+	 * Repairs safe data issues reported by the Health page.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--scope=<scope>]
+	 * : Repair scope.
+	 * ---
+	 * default: all
+	 * options:
+	 *   - all
+	 *   - orphaned-post-rows
+	 *   - orphaned-term-rows
+	 *   - orphaned-string-rows
+	 *   - missing-post-rows
+	 *   - missing-term-rows
+	 *   - unknown-source-languages
+	 * ---
+	 *
+	 * [--dry-run]
+	 * : Report rows that would be repaired without writing.
+	 *
+	 * [--apply]
+	 * : Apply repairs. Required for writes.
+	 *
+	 * [--format=<format>]
+	 * : Output format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 * ---
+	 *
+	 * @param array<int, string>    $args
+	 * @param array<string, string> $assoc_args
+	 */
+	public function repair( array $args, array $assoc_args ): void {
+		$apply   = isset( $assoc_args['apply'] );
+		$dry_run = isset( $assoc_args['dry-run'] ) || ! $apply;
+		$scope   = HealthRepair::normalize_scope( (string) ( $assoc_args['scope'] ?? 'all' ) );
+		$result  = HealthRepair::run( $scope, $dry_run );
+
+		$rows = self::repair_rows_for_display( $result );
+		Utils\format_items(
+			self::format_arg( $assoc_args ),
+			$rows,
+			array( 'action', 'count', 'applied' )
+		);
+
+		if ( ! empty( $result['errors'] ) ) {
+			foreach ( $result['errors'] as $error ) {
+				WP_CLI::warning( $error );
+			}
+			WP_CLI::error( 'Health repair finished with errors.' );
+		}
+
+		if ( $dry_run ) {
+			WP_CLI::success( 'Dry run: nothing written. Re-run with --apply to repair.' );
+			return;
+		}
+
+		WP_CLI::success( sprintf( 'Health repair complete. Rows affected: %d.', (int) $result['total'] ) );
+	}
+
+	/**
 	 * @param array<string,mixed> $report
 	 * @phpstan-param array{
 	 *   generated_at:int,
@@ -127,6 +197,27 @@ final class HealthCommand extends WP_CLI_Command {
 					'message' => (string) $check['message'],
 				);
 			}
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * @param array<string,mixed> $result
+	 * @phpstan-param array{
+	 *   actions:array<string,array{label:string,count:int,applied:bool}>
+	 * } $result
+	 * @return array<int,array{action:string,count:string,applied:string}>
+	 */
+	public static function repair_rows_for_display( array $result ): array {
+		$rows = array();
+
+		foreach ( $result['actions'] as $action ) {
+			$rows[] = array(
+				'action'  => (string) $action['label'],
+				'count'   => (string) (int) $action['count'],
+				'applied' => $action['applied'] ? 'yes' : 'no',
+			);
 		}
 
 		return $rows;

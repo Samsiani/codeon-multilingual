@@ -49,6 +49,13 @@ final class ProductSync {
 		'shipping_class_id',
 	);
 
+	/** Woo relationship meta containing product IDs. */
+	private const RELATIONSHIP_META_KEYS = array(
+		'_upsell_ids',
+		'_crosssell_ids',
+		'_children',
+	);
+
 	/** @var array<int, true> group_id => lock present */
 	private static array $active_locks = array();
 
@@ -61,6 +68,31 @@ final class ProductSync {
 		self::$registered = true;
 
 		add_action( 'woocommerce_product_object_updated_props', array( self::class, 'on_props_updated' ), 10, 2 );
+		add_action( 'cml_post_translation_created', array( self::class, 'on_translation_created' ), 20, 4 );
+	}
+
+	public static function on_translation_created( int $new_id, int $source_id, string $target_lang, int $group_id ): void {
+		unset( $group_id );
+
+		if ( 'product' !== get_post_type( $source_id ) ) {
+			return;
+		}
+
+		foreach ( self::RELATIONSHIP_META_KEYS as $meta_key ) {
+			$source_ids = self::product_ids_from_meta( get_post_meta( $source_id, $meta_key, true ) );
+			if ( array() === $source_ids ) {
+				continue;
+			}
+
+			update_post_meta(
+				$new_id,
+				$meta_key,
+				array_map(
+					static fn( int $related_id ): int => self::translated_product_id( $related_id, $target_lang ),
+					$source_ids
+				)
+			);
+		}
 	}
 
 	/**
@@ -145,5 +177,37 @@ final class ProductSync {
 	private static function synced_props(): array {
 		/** @var array<int, string> */
 		return (array) apply_filters( 'cml_woo_synced_props', self::SYNCED_PROPS );
+	}
+
+	/**
+	 * @param mixed $value
+	 * @return array<int, int>
+	 */
+	private static function product_ids_from_meta( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return array();
+		}
+
+		$ids = array();
+		foreach ( $value as $id ) {
+			$id = (int) $id;
+			if ( $id > 0 ) {
+				$ids[] = $id;
+			}
+		}
+
+		return array_values( array_unique( $ids ) );
+	}
+
+	private static function translated_product_id( int $source_id, string $target_lang ): int {
+		$group_id = TranslationGroups::get_group_id( $source_id );
+		if ( null === $group_id ) {
+			return $source_id;
+		}
+
+		$siblings   = TranslationGroups::get_siblings( $group_id );
+		$translated = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+
+		return $translated > 0 ? $translated : $source_id;
 	}
 }

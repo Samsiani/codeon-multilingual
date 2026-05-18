@@ -54,14 +54,29 @@ install_test_suite() {
 		svn_base="https://develop.svn.wordpress.org/tags/${suite_version}/tests/phpunit"
 	fi
 
-	if ! command -v svn >/dev/null 2>&1; then
-		echo "svn is required to install the WordPress PHPUnit test suite." >&2
+	mkdir -p "$WP_TESTS_DIR"
+	if command -v svn >/dev/null 2>&1; then
+		svn export --quiet --force "$svn_base/includes" "$WP_TESTS_DIR/includes"
+		svn export --quiet --force "$svn_base/data" "$WP_TESTS_DIR/data"
+		return
+	fi
+
+	if ! command -v git >/dev/null 2>&1; then
+		echo "svn or git is required to install the WordPress PHPUnit test suite." >&2
 		exit 1
 	fi
 
-	mkdir -p "$WP_TESTS_DIR"
-	svn export --quiet --force "$svn_base/includes" "$WP_TESTS_DIR/includes"
-	svn export --quiet --force "$svn_base/data" "$WP_TESTS_DIR/data"
+	local branch=$suite_version
+	if [[ "$suite_version" == "trunk" || "$suite_version" == "nightly" ]]; then
+		branch="trunk"
+	fi
+
+	local checkout="$TMPDIR/wordpress-develop-${branch}"
+	rm -rf "$checkout"
+	git clone --depth 1 --branch "$branch" https://github.com/WordPress/wordpress-develop.git "$checkout" >/dev/null 2>&1
+	rm -rf "$WP_TESTS_DIR/includes" "$WP_TESTS_DIR/data"
+	cp -R "$checkout/tests/phpunit/includes" "$WP_TESTS_DIR/includes"
+	cp -R "$checkout/tests/phpunit/data" "$WP_TESTS_DIR/data"
 }
 
 install_woocommerce() {
@@ -103,7 +118,27 @@ create_database() {
 	fi
 
 	if ! command -v mysql >/dev/null 2>&1; then
-		echo "mysql client is required to create the WordPress test database." >&2
+		if php -r 'exit( extension_loaded( "mysqli" ) || extension_loaded( "pdo_mysql" ) ? 0 : 1 );'; then
+			php -r '
+				$host = $argv[1];
+				$port = (int) $argv[2];
+				$user = $argv[3];
+				$pass = $argv[4];
+				$db   = $argv[5];
+				mysqli_report( MYSQLI_REPORT_OFF );
+				$mysqli = @new mysqli( $host, $user, $pass, "", $port > 0 ? $port : 3306 );
+				if ( $mysqli->connect_errno ) {
+					fwrite( STDERR, "Could not connect to MySQL: " . $mysqli->connect_error . PHP_EOL );
+					exit( 1 );
+				}
+				if ( ! $mysqli->query( "CREATE DATABASE IF NOT EXISTS `" . $mysqli->real_escape_string( $db ) . "`" ) ) {
+					fwrite( STDERR, "Could not create database: " . $mysqli->error . PHP_EOL );
+					exit( 1 );
+				}
+			' "$db_host_name" "${db_port:-3306}" "$DB_USER" "$DB_PASS" "$DB_NAME"
+			return
+		fi
+		echo "mysql client or PHP mysqli/pdo_mysql is required to create the WordPress test database." >&2
 		exit 1
 	fi
 

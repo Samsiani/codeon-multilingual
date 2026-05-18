@@ -15,7 +15,10 @@ use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
+use Samsiani\CodeonMultilingual\Compat\CachePurge;
+use Samsiani\CodeonMultilingual\Compat\RankMathSeo;
 use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
+use Samsiani\CodeonMultilingual\Compat\YoastSeo;
 use Samsiani\CodeonMultilingual\Content\MenuTranslator;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
@@ -120,6 +123,9 @@ final class Plugin {
 
 		// Compatibility shims.
 		WpmlFunctions::register();
+		CachePurge::register();
+		YoastSeo::register();
+		RankMathSeo::register();
 
 		// Admin.
 		AdminMenu::register();

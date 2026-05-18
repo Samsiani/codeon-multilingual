@@ -345,8 +345,8 @@ final class HealthReport {
 				'Terms missing language rows',
 				self::count_terms_missing_language_rows(),
 				self::STATUS_WARNING,
-				'All terms have a language row.',
-				'Some terms are missing cml_term_language rows.',
+				'All public translatable terms have a language row.',
+				'Some public translatable terms are missing cml_term_language rows.',
 				self::sample_terms_missing_language_rows()
 			),
 			self::count_check(
@@ -625,14 +625,20 @@ final class HealthReport {
 
 	private static function count_terms_missing_language_rows(): int {
 		global $wpdb;
-		$map_table = $wpdb->prefix . 'cml_term_language';
+		$map_table      = $wpdb->prefix . 'cml_term_language';
+		$taxonomy_where = self::public_term_taxonomy_where();
 
-		return self::count_sql(
-			"SELECT COUNT(*)
-			 FROM {$wpdb->terms} t
-			 LEFT JOIN {$map_table} m ON m.term_id = t.term_id
-			 WHERE m.term_id IS NULL"
-		);
+		$sql = "SELECT COUNT(*) FROM (
+			SELECT t.term_id
+			FROM {$wpdb->terms} t
+			INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
+			LEFT JOIN {$map_table} m ON m.term_id = t.term_id
+			WHERE m.term_id IS NULL
+			  AND {$taxonomy_where}
+			GROUP BY t.term_id
+		) cml_missing_terms";
+
+		return self::count_sql( $sql );
 	}
 
 	/**
@@ -640,16 +646,20 @@ final class HealthReport {
 	 */
 	private static function sample_terms_missing_language_rows(): array {
 		global $wpdb;
-		$map_table = $wpdb->prefix . 'cml_term_language';
+		$map_table      = $wpdb->prefix . 'cml_term_language';
+		$taxonomy_where = self::public_term_taxonomy_where();
 
-		return self::rows_sql(
-			"SELECT t.term_id, t.name, t.slug
-			 FROM {$wpdb->terms} t
-			 LEFT JOIN {$map_table} m ON m.term_id = t.term_id
-			 WHERE m.term_id IS NULL
-			 ORDER BY t.term_id ASC
-			 LIMIT " . self::SAMPLE_LIMIT
-		);
+		$sql = "SELECT t.term_id, t.name, t.slug, MIN(tt.taxonomy) AS taxonomy
+			FROM {$wpdb->terms} t
+			INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
+			LEFT JOIN {$map_table} m ON m.term_id = t.term_id
+			WHERE m.term_id IS NULL
+			  AND {$taxonomy_where}
+			GROUP BY t.term_id, t.name, t.slug
+			ORDER BY t.term_id ASC
+			LIMIT " . self::SAMPLE_LIMIT;
+
+		return self::rows_sql( $sql );
 	}
 
 	private static function count_unknown_language_rows( string $table, string $language_column ): int {
@@ -776,6 +786,14 @@ final class HealthReport {
 		global $wpdb;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
 		return (int) $wpdb->get_var( $sql );
+	}
+
+	private static function public_term_taxonomy_where(): string {
+		global $wpdb;
+
+		$taxonomies   = HealthRepair::system_term_taxonomies();
+		$placeholders = implode( ',', array_fill( 0, count( $taxonomies ), '%s' ) );
+		return $wpdb->prepare( "tt.taxonomy NOT IN ({$placeholders})", ...$taxonomies );
 	}
 
 	/**

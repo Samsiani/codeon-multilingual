@@ -3,9 +3,12 @@ declare(strict_types=1);
 
 namespace Samsiani\CodeonMultilingual\Cli;
 
+use Samsiani\CodeonMultilingual\Migration\MigrationSourceRegistry;
+use Samsiani\CodeonMultilingual\Migration\PolylangImporter;
 use Samsiani\CodeonMultilingual\Migration\WpmlImporter;
 use Samsiani\CodeonMultilingual\Migration\WpmlMigrationSnapshot;
 use WP_CLI;
+use WP_CLI\Utils;
 use WP_CLI_Command;
 
 /**
@@ -20,6 +23,8 @@ use WP_CLI_Command;
  *     wp cml migrate wpml --dry-run
  *     wp cml migrate wpml --snapshot=/secure/backups/codeon-before-wpml.json
  *     wp cml migrate wpml
+ *     wp cml migrate polylang --dry-run
+ *     wp cml migrate polylang --snapshot=/secure/backups/codeon-before-polylang.json
  *     wp cml migrate export --output=/secure/backups/codeon-before-wpml.json
  *     wp cml migrate rollback /secure/backups/codeon-before-wpml.json --dry-run
  *     wp cml migrate rollback /secure/backups/codeon-before-wpml.json --confirm-rollback
@@ -108,6 +113,105 @@ final class MigrateCommand extends WP_CLI_Command {
 		}
 
 		WP_CLI::success( 'WPML migration complete.' );
+	}
+
+	/**
+	 * Imports languages and post/term translation relationships from Polylang.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Report what would be imported and exit without writing.
+	 *
+	 * [--allow-conflicts]
+	 * : Import missing rows even when existing CodeOn data conflicts with Polylang.
+	 * Conflicting rows are left unchanged; nothing is overwritten.
+	 *
+	 * [--snapshot=<file>]
+	 * : Export a rollback snapshot of current CodeOn migration tables before importing.
+	 * Refuses to overwrite an existing file unless --force-snapshot is also passed.
+	 *
+	 * [--force-snapshot]
+	 * : Allow --snapshot to overwrite an existing file.
+	 *
+	 * @param array<int, string>    $args
+	 * @param array<string, string> $assoc_args
+	 */
+	public function polylang( array $args, array $assoc_args ): void {
+		if ( ! PolylangImporter::is_available() ) {
+			WP_CLI::error( 'No Polylang data found: language taxonomy rows are not present.' );
+		}
+
+		$summary = PolylangImporter::summary();
+		WP_CLI::log( 'Polylang data available:' );
+		WP_CLI::log( sprintf( '  languages:           %d', (int) $summary['languages'] ) );
+		WP_CLI::log( sprintf( '  posts:               %d', (int) $summary['posts'] ) );
+		WP_CLI::log( sprintf( '  terms:               %d', (int) $summary['terms'] ) );
+		WP_CLI::log( sprintf( '  string stores:       %d', (int) $summary['strings'] ) );
+		WP_CLI::log( sprintf( '  default language:    %s', (string) ( $summary['default_language'] ?? '—' ) ) );
+		WP_CLI::log( 'Conflicts:' );
+		WP_CLI::log( sprintf( '  language settings:   %d', (int) $summary['conflicts']['language_settings'] ) );
+		WP_CLI::log( sprintf( '  post mappings:       %d', (int) $summary['conflicts']['post_mappings'] ) );
+		WP_CLI::log( sprintf( '  term mappings:       %d', (int) $summary['conflicts']['term_mappings'] ) );
+		foreach ( $summary['warnings'] as $warning ) {
+			WP_CLI::warning( $warning );
+		}
+
+		if ( isset( $assoc_args['dry-run'] ) ) {
+			if ( isset( $assoc_args['snapshot'] ) ) {
+				WP_CLI::error( '--dry-run cannot be combined with --snapshot because dry runs are read-only.' );
+			}
+			if ( array_sum( $summary['conflicts'] ) > 0 ) {
+				WP_CLI::warning( 'Dry run found conflicts. A real import will stop unless --allow-conflicts is supplied.' );
+			}
+			WP_CLI::success( 'Dry run: nothing written.' );
+			return;
+		}
+
+		$snapshot = (string) ( $assoc_args['snapshot'] ?? '' );
+		if ( '' !== $snapshot ) {
+			if ( '-' === $snapshot ) {
+				WP_CLI::error( '--snapshot must be a file path when used with import.' );
+			}
+			self::write_snapshot_file( $snapshot, isset( $assoc_args['force-snapshot'] ), '--force-snapshot' );
+			WP_CLI::log( "Rollback snapshot written to {$snapshot}." );
+		} else {
+			WP_CLI::warning( 'No CodeOn rollback snapshot was exported. Use --snapshot=<file> before production imports.' );
+		}
+
+		$result = PolylangImporter::import_all( isset( $assoc_args['allow-conflicts'] ) );
+
+		WP_CLI::log( 'Imported:' );
+		WP_CLI::log( sprintf( '  languages:           %d', $result['languages'] ) );
+		WP_CLI::log( sprintf( '  posts:               %d', $result['posts'] ) );
+		WP_CLI::log( sprintf( '  terms:               %d', $result['terms'] ) );
+		WP_CLI::log( sprintf( '  strings:             %d', $result['strings'] ) );
+		WP_CLI::log( sprintf( '  default set:         %s', $result['default_set'] ? 'yes' : 'no' ) );
+		WP_CLI::log( sprintf( '  conflicts:           %d', array_sum( $result['conflicts'] ) ) );
+		foreach ( $result['warnings'] as $warning ) {
+			WP_CLI::warning( $warning );
+		}
+
+		if ( ! empty( $result['errors'] ) ) {
+			foreach ( $result['errors'] as $err ) {
+				WP_CLI::warning( $err );
+			}
+			WP_CLI::error( 'Migration finished with errors. Re-run is safe (idempotent).' );
+		}
+
+		WP_CLI::success( 'Polylang migration complete.' );
+	}
+
+	/**
+	 * Lists known migration sources and the current support level.
+	 *
+	 * @param array<int, string>    $args
+	 * @param array<string, string> $assoc_args
+	 */
+	public function sources( array $args, array $assoc_args ): void {
+		$rows = MigrationSourceRegistry::cli_rows();
+
+		Utils\format_items( 'table', $rows, array_keys( $rows[0] ) );
 	}
 
 	/**

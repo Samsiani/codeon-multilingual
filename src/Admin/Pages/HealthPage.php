@@ -6,6 +6,7 @@ namespace Samsiani\CodeonMultilingual\Admin\Pages;
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
 use Samsiani\CodeonMultilingual\Core\Diagnostics;
 use Samsiani\CodeonMultilingual\Core\HealthReport;
+use Samsiani\CodeonMultilingual\Core\HealthRepair;
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
@@ -22,9 +23,11 @@ final class HealthPage {
 
 	private const ACTION_SAVE_DEBUG  = 'cml_save_debug_logging';
 	private const ACTION_FLUSH_CACHE = 'cml_flush_runtime_caches';
+	private const ACTION_REPAIR      = 'cml_repair_health_issues';
 
 	private const NONCE_SAVE_DEBUG  = 'cml_save_debug_logging';
 	private const NONCE_FLUSH_CACHE = 'cml_flush_runtime_caches';
+	private const NONCE_REPAIR      = 'cml_repair_health_issues';
 
 	private static bool $registered = false;
 
@@ -36,6 +39,7 @@ final class HealthPage {
 
 		add_action( 'admin_post_' . self::ACTION_SAVE_DEBUG, array( self::class, 'handle_save_debug' ) );
 		add_action( 'admin_post_' . self::ACTION_FLUSH_CACHE, array( self::class, 'handle_flush_caches' ) );
+		add_action( 'admin_post_' . self::ACTION_REPAIR, array( self::class, 'handle_repair' ) );
 	}
 
 	public static function render(): void {
@@ -82,6 +86,17 @@ final class HealthPage {
 					<?php wp_nonce_field( self::NONCE_FLUSH_CACHE ); ?>
 					<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_FLUSH_CACHE ); ?>">
 					<?php submit_button( __( 'Flush CodeOn runtime caches', 'codeon-multilingual' ), 'secondary', 'submit', false ); ?>
+				</form>
+
+				<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="cml-health-repair-form">
+					<?php wp_nonce_field( self::NONCE_REPAIR ); ?>
+					<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_REPAIR ); ?>">
+					<label>
+						<input type="checkbox" name="cml_confirm_repair" value="1" required>
+						<?php esc_html_e( 'I have a recent database backup.', 'codeon-multilingual' ); ?>
+					</label>
+					<?php submit_button( __( 'Repair safe data issues', 'codeon-multilingual' ), 'secondary', 'submit', false ); ?>
+					<p class="description"><?php esc_html_e( 'Deletes orphaned CodeOn rows, backfills missing public post/term language rows, and normalizes unknown source-string languages. Source WordPress posts and terms are never deleted.', 'codeon-multilingual' ); ?></p>
 				</form>
 
 				<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="cml-health-debug-form">
@@ -168,6 +183,33 @@ final class HealthPage {
 		self::redirect_with( array( 'caches_flushed' => '1' ) );
 	}
 
+	public static function handle_repair(): void {
+		if ( ! current_user_can( AdminMenu::CAPABILITY ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
+		}
+		check_admin_referer( self::NONCE_REPAIR );
+
+		if ( empty( $_POST['cml_confirm_repair'] ) ) {
+			self::redirect_with( array( 'repair_confirm_required' => '1' ) );
+		}
+
+		$result = HealthRepair::run( 'all', false );
+		Diagnostics::debug(
+			'Health repair applied from admin',
+			array(
+				'total'   => $result['total'],
+				'actions' => array_keys( $result['actions'] ),
+			)
+		);
+
+		self::redirect_with(
+			array(
+				'repaired' => '1',
+				'total'    => (int) $result['total'],
+			)
+		);
+	}
+
 	/**
 	 * @param mixed $samples
 	 */
@@ -212,6 +254,20 @@ final class HealthPage {
 		}
 		if ( isset( $_GET['caches_flushed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			self::notice( 'success', __( 'CodeOn runtime caches flushed.', 'codeon-multilingual' ) );
+		}
+		if ( isset( $_GET['repair_confirm_required'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			self::notice( 'error', __( 'Confirm that you have a recent database backup before repairing health issues.', 'codeon-multilingual' ) );
+		}
+		if ( isset( $_GET['repaired'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$total = isset( $_GET['total'] ) ? absint( wp_unslash( $_GET['total'] ) ) : 0;
+			self::notice(
+				'success',
+				sprintf(
+					/* translators: %d: number of repaired rows. */
+					__( 'Safe health repairs complete. Rows affected: %d.', 'codeon-multilingual' ),
+					$total
+				)
+			);
 		}
 	}
 
@@ -304,8 +360,15 @@ final class HealthPage {
 			.cml-health-debug-form {
 				max-width: 560px;
 			}
+			.cml-health-repair-form {
+				max-width: 640px;
+			}
 			.cml-health-debug-form .button {
 				margin-left: 8px;
+			}
+			.cml-health-repair-form .button {
+				display: block;
+				margin-top: 8px;
 			}
 			.cml-health-status {
 				display: inline-block;

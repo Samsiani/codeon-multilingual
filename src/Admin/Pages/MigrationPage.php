@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Admin\Pages;
 
 use Samsiani\CodeonMultilingual\Admin\AdminMenu;
+use Samsiani\CodeonMultilingual\Migration\PolylangImporter;
 use Samsiani\CodeonMultilingual\Migration\WpmlImporter;
 use Samsiani\CodeonMultilingual\Migration\WpmlMigrationSnapshot;
 
@@ -19,9 +20,11 @@ final class MigrationPage {
 	public const PAGE_SLUG = 'cml-migration';
 
 	private const ACTION_IMPORT = 'cml_run_wpml_import';
+	private const ACTION_IMPORT_POLYLANG = 'cml_run_polylang_import';
 	private const ACTION_EXPORT = 'cml_export_wpml_migration_snapshot';
 	private const ACTION_RESTORE = 'cml_restore_wpml_migration_snapshot';
 	private const NONCE_IMPORT  = 'cml_run_wpml_import';
+	private const NONCE_IMPORT_POLYLANG = 'cml_run_polylang_import';
 	private const NONCE_EXPORT  = 'cml_export_wpml_migration_snapshot';
 	private const NONCE_RESTORE = 'cml_restore_wpml_migration_snapshot';
 
@@ -34,6 +37,7 @@ final class MigrationPage {
 		self::$registered = true;
 
 		add_action( 'admin_post_' . self::ACTION_IMPORT, array( self::class, 'handle_import' ) );
+		add_action( 'admin_post_' . self::ACTION_IMPORT_POLYLANG, array( self::class, 'handle_polylang_import' ) );
 		add_action( 'admin_post_' . self::ACTION_EXPORT, array( self::class, 'handle_export' ) );
 		add_action( 'admin_post_' . self::ACTION_RESTORE, array( self::class, 'handle_restore' ) );
 	}
@@ -220,7 +224,101 @@ final class MigrationPage {
 					<li><?php esc_html_e( 'Translation workflow / status metadata — not modelled in CodeOn.', 'codeon-multilingual' ); ?></li>
 				</ul>
 			<?php endif; ?>
+
+			<?php self::render_polylang_section(); ?>
 		</div>
+		<?php
+	}
+
+	private static function render_polylang_section(): void {
+		$available = PolylangImporter::is_available();
+		$summary   = PolylangImporter::summary();
+		$conflicts = $summary['conflicts'];
+
+		$has_conflicts = $conflicts['language_settings'] > 0
+			|| $conflicts['post_mappings'] > 0
+			|| $conflicts['term_mappings'] > 0
+			|| $conflicts['string_translations'] > 0;
+		?>
+		<hr>
+		<h2><?php esc_html_e( 'Polylang', 'codeon-multilingual' ); ?></h2>
+
+		<?php if ( ! $available ) : ?>
+			<div class="notice notice-info inline">
+				<p><?php esc_html_e( 'Polylang language rows not detected. Nothing to migrate.', 'codeon-multilingual' ); ?></p>
+			</div>
+		<?php else : ?>
+
+		<p class="description">
+			<?php esc_html_e( 'CodeOn found Polylang taxonomy data. The importer copies Polylang languages plus post and term translation relationships into CodeOn. Polylang source data is left untouched.', 'codeon-multilingual' ); ?>
+		</p>
+
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Detected default language', 'codeon-multilingual' ); ?></th>
+				<td><code><?php echo esc_html( (string) ( $summary['default_language'] ?? '—' ) ); ?></code></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Languages', 'codeon-multilingual' ); ?></th>
+				<td><?php echo (int) $summary['languages']; ?></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Post translations', 'codeon-multilingual' ); ?></th>
+				<td><?php echo (int) $summary['posts']; ?></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Term translations', 'codeon-multilingual' ); ?></th>
+				<td><?php echo (int) $summary['terms']; ?></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Polylang string stores', 'codeon-multilingual' ); ?></th>
+				<td><?php echo (int) $summary['strings']; ?></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Conflicts', 'codeon-multilingual' ); ?></th>
+				<td>
+					<?php if ( $has_conflicts ) : ?>
+						<strong style="color:#b32d2e"><?php esc_html_e( 'Review required', 'codeon-multilingual' ); ?></strong>
+					<?php else : ?>
+						<?php esc_html_e( 'None detected', 'codeon-multilingual' ); ?>
+					<?php endif; ?>
+					<ul style="margin:6px 0 0 20px;list-style:disc">
+						<li><?php esc_html_e( 'Language settings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['language_settings']; ?></li>
+						<li><?php esc_html_e( 'Post mappings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['post_mappings']; ?></li>
+						<li><?php esc_html_e( 'Term mappings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['term_mappings']; ?></li>
+					</ul>
+				</td>
+			</tr>
+		</table>
+
+			<?php foreach ( $summary['warnings'] as $warning ) : ?>
+				<div class="notice notice-warning inline">
+					<p><?php echo esc_html( $warning ); ?></p>
+				</div>
+			<?php endforeach; ?>
+
+			<?php if ( $has_conflicts ) : ?>
+				<div class="notice notice-warning inline">
+					<p><?php esc_html_e( 'Existing CodeOn data conflicts with Polylang data. The admin importer is blocked to avoid overwriting live language settings or mappings. Resolve conflicts manually or use WP-CLI with an explicit conflict policy.', 'codeon-multilingual' ); ?></p>
+				</div>
+			<?php endif; ?>
+
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_IMPORT_POLYLANG ); ?>">
+			<?php wp_nonce_field( self::NONCE_IMPORT_POLYLANG ); ?>
+			<p>
+				<label>
+					<input type="checkbox" name="cml_confirm_backup" value="1" required <?php disabled( $has_conflicts ); ?>>
+					<?php esc_html_e( 'I have a recent database backup and understand this import writes to CodeOn tables.', 'codeon-multilingual' ); ?>
+				</label>
+			</p>
+			<p>
+				<button type="submit" class="button button-primary" <?php disabled( $has_conflicts ); ?>>
+					<?php esc_html_e( 'Import from Polylang', 'codeon-multilingual' ); ?>
+				</button>
+			</p>
+		</form>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -252,6 +350,37 @@ final class MigrationPage {
 				'tconflicts' => (int) $result['conflicts']['term_mappings'],
 				'sconflicts' => (int) $result['conflicts']['string_translations'],
 				'errors'     => empty( $result['errors'] ) ? '' : implode( '||', $result['errors'] ),
+			)
+		);
+	}
+
+	public static function handle_polylang_import(): void {
+		if ( ! current_user_can( AdminMenu::CAPABILITY ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
+		}
+		check_admin_referer( self::NONCE_IMPORT_POLYLANG );
+
+		if ( ! PolylangImporter::is_available() ) {
+			self::redirect_with( array( 'error' => 'no_polylang' ) );
+		}
+		if ( empty( $_POST['cml_confirm_backup'] ) ) {
+			self::redirect_with( array( 'error' => 'backup_required' ) );
+		}
+
+		$result = PolylangImporter::import_all();
+
+		self::redirect_with(
+			array(
+				'polylang_imported' => '1',
+				'planguages'        => (int) $result['languages'],
+				'pposts'            => (int) $result['posts'],
+				'pterms'            => (int) $result['terms'],
+				'pstrings'          => (int) $result['strings'],
+				'plconflicts'       => (int) $result['conflicts']['language_settings'],
+				'ppconflicts'       => (int) $result['conflicts']['post_mappings'],
+				'ptconflicts'       => (int) $result['conflicts']['term_mappings'],
+				'perrors'           => empty( $result['errors'] ) ? '' : implode( '||', $result['errors'] ),
+				'pwarnings'         => empty( $result['warnings'] ) ? '' : implode( '||', $result['warnings'] ),
 			)
 		);
 	}
@@ -396,10 +525,44 @@ final class MigrationPage {
 				echo '</ul></div>';
 			}
 		}
+		if ( isset( $_GET['polylang_imported'] ) ) {
+			$summary = sprintf(
+				/* translators: 1: languages, 2: posts, 3: terms, 4: string stores */
+				esc_html__( 'Polylang import complete — languages: %1$d, post translations: %2$d, term translations: %3$d, string stores reported: %4$d.', 'codeon-multilingual' ),
+				self::get_int_arg( 'planguages' ),
+				self::get_int_arg( 'pposts' ),
+				self::get_int_arg( 'pterms' ),
+				self::get_int_arg( 'pstrings' )
+			);
+			echo '<div class="notice notice-success is-dismissible"><p>' . wp_kses_post( $summary ) . '</p></div>';
+
+			$warnings_raw = isset( $_GET['pwarnings'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['pwarnings'] ) ) : '';
+			if ( '' !== $warnings_raw ) {
+				echo '<div class="notice notice-warning is-dismissible"><p><strong>'
+					. esc_html__( 'Polylang import warnings:', 'codeon-multilingual' )
+					. '</strong></p><ul style="list-style:disc;margin-left:24px">';
+				foreach ( explode( '||', $warnings_raw ) as $warning ) {
+					echo '<li><code>' . esc_html( $warning ) . '</code></li>';
+				}
+				echo '</ul></div>';
+			}
+
+			$errors_raw = isset( $_GET['perrors'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['perrors'] ) ) : '';
+			if ( '' !== $errors_raw ) {
+				echo '<div class="notice notice-error is-dismissible"><p><strong>'
+					. esc_html__( 'Polylang import errors:', 'codeon-multilingual' )
+					. '</strong></p><ul style="list-style:disc;margin-left:24px">';
+				foreach ( explode( '||', $errors_raw ) as $error ) {
+					echo '<li><code>' . esc_html( $error ) . '</code></li>';
+				}
+				echo '</ul></div>';
+			}
+		}
 		if ( isset( $_GET['error'] ) ) {
 			$error = sanitize_key( wp_unslash( (string) $_GET['error'] ) );
 			$msg   = match ( $error ) {
 				'no_wpml' => __( 'WPML tables not detected. Cannot import.', 'codeon-multilingual' ),
+				'no_polylang' => __( 'Polylang language rows not detected. Cannot import.', 'codeon-multilingual' ),
 				'backup_required' => __( 'Confirm that you have a recent database backup before running the import.', 'codeon-multilingual' ),
 				'snapshot_export_failed' => __( 'Could not create the CodeOn migration snapshot.', 'codeon-multilingual' ),
 				'snapshot_required' => __( 'Choose a CodeOn migration snapshot JSON file to restore.', 'codeon-multilingual' ),

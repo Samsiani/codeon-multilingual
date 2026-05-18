@@ -33,7 +33,7 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | **WC payment-method titles (curated)** | ✅ done | Gateway titles/descriptions via `Woo/MethodLabels.php` |
 | **WC email subjects/bodies (curated)** | ✅ partial | Subjects/headings/additional content translate through `Woo/OrderLanguage.php`; template-specific body fragments still rely on gettext/string catalog |
 | **WC cart/checkout strings (curated)** | ✅ partial | Notices, coupon labels/descriptions, statuses, downloads, gateway/shipping labels covered; long-tail third-party checkout fragments remain follow-up |
-| **Variation attribute slug routing** | ✅ partial | Variation translation remaps `attribute_pa_*` meta to translated term slugs when sibling terms exist |
+| **Variation attribute slug routing** | ✅ partial | Variation translation remaps `attribute_pa_*` meta to translated term slugs when sibling terms exist; runtime variation option display maps to current-language term names in classic templates and Store API |
 | Language switcher — shortcode | ✅ done | `[cml_language_switcher]` |
 | Language switcher — classic widget | ✅ done | `Frontend/LanguageSwitcherWidget.php` |
 | Language switcher — auto-floating | ✅ done | `Frontend/FloatingSwitcher.php`, v0.5.0 |
@@ -118,9 +118,9 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 ### 4. Compatibility matrix ❌
 
-**Why it matters:** Production readiness means running the plugin against the actual store stack: Elementor, ACF, Yoast/Rank Math, WoodMart/Flatsome/Astra, caching/object cache, gateways, WP-CLI, and multisite if supported.
+**Why it matters:** Production readiness means running the plugin against the actual store stack: Elementor, ACF, Yoast/Rank Math, WoodMart/Flatsome/Astra, Avada/Fusion Builder, Divi, WPBakery, Visual Composer, Beaver Builder, Bricks, Oxygen, Breakdance, Brizy, SiteOrigin, Thrive, Themify, Kadence, GenerateBlocks, caching/object cache, gateways, WP-CLI, and multisite if supported.
 
-**Status:** Artcase covers a real WooCommerce/WoodMart-like environment, but the full matrix is not automated yet.
+**Status:** Artcase covers a real WooCommerce/WoodMart-like environment, but the full matrix is not automated yet. The v1 certification matrix now lives in `docs/V1_COMPATIBILITY_MATRIX.md`.
 
 ### 5. WC email rendering in customer's language ◐ (partial in v0.9.0)
 
@@ -128,11 +128,11 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 **Status:** v0.9.0 stores `_cml_language`, switches order tables/emails to the stored language during render, stores translated order item names at checkout, and translates configured email subject/heading/additional content when registered.
 
-### 6. Polylang compat shim ❌
+### 6. Polylang migration + compat shim ◐
 
-**Why it matters:** Some plugins are written against Polylang's `pll_*` API instead of WPML's. Implementing this widens our migration funnel.
+**Why it matters:** Some plugins are written against Polylang's `pll_*` API instead of WPML's. Polylang sites also need a real migration path, not only WPML.
 
-**Scope:** ~300 LOC, single file `Compat/PolylangFunctions.php`.
+**Scope:** v1 starts with the object migration adapter: languages, post mappings, term mappings, dry run, conflict preflight, admin import, and WP-CLI import. Remaining: `polylang_mo` string adapter and a `pll_*` compatibility shim.
 
 ### 7. Admin per-user UI language ❌
 
@@ -169,8 +169,8 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | ~~v0.8.0~~ | Production hardening + WC depth | Safer WPML migration, full-path page routing, canonical fix, uninstall retention, payment/shipping labels, order language, term/variation remapping, release/package gates | ✅ shipped |
 | ~~v0.9.0~~ | Production readiness | WP/Woo integration CI scaffold, PHPCS gate, WPML rollback snapshots, Health screen, benchmark command, broader Woo strings | ✅ shipped |
 | **v0.9.1** | CI proof + compatibility | Prove integration job in GitHub Actions PR, expand checkout/email/coupon tests, compatibility matrix pass | planned |
-| **v0.9.2** | Polylang + admin polish | Polylang compat shim + import path, admin per-user UI language | planned |
-| **v1.0.0** | Production-grade | Battle-tested on 3+ live sites, full migration path from WPML in one click | planned |
+| **v0.9.2** | Migration expansion + admin polish | Polylang object import, migration source matrix, admin per-user UI language | in progress |
+| **v1.0.0** | Production-grade | Battle-tested on 3+ live sites, full migration path from WPML and Polylang, documented paths for overlay/proxy plugins | planned |
 
 ## Out of scope (deliberately)
 
@@ -182,8 +182,8 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | Machine translation (Google / DeepL / Microsoft) | Same — too opinionated for the core. |
 | Multi-currency | Separate concern. Would be a sister-plugin if/when needed. |
 | Advanced Translation Editor (WPML side-by-side rich-text editor) | The native WP editor with our meta-box switcher is sufficient. |
-| Page builder JSON walker | Themes that store layouts as JSON blobs can be translated by re-editing in the builder UI. Walker per builder = maintenance treadmill. |
-| String packages (Yoast/ACF/Elementor blob translation) | Too plugin-specific. May ship as separate per-plugin integrations later. |
+| Generic one-size-fits-all page builder JSON walker | Builder formats are different enough that v1 uses explicit adapters/certification lanes instead of one unsafe generic walker. |
+| Blind string-package import | String packages must be source-specific. WPML/Polylang/TranslatePress/Weglot data should not be guessed from blobs without an adapter and tests. |
 
 ## Out of MVP but tracked
 
