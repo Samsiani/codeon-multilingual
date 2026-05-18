@@ -87,6 +87,18 @@ final class HealthReportTest extends TestCase {
 		$this->assertSame( HealthReport::STATUS_OK, HealthReport::status_from_counts( 0, 0 ) );
 	}
 
+	public function test_multisite_environment_reports_explicit_support_boundary(): void {
+		$single = HealthReport::inspect_multisite_environment( false, false );
+		$this->assertSame( 0, $single['warning_count'] );
+		$this->assertFalse( $single['is_multisite'] );
+
+		$multisite = HealthReport::inspect_multisite_environment( true, true );
+		$this->assertSame( 1, $multisite['warning_count'] );
+		$this->assertTrue( $multisite['is_multisite'] );
+		$this->assertTrue( $multisite['network_active'] );
+		$this->assertStringContainsString( 'network-wide', $multisite['samples']['support'] );
+	}
+
 	public function test_health_repair_classifies_internal_term_taxonomies(): void {
 		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'product_type' ) );
 		$this->assertTrue( HealthRepair::is_system_term_taxonomy( 'product_visibility' ) );

@@ -122,6 +122,26 @@ final class WooStoreApiLanguageTest extends TestCase {
 		$this->assertSame( 'en', CurrentLanguage::code() );
 	}
 
+	public function test_non_store_api_route_resets_store_api_request_flag_after_store_dispatch(): void {
+		StoreApiLanguage::detect_language(
+			null,
+			null,
+			$this->request( '/wc/store/v1/cart', array( 'lang' => 'ka' ) )
+		);
+
+		$this->assertTrue( StoreApiLanguage::is_current_request() );
+		$this->assertSame( 'ka', CurrentLanguage::code() );
+
+		StoreApiLanguage::detect_language(
+			null,
+			null,
+			$this->request( '/wc/v3/products', array( 'lang' => 'en' ) )
+		);
+
+		$this->assertFalse( StoreApiLanguage::is_current_request() );
+		$this->assertSame( 'ka', CurrentLanguage::code() );
+	}
+
 	public function test_ignores_invalid_or_inactive_language_candidates(): void {
 		StoreApiLanguage::detect_language(
 			null,
@@ -182,5 +202,7 @@ final class WooStoreApiLanguageTest extends TestCase {
 	private function reset_registration(): void {
 		$registered = new \ReflectionProperty( StoreApiLanguage::class, 'registered' );
 		$registered->setValue( null, false );
+		$request = new \ReflectionProperty( StoreApiLanguage::class, 'store_api_request' );
+		$request->setValue( null, false );
 	}
 }

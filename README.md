@@ -111,12 +111,15 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml backfill run [--all]` / `status` / `reset`
 - `wp cml health summary` / `report [--failed-only]`
 - `wp cml health repair [--dry-run|--apply] [--scope=all|orphaned-post-rows|orphaned-term-rows|orphaned-string-rows|missing-post-rows|missing-term-rows|unknown-source-languages]`
-- `wp cml benchmark report` / `seed --yes` — strings plus real `WP_Query` product/variation collection workloads in the selected language
+- `wp cml benchmark report` / `seed --yes` / `cleanup --dry-run|--yes` — strings plus real `WP_Query` product/variation collection workloads in the selected language, with guarded fixture cleanup
 
 **v1 hardening branch**
 - WPML/Polylang migration preflight is stricter about default-language and source-language conflicts.
+- Admin WPML/Polylang imports create a source-tagged rollback snapshot before writes; WP-CLI imports remain snapshot-gated.
 - WooCommerce product relationship IDs and variation option display labels remap to current-language siblings where possible.
-- Yoast SEO and Rank Math breadcrumb/schema arrays localize URLs, post IDs, and term IDs through CodeOn translation groups.
+- WooCommerce Store API language state is scoped to Store API dispatches, including cart item product-object swaps and notice payload translation.
+- Yoast SEO and Rank Math breadcrumb/schema/canonical/sitemap surfaces localize URLs, post IDs, and term IDs through CodeOn translation groups.
+- Builder/template library CPTs are included in the default translatable post type set when present.
 
 ## Requirements
 

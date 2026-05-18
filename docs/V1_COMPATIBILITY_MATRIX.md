@@ -9,21 +9,21 @@ shortcodes, templates, dynamic IDs, strings, or cache behavior.
 
 | Target | Priority | Current posture | v1.0 certification scope |
 |---|---:|---|---|
-| Gutenberg / Block Editor | P0 | Attribute adapter started | `parse_blocks()` ID/link walker, reusable `wp_block`, navigation block, dynamic blocks |
+| Gutenberg / Block Editor | P0 | Attribute adapter started; reusable `wp_block` and `wp_navigation` are translatable CPTs when present | `parse_blocks()` ID/link walker, reusable `wp_block`, navigation block, dynamic blocks |
 | WooCommerce Blocks / Store API | P0 | Partial | Cart, checkout, notices, product grids, variation add-to-cart, REST/Store API language |
-| Elementor | P0 | JSON adapter started | `_elementor_data` JSON strings, template IDs, links, widgets, loop/grid widgets |
+| Elementor | P0 | JSON adapter started; `elementor_library` is translatable when present | `_elementor_data` JSON strings, template IDs, links, widgets, loop/grid widgets |
 | Elementor Pro | P0 | Needs adapter | Theme Builder, forms, popups, Woo widgets, dynamic tags, conditions |
 | ACF / ACF Pro | P0 | Field-value adapter started | Options pages per language, flexible/repeater walker, relationship fields, field group policy |
-| Yoast SEO | P0 | Adapter started | Breadcrumb and schema URL/object localization with static asset/REST/admin URL guards; sitemap/canonical smoke tests remain |
-| Rank Math | P0 | Adapter started | Breadcrumb and schema URL/object localization with static asset/REST/admin URL guards; sitemap/canonical smoke tests remain |
-| Avada / Fusion Builder | P1 | Baseline shortcode/meta clone | Global elements, layout sections, dynamic data, shortcode ID/link remapping |
-| Divi Builder / Divi Theme Builder | P1 | Baseline shortcode clone | `et_pb_layout`, global modules, theme builder templates, shortcode ID/link remapping |
+| Yoast SEO | P0 | Adapter covers breadcrumbs, schema JSON-LD, canonical, OpenGraph URL, sitemap entry `loc`, and static asset/REST/admin URL guards | Third-party sitemap smoke tests on real Yoast installs remain |
+| Rank Math | P0 | Adapter covers breadcrumbs, JSON-LD, canonical, sitemap entry `loc`, and static asset/REST/admin URL guards | Third-party sitemap smoke tests on real Rank Math installs remain |
+| Avada / Fusion Builder | P1 | Baseline shortcode/meta clone; `fusion_template`/`fusion_element` are translatable when present | Global elements, layout sections, dynamic data, shortcode ID/link remapping |
+| Divi Builder / Divi Theme Builder | P1 | Baseline shortcode clone; `et_pb_layout` is translatable when present | Global modules, theme builder templates, shortcode ID/link remapping |
 | WPBakery | P1 | Good shortcode baseline | Template/library refs, grid explicit IDs, Woo elements, shortcode attribute remapping |
 | Visual Composer Website Builder | P1 | Partial | Hub templates, shortcode/template refs, frontend editor smoke tests |
-| Beaver Builder / Beaver Themer | P1 | Serialized meta adapter started | `_fl_builder_data`, saved rows/modules, Themer layouts, serialized strings/IDs |
-| Bricks Builder | P1 | Needs adapter | Builder content meta, templates, query loops, conditions, dynamic data, ACF integration |
-| Oxygen Builder | P1 | Needs adapter | Templates, conditions, reusable parts, shortcodes/meta, query components |
-| Breakdance | P1 | Needs adapter | Builder data store, templates, conditions, forms, AJAX rendering |
+| Beaver Builder / Beaver Themer | P1 | Serialized meta adapter started; `fl-builder-template`/`fl-theme-layout` are translatable when present | `_fl_builder_data`, saved rows/modules, Themer layouts, serialized strings/IDs |
+| Bricks Builder | P1 | Template CPT translatable when present | Builder content meta, templates, query loops, conditions, dynamic data, ACF integration |
+| Oxygen Builder | P1 | Template CPT translatable when present | Templates, conditions, reusable parts, shortcodes/meta, query components |
+| Breakdance | P1 | Template CPT translatable when present | Builder data store, templates, conditions, forms, AJAX rendering |
 | Brizy | P2 | Needs adapter | Project JSON/meta, global blocks, forms, templates |
 | SiteOrigin Page Builder | P2 | Partial | `panels_data` serialized widget strings, post/page IDs, widgets bundle |
 | Thrive Architect / Theme Builder | P2 | Needs adapter | Architect content data, theme templates, symbols, forms/leads |
@@ -64,8 +64,8 @@ shortcodes, templates, dynamic IDs, strings, or cache behavior.
 | W3 Total Cache / WP Super Cache | P1 | Page cache purge and object cache behavior |
 | Cloudflare APO/CDN | P1 | Path-based cache variation and purge guidance |
 | Relevanssi / SearchWP | P1 | Index per language, query filtering, translated terms |
-| WP-CLI | P0 | Every admin migration/repair operation has a CLI equivalent |
-| Multisite | P1 decision | Either explicitly unsupported or certified for sub-sites with isolation |
+| WP-CLI | P0 | Every admin migration/repair operation has a CLI equivalent; benchmark seed/report/cleanup are available for staging performance runs |
+| Multisite | P1 decision | Per-site operation has request-state reset on `switch_blog`; Health reports multisite/network-active boundary. Network-wide activation and cross-site migration remain uncertified. |
 
 ## v1.0 Test Rule
 

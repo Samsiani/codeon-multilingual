@@ -101,6 +101,21 @@ final class YoastSeoTest extends TestCase {
 		$this->assertSame( 'https://external.test/profile', $result[0]['sameAs'][1] );
 	}
 
+	public function test_localizes_canonical_opengraph_and_sitemap_urls(): void {
+		$this->assertSame(
+			'https://example.test/en/product/',
+			YoastSeo::localize_url( 'https://example.test/product/', 'en' )
+		);
+		$this->assertSame(
+			'https://example.test/wp-json/wp/v2/posts',
+			YoastSeo::localize_url( 'https://example.test/wp-json/wp/v2/posts', 'en' )
+		);
+		$this->assertSame(
+			array( 'loc' => 'https://example.test/en/product/' ),
+			YoastSeo::localize_sitemap_entry( array( 'loc' => 'https://example.test/product/' ), 'post', null, 'en' )
+		);
+	}
+
 	private function set_wordpress_stubs(): void {
 		Functions\when( 'wp_parse_url' )->alias( static fn( $url, $component = -1 ) => parse_url( (string) $url, $component ) );
 		Functions\when( 'home_url' )->alias( static fn( $path = '/' ) => 'https://example.test/' . ltrim( (string) $path, '/' ) );

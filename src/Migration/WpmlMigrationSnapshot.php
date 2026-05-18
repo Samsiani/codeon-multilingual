@@ -87,7 +87,7 @@ final class WpmlMigrationSnapshot {
 	/**
 	 * @return array<string,mixed>
 	 */
-	public static function create(): array {
+	public static function create( string $migration_source = 'manual' ): array {
 		global $wpdb;
 
 		$tables = array();
@@ -111,6 +111,7 @@ final class WpmlMigrationSnapshot {
 			'format'         => self::FORMAT,
 			'format_version' => self::FORMAT_VERSION,
 			'plugin_version' => defined( 'CML_VERSION' ) ? CML_VERSION : '',
+			'migration_source' => self::normalize_source( $migration_source ),
 			'generated_at'   => gmdate( 'c' ),
 			'site_url'       => self::current_site_url(),
 			'table_prefix'   => (string) $wpdb->prefix,
@@ -123,8 +124,8 @@ final class WpmlMigrationSnapshot {
 		);
 	}
 
-	public static function to_json(): string {
-		$json = json_encode( self::create(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE );
+	public static function to_json( string $migration_source = 'manual' ): string {
+		$json = json_encode( self::create( $migration_source ), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE );
 		if ( ! is_string( $json ) ) {
 			throw new RuntimeException( 'Could not encode migration snapshot JSON.' );
 		}
@@ -587,6 +588,12 @@ final class WpmlMigrationSnapshot {
 			return (string) home_url();
 		}
 		return '';
+	}
+
+	private static function normalize_source( string $source ): string {
+		$source = strtolower( trim( $source ) );
+		$source = (string) preg_replace( '/[^a-z0-9_-]/', '', $source );
+		return '' !== $source ? $source : 'manual';
 	}
 
 	/**

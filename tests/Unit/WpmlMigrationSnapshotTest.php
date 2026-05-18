@@ -29,12 +29,13 @@ final class WpmlMigrationSnapshotTest extends TestCase {
 		global $wpdb;
 		$wpdb = $this->export_wpdb();
 
-		$json     = WpmlMigrationSnapshot::to_json();
+		$json     = WpmlMigrationSnapshot::to_json( 'polylang' );
 		$snapshot = json_decode( $json, true );
 
 		$this->assertIsArray( $snapshot );
 		$this->assertSame( 'codeon-multilingual.wpml-migration-snapshot', $snapshot['format'] );
 		$this->assertSame( 1, $snapshot['format_version'] );
+		$this->assertSame( 'polylang', $snapshot['migration_source'] );
 		$this->assertSame( 'https://example.test', $snapshot['site_url'] );
 		$this->assertSame( 'wp_', $snapshot['table_prefix'] );
 		$this->assertSame( 5, $snapshot['report']['total_rows'] );

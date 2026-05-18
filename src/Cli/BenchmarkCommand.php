@@ -21,6 +21,8 @@ use WP_Query;
  *     wp cml benchmark report --limit=250
  *     wp cml benchmark report --language=ka --format=json
  *     wp cml benchmark seed --strings=1000 --products=50 --variations=5 --language=ka --yes
+ *     wp cml benchmark cleanup --dry-run
+ *     wp cml benchmark cleanup --yes
  */
 final class BenchmarkCommand extends WP_CLI_Command {
 
@@ -152,6 +154,52 @@ final class BenchmarkCommand extends WP_CLI_Command {
 	}
 
 	/**
+	 * Removes benchmark fixtures inserted by `wp cml benchmark seed`.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--dry-run]
+	 * : Report what would be deleted without deleting anything.
+	 *
+	 * [--yes]
+	 * : Confirm deletion of CodeOn benchmark fixture rows/posts.
+	 *
+	 * [--format=<format>]
+	 * : Output format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - json
+	 *   - yaml
+	 * ---
+	 *
+	 * @param array<int, string>    $args
+	 * @param array<string, string> $assoc_args
+	 */
+	public function cleanup( array $args, array $assoc_args ): void {
+		$dry_run = isset( $assoc_args['dry-run'] );
+		if ( ! $dry_run && ! isset( $assoc_args['yes'] ) ) {
+			WP_CLI::error( 'Cleanup deletes CodeOn benchmark fixture data. Re-run with --yes to confirm, or --dry-run to preview.' );
+		}
+
+		$result = self::cleanup_benchmark_fixtures( $dry_run );
+		Utils\format_items(
+			(string) ( $assoc_args['format'] ?? 'table' ),
+			self::cleanup_rows_for_display( $result ),
+			array( 'fixture', 'count', 'deleted' )
+		);
+
+		if ( $result['dry_run'] ) {
+			WP_CLI::success( 'Dry run: benchmark fixture cleanup was not applied.' );
+			return;
+		}
+
+		WP_CLI::success( 'Benchmark fixtures removed.' );
+	}
+
+	/**
 	 * @param array<string,mixed> $metric
 	 * @return array<string,string>
 	 */
@@ -182,6 +230,117 @@ final class BenchmarkCommand extends WP_CLI_Command {
 			return $max;
 		}
 		return $int;
+	}
+
+	/**
+	 * @return array{strings:int,string_translations:int,posts:int,post_language_rows:int}
+	 */
+	public static function benchmark_fixture_counts(): array {
+		global $wpdb;
+
+		$post_ids = self::benchmark_post_ids();
+
+		return array(
+			'strings'             => (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}cml_strings WHERE domain = %s",
+					'cml-benchmark'
+				)
+			),
+			'string_translations' => (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*)
+					 FROM {$wpdb->prefix}cml_string_translations st
+					 INNER JOIN {$wpdb->prefix}cml_strings s ON s.id = st.string_id
+					 WHERE s.domain = %s",
+					'cml-benchmark'
+				)
+			),
+			'posts'               => count( $post_ids ),
+			'post_language_rows'  => self::count_post_language_rows_for_posts( $post_ids ),
+		);
+	}
+
+	/**
+	 * @return array{
+	 *   dry_run:bool,
+	 *   counts:array{strings:int,string_translations:int,posts:int,post_language_rows:int},
+	 *   deleted:array{strings:int,string_translations:int,posts:int,post_language_rows:int}
+	 * }
+	 */
+	public static function cleanup_benchmark_fixtures( bool $dry_run = true ): array {
+		global $wpdb;
+
+		$counts = self::benchmark_fixture_counts();
+		$result = array(
+			'dry_run' => $dry_run,
+			'counts'  => $counts,
+			'deleted' => array(
+				'strings'             => 0,
+				'string_translations' => 0,
+				'posts'               => 0,
+				'post_language_rows'  => 0,
+			),
+		);
+
+		if ( $dry_run ) {
+			return $result;
+		}
+
+		$result['deleted']['string_translations'] = self::query_rows(
+			$wpdb->prepare(
+				"DELETE st
+				 FROM {$wpdb->prefix}cml_string_translations st
+				 INNER JOIN {$wpdb->prefix}cml_strings s ON s.id = st.string_id
+				 WHERE s.domain = %s",
+				'cml-benchmark'
+			)
+		);
+		$result['deleted']['strings'] = self::query_rows(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->prefix}cml_strings WHERE domain = %s",
+				'cml-benchmark'
+			)
+		);
+
+		$post_ids = self::benchmark_post_ids();
+		$result['deleted']['post_language_rows'] = self::delete_post_language_rows_for_posts( $post_ids );
+
+		foreach ( $post_ids as $post_id ) {
+			$deleted = function_exists( 'wp_delete_post' ) ? wp_delete_post( $post_id, true ) : false;
+			if ( false !== $deleted && null !== $deleted ) {
+				++$result['deleted']['posts'];
+			}
+		}
+
+		StringTranslator::flush_cache();
+		TranslationGroups::flush();
+
+		return $result;
+	}
+
+	/**
+	 * @param array<string,mixed> $result
+	 * @return array<int,array{fixture:string,count:string,deleted:string}>
+	 */
+	public static function cleanup_rows_for_display( array $result ): array {
+		$labels = array(
+			'strings'             => 'strings',
+			'string_translations' => 'string translations',
+			'posts'               => 'posts',
+			'post_language_rows'  => 'post language rows',
+		);
+		$rows   = array();
+
+		foreach ( $labels as $key => $label ) {
+			$rows[] = array(
+				'fixture' => $label,
+				'count'   => (string) (int) ( $result['counts'][ $key ] ?? 0 ),
+				'deleted' => (string) (int) ( $result['deleted'][ $key ] ?? 0 ),
+			);
+		}
+
+		return $rows;
 	}
 
 	/**
@@ -407,6 +566,87 @@ final class BenchmarkCommand extends WP_CLI_Command {
 				$language
 			)
 		);
+	}
+
+	/**
+	 * @return array<int,int>
+	 */
+	private static function benchmark_post_ids(): array {
+		global $wpdb;
+
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT p.ID
+				 FROM {$wpdb->posts} p
+				 INNER JOIN {$wpdb->postmeta} pm ON pm.post_id = p.ID
+				 WHERE pm.meta_key = %s
+				   AND pm.meta_value = %s
+				 ORDER BY p.ID ASC",
+				'_cml_benchmark',
+				'1'
+			)
+		);
+
+		return is_array( $rows ) ? array_map( 'intval', $rows ) : array();
+	}
+
+	/**
+	 * @param array<int,int> $post_ids
+	 */
+	private static function count_post_language_rows_for_posts( array $post_ids ): int {
+		global $wpdb;
+
+		if ( array() === $post_ids ) {
+			return 0;
+		}
+
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- IN placeholders are generated from the integer id list and values are still bound by prepare().
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}cml_post_language WHERE post_id IN (" . self::int_placeholders( $post_ids ) . ')',
+				...$post_ids
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
+
+		return $count;
+	}
+
+	/**
+	 * @param array<int,int> $post_ids
+	 */
+	private static function delete_post_language_rows_for_posts( array $post_ids ): int {
+		global $wpdb;
+
+		if ( array() === $post_ids ) {
+			return 0;
+		}
+
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- IN placeholders are generated from the integer id list and values are still bound by prepare().
+		$sql = $wpdb->prepare(
+			"DELETE FROM {$wpdb->prefix}cml_post_language WHERE post_id IN (" . self::int_placeholders( $post_ids ) . ')',
+			...$post_ids
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
+
+		return self::query_rows(
+			$sql
+		);
+	}
+
+	/**
+	 * @param array<int,int> $values
+	 */
+	private static function int_placeholders( array $values ): string {
+		return implode( ',', array_fill( 0, count( $values ), '%d' ) );
+	}
+
+	private static function query_rows( string $sql ): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+		$result = $wpdb->query( $sql );
+		return false === $result ? 0 : (int) $wpdb->rows_affected;
 	}
 
 	/**

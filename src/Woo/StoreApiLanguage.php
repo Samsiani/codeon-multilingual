@@ -41,11 +41,10 @@ final class StoreApiLanguage {
 	public static function detect_language( $result, $server, $request ) {
 		unset( $server );
 
-		if ( ! self::is_store_api_request( $request ) ) {
+		self::$store_api_request = self::is_store_api_request( $request );
+		if ( ! self::$store_api_request ) {
 			return $result;
 		}
-
-		self::$store_api_request = true;
 
 		$language = self::request_language( $request );
 		if ( null !== $language ) {

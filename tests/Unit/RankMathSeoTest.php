@@ -96,6 +96,21 @@ final class RankMathSeoTest extends TestCase {
 		$this->assertSame( 15, $result['Article']['about']['term_id'] );
 	}
 
+	public function test_localizes_rank_math_canonical_and_sitemap_urls(): void {
+		$this->assertSame(
+			'https://example.test/en/product/',
+			RankMathSeo::localize_url( 'https://example.test/product/', 'en' )
+		);
+		$this->assertSame(
+			'https://example.test/wp-content/uploads/product.jpg',
+			RankMathSeo::localize_url( 'https://example.test/wp-content/uploads/product.jpg', 'en' )
+		);
+		$this->assertSame(
+			array( 'loc' => 'https://example.test/en/product/' ),
+			RankMathSeo::localize_sitemap_entry( array( 'loc' => 'https://example.test/product/' ), 'post', null, 'en' )
+		);
+	}
+
 	private function set_wordpress_stubs(): void {
 		Functions\when( 'wp_parse_url' )->alias( static fn( $url, $component = -1 ) => parse_url( (string) $url, $component ) );
 		Functions\when( 'home_url' )->alias( static fn( $path = '/' ) => 'https://example.test/' . ltrim( (string) $path, '/' ) );

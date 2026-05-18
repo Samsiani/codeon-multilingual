@@ -105,6 +105,10 @@ final class Languages {
 		wp_cache_delete( self::CACHE_KEY, self::CACHE_GROUP );
 	}
 
+	public static function reset_request_cache(): void {
+		self::$request_cache = null;
+	}
+
 	/**
 	 * Insert a language row. Caller validates uniqueness and required fields;
 	 * we trust the input and rely on the unique PRIMARY KEY (code) to error if

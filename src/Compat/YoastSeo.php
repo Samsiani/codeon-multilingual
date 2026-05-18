@@ -58,6 +58,9 @@ final class YoastSeo {
 		add_filter( 'wpseo_breadcrumb_links', array( self::class, 'localize_breadcrumbs' ), 20, 1 );
 		add_filter( 'wpseo_schema_graph', array( self::class, 'localize_schema' ), 20, 1 );
 		add_filter( 'wpseo_json_ld_output', array( self::class, 'localize_json_ld' ), 20, 1 );
+		add_filter( 'wpseo_canonical', array( self::class, 'localize_url' ), 20, 1 );
+		add_filter( 'wpseo_opengraph_url', array( self::class, 'localize_url' ), 20, 1 );
+		add_filter( 'wpseo_sitemap_entry', array( self::class, 'localize_sitemap_entry' ), 20, 3 );
 	}
 
 	/**
@@ -100,6 +103,37 @@ final class YoastSeo {
 	 */
 	public static function localize_json_ld( $json_ld, ?string $language = null ) {
 		return self::localize_schema( $json_ld, $language );
+	}
+
+	/**
+	 * @param mixed $url
+	 * @return mixed
+	 */
+	public static function localize_url( $url, ?string $language = null ) {
+		if ( ! is_string( $url ) || '' === $url ) {
+			return $url;
+		}
+
+		$language = self::language( $language );
+		return '' === $language ? $url : ValueLocalizer::url( $url, $language );
+	}
+
+	/**
+	 * @param mixed $entry
+	 * @return mixed
+	 */
+	public static function localize_sitemap_entry( mixed $entry, mixed $type = '', mixed $object = null, ?string $language = null ) {
+		unset( $type, $object );
+
+		if ( ! is_array( $entry ) ) {
+			return $entry;
+		}
+
+		if ( isset( $entry['loc'] ) && is_string( $entry['loc'] ) ) {
+			$entry['loc'] = self::localize_url( $entry['loc'], $language );
+		}
+
+		return $entry;
 	}
 
 	private static function language( ?string $language ): string {

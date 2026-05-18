@@ -27,6 +27,7 @@ final class HealthReport {
 	 * }
 	 */
 	public static function generate(): array {
+		$environment = self::environment_section();
 		$languages = self::language_section();
 		$posts     = self::post_mapping_section( (string) $languages['meta']['default_code'] );
 		$terms     = self::term_mapping_section( (string) $languages['meta']['default_code'] );
@@ -34,6 +35,7 @@ final class HealthReport {
 		$cache     = self::cache_section( $languages['meta'] );
 
 		$sections = array(
+			'environment' => $environment,
 			'languages' => $languages,
 			'posts'     => $posts,
 			'terms'     => $terms,
@@ -155,6 +157,50 @@ final class HealthReport {
 			return self::STATUS_WARNING;
 		}
 		return self::STATUS_OK;
+	}
+
+	/**
+	 * @return array{is_multisite:bool,network_active:bool,warning_count:int,samples:array<string,mixed>}
+	 */
+	public static function inspect_multisite_environment( bool $is_multisite, bool $network_active ): array {
+		$samples = array(
+			'multisite'      => $is_multisite,
+			'network_active' => $network_active,
+			'support'        => 'single-site and per-site installs are supported; network-wide multisite certification is not complete',
+		);
+
+		return array(
+			'is_multisite'   => $is_multisite,
+			'network_active' => $network_active,
+			'warning_count'  => $is_multisite ? 1 : 0,
+			'samples'        => $samples,
+		);
+	}
+
+	/**
+	 * @return array{title:string,status:string,checks:array<int,array<string,mixed>>,meta:array<string,mixed>}
+	 */
+	private static function environment_section(): array {
+		$inspection = self::inspect_multisite_environment( self::is_multisite_runtime(), self::is_network_active() );
+
+		return self::section(
+			'Environment',
+			array(
+				self::count_check(
+					'multisite_support_boundary',
+					'Multisite support boundary',
+					$inspection['warning_count'],
+					self::STATUS_WARNING,
+					'This install is running in the certified single-site path.',
+					'This install is multisite. CodeOn v1.0 supports per-site operation only; network-wide activation and cross-site migration are not certified.',
+					$inspection['samples']
+				),
+			),
+			array(
+				'is_multisite'   => $inspection['is_multisite'],
+				'network_active' => $inspection['network_active'],
+			)
+		);
 	}
 
 	/**
@@ -794,6 +840,18 @@ final class HealthReport {
 		$taxonomies   = HealthRepair::system_term_taxonomies();
 		$placeholders = implode( ',', array_fill( 0, count( $taxonomies ), '%s' ) );
 		return $wpdb->prepare( "tt.taxonomy NOT IN ({$placeholders})", ...$taxonomies );
+	}
+
+	private static function is_multisite_runtime(): bool {
+		return function_exists( 'is_multisite' ) && is_multisite();
+	}
+
+	private static function is_network_active(): bool {
+		if ( ! self::is_multisite_runtime() || ! function_exists( 'is_plugin_active_for_network' ) || ! defined( 'CML_BASENAME' ) ) {
+			return false;
+		}
+
+		return is_plugin_active_for_network( CML_BASENAME );
 	}
 
 	/**

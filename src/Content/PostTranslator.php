@@ -62,11 +62,46 @@ final class PostTranslator {
 	public static function translatable_post_types(): array {
 		$types   = get_post_types( array( 'public' => true ), 'names' );
 		$types[] = 'attachment';
-		$types   = array_values( array_unique( $types ) );
+		$types   = array_merge( $types, self::builder_template_post_types() );
+		$types   = array_values( array_unique( array_filter( $types, 'is_string' ) ) );
 
 		/** @var array<int, string> $types */
 		$types = (array) apply_filters( 'cml_translatable_post_types', $types );
 		return $types;
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	public static function builder_template_post_types(): array {
+		$types = array(
+			'wp_block',
+			'wp_navigation',
+			'elementor_library',
+			'fl-builder-template',
+			'fl-theme-layout',
+			'et_pb_layout',
+			'fusion_template',
+			'fusion_element',
+			'bricks_template',
+			'ct_template',
+			'breakdance_template',
+		);
+
+		/** @var array<int, string> $types */
+		$types = (array) apply_filters( 'cml_builder_template_post_types', $types );
+		$types = array_values( array_filter( $types, 'is_string' ) );
+
+		if ( ! function_exists( 'post_type_exists' ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				array_unique( $types ),
+				static fn( string $type ): bool => post_type_exists( $type )
+			)
+		);
 	}
 
 	public static function register_meta_box(): void {

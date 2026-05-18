@@ -57,6 +57,8 @@ final class RankMathSeo {
 
 		add_filter( 'rank_math/frontend/breadcrumb/items', array( self::class, 'localize_breadcrumbs' ), 20, 1 );
 		add_filter( 'rank_math/json_ld', array( self::class, 'localize_json_ld' ), 20, 1 );
+		add_filter( 'rank_math/frontend/canonical', array( self::class, 'localize_url' ), 20, 1 );
+		add_filter( 'rank_math/sitemap/entry', array( self::class, 'localize_sitemap_entry' ), 20, 3 );
 	}
 
 	/**
@@ -99,6 +101,37 @@ final class RankMathSeo {
 	 */
 	public static function localize_json_ld( $json_ld, ?string $language = null ) {
 		return self::localize_schema( $json_ld, $language );
+	}
+
+	/**
+	 * @param mixed $url
+	 * @return mixed
+	 */
+	public static function localize_url( $url, ?string $language = null ) {
+		if ( ! is_string( $url ) || '' === $url ) {
+			return $url;
+		}
+
+		$language = self::language( $language );
+		return '' === $language ? $url : ValueLocalizer::url( $url, $language );
+	}
+
+	/**
+	 * @param mixed $entry
+	 * @return mixed
+	 */
+	public static function localize_sitemap_entry( mixed $entry, mixed $type = '', mixed $object = null, ?string $language = null ) {
+		unset( $type, $object );
+
+		if ( ! is_array( $entry ) ) {
+			return $entry;
+		}
+
+		if ( isset( $entry['loc'] ) && is_string( $entry['loc'] ) ) {
+			$entry['loc'] = self::localize_url( $entry['loc'], $language );
+		}
+
+		return $entry;
 	}
 
 	private static function language( ?string $language ): string {

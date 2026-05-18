@@ -89,6 +89,7 @@ final class Plugin {
 
 		// Background work.
 		Backfill::register();
+		Multisite::register();
 
 		// Content translation.
 		PostTranslator::register();

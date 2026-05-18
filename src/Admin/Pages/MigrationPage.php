@@ -340,11 +340,21 @@ final class MigrationPage {
 			self::redirect_with( array( 'error' => 'backup_required' ) );
 		}
 
+		$snapshot = self::create_admin_import_snapshot( 'wpml' );
+		if ( empty( $snapshot['ok'] ) ) {
+			self::redirect_with( array( 'error' => 'snapshot_export_failed' ) );
+		}
+
 		$result = WpmlImporter::import_all();
 
 		self::redirect_with(
 			array(
 				'imported'   => '1',
+				'snapshot'   => '1',
+				'ssource'    => (string) $snapshot['source'],
+				'sfile'      => (string) $snapshot['file'],
+				'srows'      => (int) $snapshot['rows'],
+				'stime'      => (string) $snapshot['generated_at'],
 				'languages'  => (int) $result['languages'],
 				'posts'      => (int) $result['posts'],
 				'terms'      => (int) $result['terms'],
@@ -372,11 +382,21 @@ final class MigrationPage {
 			self::redirect_with( array( 'error' => 'backup_required' ) );
 		}
 
+		$snapshot = self::create_admin_import_snapshot( 'polylang' );
+		if ( empty( $snapshot['ok'] ) ) {
+			self::redirect_with( array( 'error' => 'snapshot_export_failed' ) );
+		}
+
 		$result = PolylangImporter::import_all();
 
 		self::redirect_with(
 			array(
 				'polylang_imported' => '1',
+				'snapshot'          => '1',
+				'ssource'           => (string) $snapshot['source'],
+				'sfile'             => (string) $snapshot['file'],
+				'srows'             => (int) $snapshot['rows'],
+				'stime'             => (string) $snapshot['generated_at'],
 				'planguages'        => (int) $result['languages'],
 				'pposts'            => (int) $result['posts'],
 				'pterms'            => (int) $result['terms'],
@@ -399,7 +419,7 @@ final class MigrationPage {
 		check_admin_referer( self::NONCE_EXPORT );
 
 		try {
-			$json = WpmlMigrationSnapshot::to_json();
+			$json = WpmlMigrationSnapshot::to_json( 'manual' );
 		} catch ( \Throwable $_e ) {
 			self::redirect_with( array( 'error' => 'snapshot_export_failed' ) );
 			return;
@@ -412,6 +432,119 @@ final class MigrationPage {
 		header( 'Content-Length: ' . strlen( $json ) );
 		echo $json; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
+	}
+
+	/**
+	 * @return array{ok:bool,source:string,file:string,path:string,rows:int,generated_at:string,error:string}
+	 */
+	public static function create_admin_import_snapshot( string $source ): array {
+		$source = self::normalize_snapshot_source( $source );
+
+		try {
+			$json     = WpmlMigrationSnapshot::to_json( $source );
+			$decoded  = json_decode( $json, true );
+			$rows     = is_array( $decoded ) ? (int) ( $decoded['report']['total_rows'] ?? 0 ) : 0;
+			$generated_at = is_array( $decoded ) ? (string) ( $decoded['generated_at'] ?? gmdate( 'c' ) ) : gmdate( 'c' );
+		} catch ( \Throwable $e ) {
+			return self::snapshot_result( false, $source, '', '', 0, gmdate( 'c' ), $e->getMessage() );
+		}
+
+		$directory = self::admin_snapshot_directory();
+		if ( '' === $directory || ! self::ensure_snapshot_directory( $directory ) ) {
+			return self::snapshot_result( false, $source, '', '', $rows, $generated_at, 'Snapshot directory is not writable.' );
+		}
+
+		$file = sprintf(
+			'codeon-before-%s-%s-%s.json',
+			$source,
+			gmdate( 'Ymd-His' ),
+			self::snapshot_token()
+		);
+		$path = trailingslashit( $directory ) . $file;
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Snapshot export must create a user-restorable JSON artifact.
+		if ( false === file_put_contents( $path, $json, LOCK_EX ) ) {
+			return self::snapshot_result( false, $source, $file, $path, $rows, $generated_at, 'Could not write snapshot file.' );
+		}
+
+		return self::snapshot_result( true, $source, $file, $path, $rows, $generated_at, '' );
+	}
+
+	private static function normalize_snapshot_source( string $source ): string {
+		if ( function_exists( 'sanitize_key' ) ) {
+			$source = sanitize_key( $source );
+		} else {
+			$source = strtolower( trim( $source ) );
+			$source = (string) preg_replace( '/[^a-z0-9_-]/', '', $source );
+		}
+
+		return '' !== $source ? $source : 'manual';
+	}
+
+	private static function admin_snapshot_directory(): string {
+		if ( ! function_exists( 'wp_upload_dir' ) ) {
+			return '';
+		}
+
+		$uploads = wp_upload_dir( null, false );
+		if ( ! is_array( $uploads ) || ! empty( $uploads['error'] ) || empty( $uploads['basedir'] ) ) {
+			return '';
+		}
+
+		return rtrim( (string) $uploads['basedir'], '/\\' ) . '/codeon-multilingual/snapshots';
+	}
+
+	private static function ensure_snapshot_directory( string $directory ): bool {
+		if ( ! is_dir( $directory ) ) {
+			if ( function_exists( 'wp_mkdir_p' ) ) {
+				if ( ! wp_mkdir_p( $directory ) ) {
+					return false;
+				}
+			} elseif ( ! mkdir( $directory, 0755, true ) && ! is_dir( $directory ) ) {
+				return false;
+			}
+		}
+
+		if ( ! is_writable( $directory ) ) {
+			return false;
+		}
+
+		self::write_snapshot_guard_file( $directory . '/index.html', '' );
+		self::write_snapshot_guard_file( $directory . '/.htaccess', "Deny from all\n" );
+		self::write_snapshot_guard_file( $directory . '/web.config', "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration><system.webServer><authorization><remove users=\"*\" roles=\"\" verbs=\"\" /><add accessType=\"Deny\" users=\"*\" /></authorization></system.webServer></configuration>\n" );
+
+		return true;
+	}
+
+	private static function write_snapshot_guard_file( string $path, string $contents ): void {
+		if ( file_exists( $path ) ) {
+			return;
+		}
+
+		@file_put_contents( $path, $contents ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+	}
+
+	private static function snapshot_token(): string {
+		if ( function_exists( 'wp_generate_uuid4' ) ) {
+			return substr( str_replace( '-', '', wp_generate_uuid4() ), 0, 12 );
+		}
+
+		return substr( md5( uniqid( 'cml', true ) ), 0, 12 ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_md5
+	}
+
+	/**
+	 * @return array{ok:bool,source:string,file:string,path:string,rows:int,generated_at:string,error:string}
+	 */
+	private static function snapshot_result( bool $ok, string $source, string $file, string $path, int $rows, string $generated_at, string $error ): array {
+		return array(
+			'ok'           => $ok,
+			'source'       => $source,
+			'file'         => $file,
+			'path'         => $path,
+			'rows'         => $rows,
+			'generated_at' => $generated_at,
+			'error'        => $error,
+		);
 	}
 
 	public static function handle_restore(): void {
@@ -476,6 +609,7 @@ final class MigrationPage {
 				self::get_int_arg( 'tstrings' )
 			);
 			echo '<div class="notice notice-success is-dismissible"><p>' . wp_kses_post( $summary ) . '</p></div>';
+			self::render_snapshot_created_notice();
 
 			$errors_raw = isset( $_GET['errors'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['errors'] ) ) : '';
 			if ( '' !== $errors_raw ) {
@@ -543,6 +677,7 @@ final class MigrationPage {
 				self::get_int_arg( 'ptstrings' )
 			);
 			echo '<div class="notice notice-success is-dismissible"><p>' . wp_kses_post( $summary ) . '</p></div>';
+			self::render_snapshot_created_notice();
 
 			$warnings_raw = isset( $_GET['pwarnings'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['pwarnings'] ) ) : '';
 			if ( '' !== $warnings_raw ) {
@@ -579,6 +714,27 @@ final class MigrationPage {
 			};
 			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';
 		}
+	}
+
+	private static function render_snapshot_created_notice(): void {
+		if ( '1' !== self::get_string_arg( 'snapshot' ) ) {
+			return;
+		}
+
+		$file   = self::get_string_arg( 'sfile' );
+		$source = self::get_string_arg( 'ssource' );
+		$rows   = self::get_int_arg( 'srows' );
+		$time   = self::get_string_arg( 'stime' );
+
+		$message = sprintf(
+			/* translators: 1: source plugin, 2: row count, 3: generated timestamp, 4: snapshot file name */
+			__( 'Rollback snapshot created before %1$s import (%2$d rows, %3$s): %4$s', 'codeon-multilingual' ),
+			strtoupper( $source ),
+			$rows,
+			$time,
+			$file
+		);
+		echo '<div class="notice notice-info is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 	}
 
 	/**

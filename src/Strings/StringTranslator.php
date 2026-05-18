@@ -374,6 +374,11 @@ final class StringTranslator {
 		}
 	}
 
+	public static function reset_request_cache(): void {
+		self::$compiled = array();
+		self::$known    = null;
+	}
+
 	/**
 	 * @param array<string,mixed> $context
 	 */

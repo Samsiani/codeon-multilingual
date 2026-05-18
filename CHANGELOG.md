@@ -10,10 +10,14 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - Health repair tooling: admin repair action plus `wp cml health repair` for orphaned rows, missing public post/term rows, orphaned string rows, and unknown source-language normalization.
 - Compatibility base layer: shared value-localization helper, Yoast/Rank Math breadcrumb/schema localization, and cache purge integration for CodeOn caches, LiteSpeed Cache hooks, and WP Rocket purge functions.
 - URL localization safety now skips static assets, uploads, REST endpoints, WordPress admin paths, and static file extensions inside builder/SEO payloads instead of language-prefixing non-routable resources.
+- Yoast SEO and Rank Math compatibility now localizes canonical URLs, OpenGraph URLs, and sitemap entry `loc` values in addition to breadcrumbs and schema JSON-LD.
+- Builder/template library post types such as Gutenberg reusable blocks/navigation, Elementor templates, Divi layouts, Avada/Fusion templates, Beaver Builder templates, Bricks, Oxygen, and Breakdance templates are now included in the default translatable post type set when those CPTs exist.
 - Builder/ACF data localization for duplicated translations: Gutenberg block attributes, Elementor JSON/settings meta, and ACF relationship/taxonomy/page-link values now remap explicit object IDs and internal URLs to target-language siblings.
 - WooCommerce relationship hardening: product translations now remap upsells, cross-sells, grouped children, and variation option display labels to current-language siblings where available.
 - WooCommerce Store API hardening for Blocks requests: `/wc/store/*` now resolves language from `?lang=`, `X-CodeOn-Language`, or a translated-page `Referer`, Store API cart item product objects are swapped to current-language siblings before serialization, and Store API error/notice payload messages use the Woo notice string catalog.
-- Benchmark coverage now measures product and variation collection workloads through real `WP_Query` language filtering instead of direct SQL.
+- Benchmark coverage now measures product and variation collection workloads through real `WP_Query` language filtering instead of direct SQL, with `wp cml benchmark cleanup` to remove seeded fixtures after staging runs.
+- Admin WPML/Polylang imports now create a rollback snapshot automatically before writing, tag snapshots with the migration source, and report the created snapshot after import.
+- Multisite hardening now resets CodeOn request-static language/query/string caches on `switch_blog` and reports the current multisite support boundary in the Health screen.
 - Cache purge coverage now includes language mutations, string translation/catalog changes, and successful migration imports so external page caches do not serve stale multilingual output.
 - v1 migration and compatibility planning docs: `docs/MIGRATION-SOURCES.md` and `docs/V1_COMPATIBILITY_MATRIX.md`.
 
@@ -21,6 +25,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - WPML migration conflict preflight now treats default-language drift and existing string source-language drift as blocking conflicts instead of silently changing live CodeOn rows.
 - WPML and Polylang imports now replace CodeOn's auto-created default identity placeholder rows instead of treating them as real conflicts.
 - WP-CLI migration writes now require `--snapshot=<file>` or the explicit unsafe bypass `--no-snapshot --confirm-no-snapshot`.
+- WooCommerce Store API request detection now resets on later non-Store REST requests in the same PHP process, avoiding cart translation bleed between REST dispatches.
 - `--allow-conflicts` no longer rewrites CodeOn default-language settings when language-setting conflicts exist.
 - Polylang import now requires taxonomy-backed Polylang language rows for writes and flushes language caches before setting the imported default language.
 - WooCommerce product sync now skips sibling saves when synced price/stock/shipping/tax values already match.
