@@ -138,6 +138,8 @@ Brain Monkey stubs WP functions; Mockery is available for object mocking.
 
 The `tests/Integration/` suite uses the WordPress PHPUnit test scaffold and is kept separate from the default unit gate. It boots a real WordPress install, loads WooCommerce when present, then loads CodeOn Multilingual from this working tree.
 
+WordPress' current test scaffold still expects PHPUnit 9 APIs, so CI runs the integration suite on PHP 8.2 with `phpunit/phpunit:^9.6`. The normal unit suite remains on the locked Composer dependencies.
+
 ```bash
 composer test:integration:setup
 WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test:integration
@@ -258,9 +260,9 @@ Always update the changelog with the same commit that bumps the version — or i
 
 `.github/workflows/ci.yml` runs on push to main + every PR:
 
-- **lint job**: PHP syntax check and PHPStan
+- **lint job**: PHP syntax check, PHPCS, and PHPStan
 - **unit-tests job**: matrix on PHP 8.1, 8.2, 8.3 — `composer test`
-- **integration-tests job**: PHP 8.3, MySQL 8 service, WordPress PHPUnit scaffold, WooCommerce installed from WordPress.org, then `composer test:integration`
+- **integration-tests job**: PHP 8.2, MySQL 8 service, WordPress-compatible PHPUnit 9.6, WordPress PHPUnit scaffold, WooCommerce installed from WordPress.org, then `composer test:integration`
 
 Both must be green for a clean release.
 
