@@ -34,6 +34,8 @@ if ( ! file_exists( $plugin_root . '/vendor/autoload.php' ) ) {
 	cml_integration_bootstrap_fail( 'Composer dependencies are missing. Run `composer install` before integration tests.' );
 }
 
+require_once $plugin_root . '/vendor/autoload.php';
+
 if ( ! defined( 'CML_TEST_PLUGIN_FILE' ) ) {
 	define( 'CML_TEST_PLUGIN_FILE', $plugin_root . '/codeon-multilingual.php' );
 }
