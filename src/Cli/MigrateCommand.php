@@ -29,6 +29,10 @@ final class MigrateCommand extends WP_CLI_Command {
 	 * [--dry-run]
 	 * : Report what would be imported and exit without writing.
 	 *
+	 * [--allow-conflicts]
+	 * : Import missing rows even when existing CodeOn data conflicts with WPML.
+	 * Conflicting rows are left unchanged; nothing is overwritten.
+	 *
 	 * @param array<int, string>    $args
 	 * @param array<string, string> $assoc_args
 	 */
@@ -45,13 +49,18 @@ final class MigrateCommand extends WP_CLI_Command {
 		WP_CLI::log( sprintf( '  strings:             %d', (int) $summary['strings'] ) );
 		WP_CLI::log( sprintf( '  translated strings:  %d', (int) $summary['translated_strings'] ) );
 		WP_CLI::log( sprintf( '  default language:    %s', (string) ( $summary['default_language'] ?? '—' ) ) );
+		WP_CLI::log( 'Conflicts:' );
+		WP_CLI::log( sprintf( '  language settings:   %d', (int) $summary['conflicts']['language_settings'] ) );
+		WP_CLI::log( sprintf( '  post mappings:       %d', (int) $summary['conflicts']['post_mappings'] ) );
+		WP_CLI::log( sprintf( '  term mappings:       %d', (int) $summary['conflicts']['term_mappings'] ) );
+		WP_CLI::log( sprintf( '  string translations: %d', (int) $summary['conflicts']['string_translations'] ) );
 
 		if ( isset( $assoc_args['dry-run'] ) ) {
 			WP_CLI::success( 'Dry run: nothing written.' );
 			return;
 		}
 
-		$result = WpmlImporter::import_all();
+		$result = WpmlImporter::import_all( isset( $assoc_args['allow-conflicts'] ) );
 
 		WP_CLI::log( 'Imported:' );
 		WP_CLI::log( sprintf( '  languages:           %d', $result['languages'] ) );
@@ -60,6 +69,7 @@ final class MigrateCommand extends WP_CLI_Command {
 		WP_CLI::log( sprintf( '  strings:             %d', $result['strings'] ) );
 		WP_CLI::log( sprintf( '  translated strings:  %d', $result['translated_strings'] ) );
 		WP_CLI::log( sprintf( '  default set:         %s', $result['default_set'] ? 'yes' : 'no' ) );
+		WP_CLI::log( sprintf( '  conflicts:           %d', array_sum( $result['conflicts'] ) ) );
 
 		if ( ! empty( $result['errors'] ) ) {
 			foreach ( $result['errors'] as $err ) {

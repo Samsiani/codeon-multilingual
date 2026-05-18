@@ -3,7 +3,7 @@
  * Plugin Name:       CodeOn Multilingual
  * Plugin URI:        https://codeon.ge/plugins/codeon-multilingual
  * Description:       Lightweight multilingual plugin for WordPress and WooCommerce. WPML-compatible, fraction of the weight.
- * Version:           0.7.37
+ * Version:           0.8.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Samsiani / CodeOn
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'CML_VERSION', '0.7.37' );
+define( 'CML_VERSION', '0.8.0' );
 define( 'CML_FILE', __FILE__ );
 define( 'CML_PATH', plugin_dir_path( __FILE__ ) );
 define( 'CML_URL', plugin_dir_url( __FILE__ ) );
@@ -50,12 +50,9 @@ if ( version_compare( PHP_VERSION, CML_MIN_PHP, '<' )
 	return;
 }
 
-$cml_autoload = __DIR__ . '/vendor/autoload_packages.php';
-if ( ! file_exists( $cml_autoload ) ) {
-	$cml_autoload = __DIR__ . '/vendor/autoload.php';
-}
+$cml_composer_autoload = __DIR__ . '/vendor/autoload.php';
 
-if ( ! file_exists( $cml_autoload ) ) {
+if ( ! file_exists( $cml_composer_autoload ) ) {
 	add_action(
 		'admin_notices',
 		static function () {
@@ -65,7 +62,15 @@ if ( ! file_exists( $cml_autoload ) ) {
 	return;
 }
 
-require_once $cml_autoload;
+// Composer's autoloader owns this plugin's PSR-4 classes. Jetpack's package
+// autoloader only coordinates shared vendor packages and does not autoload the
+// root plugin namespace by itself.
+require_once $cml_composer_autoload;
+
+$cml_package_autoload = __DIR__ . '/vendor/autoload_packages.php';
+if ( file_exists( $cml_package_autoload ) ) {
+	require_once $cml_package_autoload;
+}
 
 register_activation_hook( __FILE__, array( \Samsiani\CodeonMultilingual\Core\Activator::class, 'activate' ) );
 register_deactivation_hook( __FILE__, array( \Samsiani\CodeonMultilingual\Core\Deactivator::class, 'deactivate' ) );

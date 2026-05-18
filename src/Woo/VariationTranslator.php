@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Woo;
 
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
+use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 
 /**
  * Auto-duplicates a variable product's variations when the parent product is
@@ -53,7 +54,55 @@ final class VariationTranslator {
 		}
 
 		foreach ( $variation_ids as $vid ) {
-			PostTranslator::duplicate( (int) $vid, $target_lang );
+			$new_variation_id = PostTranslator::duplicate( (int) $vid, $target_lang );
+			if ( $new_variation_id > 0 ) {
+				self::remap_variation_attributes( $new_variation_id, $target_lang );
+			}
 		}
+	}
+
+	private static function remap_variation_attributes( int $variation_id, string $target_lang ): void {
+		$meta = get_post_meta( $variation_id );
+		if ( ! is_array( $meta ) ) {
+			return;
+		}
+
+		foreach ( $meta as $key => $values ) {
+			$key = (string) $key;
+			if ( ! str_starts_with( $key, 'attribute_pa_' ) ) {
+				continue;
+			}
+			$source_slug = isset( $values[0] ) ? (string) $values[0] : '';
+			if ( '' === $source_slug ) {
+				continue;
+			}
+
+			$taxonomy = substr( $key, strlen( 'attribute_' ) );
+			$target   = self::translated_attribute_slug( $taxonomy, $source_slug, $target_lang );
+			if ( null !== $target && $target !== $source_slug ) {
+				update_post_meta( $variation_id, $key, $target );
+			}
+		}
+	}
+
+	private static function translated_attribute_slug( string $taxonomy, string $source_slug, string $target_lang ): ?string {
+		$term = get_term_by( 'slug', $source_slug, $taxonomy );
+		if ( ! $term instanceof \WP_Term ) {
+			return null;
+		}
+
+		$group_id = TranslationGroups::get_term_group_id( (int) $term->term_id );
+		if ( null === $group_id ) {
+			return null;
+		}
+
+		$siblings        = TranslationGroups::get_term_siblings( $group_id );
+		$translated_term = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+		if ( $translated_term <= 0 || $translated_term === (int) $term->term_id ) {
+			return null;
+		}
+
+		$target = get_term( $translated_term, $taxonomy );
+		return $target instanceof \WP_Term ? (string) $target->slug : null;
 	}
 }

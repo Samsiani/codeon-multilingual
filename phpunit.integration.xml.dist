@@ -2,15 +2,15 @@
 <phpunit
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.0/phpunit.xsd"
-    bootstrap="tests/bootstrap.php"
+    bootstrap="tests/Integration/bootstrap.php"
     colors="true"
-    cacheDirectory=".phpunit.cache"
+    cacheDirectory=".phpunit.integration.cache"
     failOnRisky="true"
     failOnWarning="true"
 >
     <testsuites>
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
         </testsuite>
     </testsuites>
 
@@ -19,8 +19,4 @@
             <directory>src</directory>
         </include>
     </source>
-
-    <php>
-        <const name="ABSPATH" value="/tmp/abspath/"/>
-    </php>
 </phpunit>

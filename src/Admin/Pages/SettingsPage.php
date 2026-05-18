@@ -139,6 +139,22 @@ final class SettingsPage {
 					</tr>
 				</table>
 
+				<h2><?php esc_html_e( 'Data retention', 'codeon-multilingual' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Plugin deletion', 'codeon-multilingual' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="delete_data_on_uninstall" value="1" <?php checked( (bool) $settings['delete_data_on_uninstall'] ); ?>>
+								<?php esc_html_e( 'Remove all CodeOn Multilingual data when this plugin is deleted.', 'codeon-multilingual' ); ?>
+							</label>
+							<p class="description">
+								<?php esc_html_e( 'Off by default for production safety. When enabled, uninstall drops CodeOn language, mapping, and string tables, removes plugin options, and deletes generated .l10n.php files.', 'codeon-multilingual' ); ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+
 				<h2><?php esc_html_e( 'Performance — native .l10n.php files', 'codeon-multilingual' ); ?></h2>
 				<table class="form-table" role="presentation">
 					<tr>
@@ -218,6 +234,7 @@ final class SettingsPage {
 				'auto_discover_strings'       => ! empty( $_POST['auto_discover_strings'] ),
 				'use_native_l10n_files'       => $new_l10n,
 				'wpml_compat_enabled'         => ! empty( $_POST['wpml_compat_enabled'] ),
+				'delete_data_on_uninstall'    => ! empty( $_POST['delete_data_on_uninstall'] ),
 			)
 		);
 

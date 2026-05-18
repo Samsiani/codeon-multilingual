@@ -165,10 +165,6 @@ final class TermTranslator {
 	}
 
 	public static function handle_add_translation(): void {
-		if ( ! current_user_can( 'manage_categories' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
-		}
-
 		$source   = isset( $_GET['source'] ) ? (int) $_GET['source'] : 0;
 		$taxonomy = isset( $_GET['taxonomy'] ) ? sanitize_key( wp_unslash( (string) $_GET['taxonomy'] ) ) : '';
 		$target   = isset( $_GET['target'] ) ? sanitize_key( wp_unslash( (string) $_GET['target'] ) ) : '';
@@ -180,6 +176,17 @@ final class TermTranslator {
 		}
 		if ( ! taxonomy_exists( $taxonomy ) ) {
 			wp_die( esc_html__( 'Unknown taxonomy.', 'codeon-multilingual' ) );
+		}
+		$taxonomy_object = get_taxonomy( $taxonomy );
+		$manage_cap      = $taxonomy_object && isset( $taxonomy_object->cap->manage_terms )
+			? (string) $taxonomy_object->cap->manage_terms
+			: 'manage_categories';
+		if ( ! current_user_can( $manage_cap ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions.', 'codeon-multilingual' ) );
+		}
+		$source_term = get_term( $source, $taxonomy );
+		if ( ! ( $source_term instanceof WP_Term ) ) {
+			wp_die( esc_html__( 'Invalid source term.', 'codeon-multilingual' ) );
 		}
 		if ( ! Languages::exists_and_active( $target ) ) {
 			wp_die( esc_html__( 'Target language is not active.', 'codeon-multilingual' ) );

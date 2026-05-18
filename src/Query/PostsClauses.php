@@ -67,30 +67,10 @@ final class PostsClauses {
 		$current = CurrentLanguage::code();
 
 		// Slug uniqueness in our schema is scoped per language, so a slug
-		// may legitimately live in any language. Resolve to the row that
-		// matches the current request language; fall back to default-language
+		// may legitimately live in any language. Resolve the full page path
+		// against the current request language; fall back to default-language
 		// row when no translation exists.
-		global $wpdb;
-		$leaf = $pagename;
-		if ( false !== strpos( $pagename, '/' ) ) {
-			$parts = array_filter( explode( '/', $pagename ) );
-			$leaf  = (string) end( $parts );
-		}
-
-		$row = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT p.ID
-				 FROM {$wpdb->posts} p
-				 INNER JOIN {$wpdb->prefix}cml_post_language pl ON pl.post_id = p.ID
-				 WHERE p.post_name = %s
-				   AND p.post_type = 'page'
-				   AND p.post_status IN ('publish', 'private')
-				   AND pl.language = %s
-				 LIMIT 1",
-				$leaf,
-				$current
-			)
-		);
+		$row = self::resolve_page_id_by_path( $pagename, $current );
 
 		if ( null === $row ) {
 			// No translation in the current language. Fall back to the
@@ -98,20 +78,7 @@ final class PostsClauses {
 			// instead of 404'ing — consistent with the cart-items fallback
 			// rule (untranslated items show in original language). Admins
 			// can create a proper translation later.
-			$row = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT p.ID
-					 FROM {$wpdb->posts} p
-					 INNER JOIN {$wpdb->prefix}cml_post_language pl ON pl.post_id = p.ID
-					 WHERE p.post_name = %s
-					   AND p.post_type = 'page'
-					   AND p.post_status IN ('publish', 'private')
-					   AND pl.language = %s
-					 LIMIT 1",
-					$leaf,
-					Languages::default_code()
-				)
-			);
+			$row = self::resolve_page_id_by_path( $pagename, Languages::default_code() );
 			if ( null === $row ) {
 				return $query_vars;
 			}
@@ -128,6 +95,63 @@ final class PostsClauses {
 		unset( $query_vars['pagename'], $query_vars['name'] );
 		$query_vars['page_id'] = $sibling_id;
 		return $query_vars;
+	}
+
+	/**
+	 * Resolve a WordPress page path in one language.
+	 *
+	 * WordPress stores only each page's leaf slug and parent ID, so nested
+	 * pagenames must be matched by walking the full parent chain. Matching only
+	 * the leaf slug lets `/about/team/` resolve to an unrelated `/careers/team/`.
+	 */
+	private static function resolve_page_id_by_path( string $pagename, string $language ): ?int {
+		$parts = array_values(
+			array_filter(
+				array_map( 'trim', explode( '/', trim( $pagename, '/' ) ) ),
+				static fn( string $part ): bool => '' !== $part
+			)
+		);
+		if ( array() === $parts ) {
+			return null;
+		}
+
+		global $wpdb;
+
+		$leaf_index = count( $parts ) - 1;
+		$joins      = '';
+		$where      = array(
+			'p0.post_name = %s',
+			"p0.post_type = 'page'",
+			"p0.post_status IN ('publish', 'private')",
+			'pl.language = %s',
+		);
+		$args       = array( $parts[ $leaf_index ], $language );
+
+		for ( $depth = 1; $depth <= $leaf_index; $depth++ ) {
+			$child_alias  = 'p' . ( $depth - 1 );
+			$parent_alias = 'p' . $depth;
+			$segment      = $parts[ $leaf_index - $depth ];
+
+			$joins  .= " INNER JOIN {$wpdb->posts} {$parent_alias} ON {$child_alias}.post_parent = {$parent_alias}.ID";
+			$where[] = "{$parent_alias}.post_name = %s";
+			$where[] = "{$parent_alias}.post_type = 'page'";
+			$where[] = "{$parent_alias}.post_status IN ('publish', 'private')";
+			$args[]  = $segment;
+		}
+
+		$root_alias = 'p' . $leaf_index;
+		$where[]    = "{$root_alias}.post_parent = 0";
+
+		$sql = "SELECT p0.ID
+			FROM {$wpdb->posts} p0
+			INNER JOIN {$wpdb->prefix}cml_post_language pl ON pl.post_id = p0.ID
+			{$joins}
+			WHERE " . implode( ' AND ', $where ) . '
+			LIMIT 1';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- SQL is dynamically assembled from fixed fragments and prepared immediately here.
+		$row = $wpdb->get_var( $wpdb->prepare( $sql, ...$args ) );
+		return null === $row ? null : (int) $row;
 	}
 
 	/**
@@ -168,7 +192,7 @@ final class PostsClauses {
 		global $wpdb;
 		$alias = self::JOIN_ALIAS;
 
-		self::$join_sql = " LEFT JOIN {$wpdb->prefix}cml_post_language {$alias} ON {$alias}.post_id = {$wpdb->posts}.ID";
+		self::$join_sql = " LEFT JOIN {$wpdb->prefix}cml_post_language {$alias} ON {$alias}.post_id = {$wpdb->posts}.ID ";
 
 		if ( Languages::is_default( $code ) ) {
 			self::$where_sql = $wpdb->prepare(

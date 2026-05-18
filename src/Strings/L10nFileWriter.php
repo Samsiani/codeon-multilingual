@@ -98,6 +98,7 @@ final class L10nFileWriter {
 			return false;
 		}
 		$locale = trim( (string) $lang->locale );
+		$locale = self::sanitize_locale( $locale );
 		if ( '' === $locale ) {
 			return false;
 		}
@@ -166,7 +167,11 @@ final class L10nFileWriter {
 		if ( ! $lang ) {
 			return false;
 		}
-		$path = self::file_path( $domain, (string) $lang->locale );
+		$locale = self::sanitize_locale( (string) $lang->locale );
+		if ( '' === $locale ) {
+			return false;
+		}
+		$path = self::file_path( $domain, $locale );
 		if ( ! file_exists( $path ) ) {
 			return true;
 		}
@@ -244,7 +249,11 @@ final class L10nFileWriter {
 	// ---- Paths -----------------------------------------------------------
 
 	public static function file_path( string $domain, string $locale ): string {
-		return self::base_dir() . '/' . self::sanitize_domain( $domain ) . '-' . $locale . '.l10n.php';
+		$safe_locale = self::sanitize_locale( $locale );
+		if ( '' === $safe_locale ) {
+			$safe_locale = 'unknown';
+		}
+		return self::base_dir() . '/' . self::sanitize_domain( $domain ) . '-' . $safe_locale . '.l10n.php';
 	}
 
 	public static function base_dir(): string {
@@ -263,6 +272,17 @@ final class L10nFileWriter {
 		$clean = preg_replace( '/[^a-z0-9_-]/i', '-', $domain );
 		$clean = is_string( $clean ) ? trim( $clean, '-' ) : '';
 		return '' !== $clean ? strtolower( $clean ) : 'default';
+	}
+
+	private static function sanitize_locale( string $locale ): string {
+		$locale = trim( $locale );
+		if ( 1 !== preg_match( '/^[A-Za-z0-9_@.-]{2,32}$/', $locale ) ) {
+			return '';
+		}
+		if ( str_contains( $locale, '..' ) ) {
+			return '';
+		}
+		return $locale;
 	}
 
 	// ---- Internal --------------------------------------------------------

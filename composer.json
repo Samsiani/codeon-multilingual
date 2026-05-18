@@ -31,10 +31,12 @@
         }
     },
     "scripts": {
-        "lint": "phpcs",
-        "lint:fix": "phpcbf",
-        "analyse": "phpstan analyse",
-        "test": "phpunit"
+        "lint": "vendor/bin/phpcs -n --report=summary",
+        "lint:fix": "vendor/bin/phpcbf",
+        "analyse": "vendor/bin/phpstan analyse --memory-limit=2G",
+        "test": "vendor/bin/phpunit --testsuite=Unit",
+        "test:integration": "vendor/bin/phpunit -c phpunit.integration.xml.dist",
+        "package:test": "bash scripts/package-test.sh"
     },
     "config": {
         "allow-plugins": {

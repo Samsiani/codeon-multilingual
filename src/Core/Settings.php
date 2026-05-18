@@ -26,6 +26,7 @@ final class Settings {
 			'auto_discover_strings'       => false,
 			'use_native_l10n_files'       => false,
 			'wpml_compat_enabled'         => true,
+			'delete_data_on_uninstall'    => false,
 		);
 	}
 
@@ -55,5 +56,9 @@ final class Settings {
 	public static function save( array $changes ): void {
 		$current = self::all();
 		update_option( self::OPTION, array_merge( $current, $changes ), true );
+	}
+
+	public static function delete_data_on_uninstall(): bool {
+		return (bool) self::get( 'delete_data_on_uninstall', false );
 	}
 }

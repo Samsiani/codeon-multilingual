@@ -50,7 +50,7 @@ composer install
 │   └── Admin/               — Menu, admin bar, page renderers
 ├── tests/
 │   ├── Unit/                — Brain Monkey + Mockery unit tests
-│   ├── Integration/         — (reserved for wp-phpunit; not yet populated)
+│   ├── Integration/         — wp-phpunit integration tests
 │   ├── bootstrap.php        — Test bootstrap
 │   └── phpstan-stubs.php    — Stubs declaring CML_* constants for PHPStan
 ├── .github/workflows/
@@ -62,7 +62,8 @@ composer install
 ├── composer.lock            — Committed per CodeOn convention
 ├── phpcs.xml.dist           — WordPress coding standards
 ├── phpstan.neon.dist        — Level 6 + szepeviktor/phpstan-wordpress
-├── phpunit.xml.dist         — Test config
+├── phpunit.xml.dist         — Unit test config
+├── phpunit.integration.xml.dist — Integration test config
 ├── README.md                — Overview + quick start
 ├── ARCHITECTURE.md          — Technical deep dive
 ├── ROADMAP.md               — Status + gap analysis + forward plan
@@ -88,14 +89,17 @@ composer install
 ### Run the unit suite
 
 ```bash
-vendor/bin/phpunit --testsuite=Unit
+composer test
 ```
 
-30 tests passing as of v0.7.0. Coverage:
+86 unit tests passing as of the current production-hardening pass. Coverage:
 - `Url\SubdirectoryStrategy` — 12 tests (detect, build_url, strip_lang_prefix, strip_from_request)
 - `Frontend\HtmlLangAttribute` — 5 tests (regex edge cases, admin pass-through)
 - `Strings\StringTranslator::hash` — 5 tests (determinism, domain/context discrimination)
 - `Compat\WpmlFunctions::is_term_element_type` — 8 tests (core post types, core taxonomies, post_/tax_ prefixes, registry fallback, edge cases)
+- `Query\PostsClauses` routing — nested page path resolution and default-language fallback
+- `Url\Router` canonical redirects — language-prefix loop suppression without blocking unrelated canonical fixes
+- Woo configured method labels, order-language persistence, native `.l10n.php` path safety, and term-clause JOIN whitespace regressions
 
 ### Add a new unit test
 
@@ -130,14 +134,20 @@ final class MyModuleTest extends TestCase {
 
 Brain Monkey stubs WP functions; Mockery is available for object mocking.
 
-### Integration tests (planned, not yet built)
+### Integration tests
 
-The `tests/Integration/` suite is reserved for full WP+MySQL tests using `wp-phpunit`. Scheduled for v0.9.0. Until then, integration testing is manual via the live artcase.ge deployment.
+The `tests/Integration/` suite uses the WordPress PHPUnit test scaffold and is kept separate from the default unit gate.
+
+```bash
+WP_TESTS_DIR=/path/to/wordpress-develop/tests/phpunit composer test:integration
+```
+
+Current coverage starts with schema activation. Expand this suite for routing, post/term duplication, WPML migration, WooCommerce product sync, cart/page mapping, and REST `?lang=` before v1.0.
 
 ### Static analysis
 
 ```bash
-vendor/bin/phpstan analyse --memory-limit=1G
+composer analyse
 ```
 
 Level 6 + `szepeviktor/phpstan-wordpress` for WP function signatures. The `tests/phpstan-stubs.php` file declares `CML_*` constants so analysis of `src/` doesn't see them as undefined.
@@ -145,8 +155,8 @@ Level 6 + `szepeviktor/phpstan-wordpress` for WP function signatures. The `tests
 ### Coding standards
 
 ```bash
-vendor/bin/phpcs                  # check
-vendor/bin/phpcbf                 # auto-fix what's fixable
+composer lint                     # check
+composer lint:fix                 # auto-fix what's fixable
 ```
 
 WordPress ruleset with the following exclusions (`phpcs.xml.dist`):
@@ -156,7 +166,7 @@ WordPress ruleset with the following exclusions (`phpcs.xml.dist`):
 - `Universal.Operators.DisallowShortTernary` (we use `?:` freely)
 - `WordPress.PHP.YodaConditions` (we don't write Yoda)
 
-PHPCS runs with `continue-on-error: true` in CI — won't fail the build, but its annotations show up in the GitHub Checks UI.
+PHPCS is currently a local debt command, not a CI/release gate. Do not add it back to CI with `continue-on-error`; either fix the existing source violations and make it blocking, or keep it out of the production gate.
 
 ### Manual end-to-end testing on artcase.ge
 
@@ -207,12 +217,14 @@ git push origin vX.Y.Z
 1. Checkout
 2. Setup PHP 8.1 + Composer
 3. Derive `version` from `${REF_NAME#v}`
-4. Stamp `src/Core/BuildId.php` with `version+sha`
-5. Verify plugin-header version matches the tag (fails if not)
-6. `composer install --no-dev --optimize-autoloader --prefer-dist`
-7. rsync to staging dir excluding `.git`, `.github`, `tests`, `phpcs.xml.dist`, etc.
-8. ZIP the staging dir
-9. Create GitHub Release with the ZIP attached, auto-generated release notes
+4. Install dev dependencies
+5. Stamp `src/Core/BuildId.php` with `version+sha`
+6. Verify plugin-header version matches the tag (fails if not)
+7. Run syntax check, PHPStan, and PHPUnit unit tests
+8. `composer install --no-dev --optimize-autoloader --prefer-dist`
+9. rsync to staging dir excluding `.git`, `.github`, `tests`, `phpcs.xml.dist`, etc.
+10. ZIP the staging dir
+11. Create GitHub Release with the ZIP attached, auto-generated release notes
 
 ### 4. Update on production
 
@@ -233,8 +245,8 @@ Always update the changelog with the same commit that bumps the version — or i
 
 `.github/workflows/ci.yml` runs on push to main + every PR:
 
-- **lint job**: PHP syntax check, PHPStan (must pass), PHPCS (advisory)
-- **unit-tests job**: matrix on PHP 8.1, 8.2, 8.3 — `phpunit --testsuite=Unit`
+- **lint job**: PHP syntax check and PHPStan
+- **unit-tests job**: matrix on PHP 8.1, 8.2, 8.3 — `composer test`
 
 Both must be green for a clean release.
 

@@ -98,7 +98,7 @@ final class TermsClauses {
 		global $wpdb;
 		$alias = self::JOIN_ALIAS;
 
-		self::$join_sql = " LEFT JOIN {$wpdb->prefix}cml_term_language {$alias} ON {$alias}.term_id = t.term_id";
+		self::$join_sql = " LEFT JOIN {$wpdb->prefix}cml_term_language {$alias} ON {$alias}.term_id = t.term_id ";
 
 		if ( Languages::is_default( $code ) ) {
 			self::$where_sql = $wpdb->prepare(

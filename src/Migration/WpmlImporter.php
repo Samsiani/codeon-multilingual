@@ -16,8 +16,10 @@ use Samsiani\CodeonMultilingual\Strings\StringTranslator;
  * existing trid (translation group id) is reused as our group_id directly —
  * they have the same semantics.
  *
- * Idempotent: re-running updates rows in place. Safe to run multiple times and
- * across staged content additions.
+ * Idempotent: re-running imports rows that are still missing. Existing CodeOn
+ * mappings/translations are never silently overwritten; conflicting rows are
+ * reported by preflight and import_all() aborts unless the caller explicitly
+ * allows importing around conflicts.
  *
  * Scope (v0.3): languages, post translations (incl. variations/attachments/menu
  * items), term translations, string sources, string translations. Out of scope:
@@ -39,7 +41,7 @@ final class WpmlImporter {
 	}
 
 	/**
-	 * @return array{languages:int, posts:int, terms:int, strings:int, translated_strings:int, default_language:?string}
+	 * @return array{languages:int, posts:int, terms:int, strings:int, translated_strings:int, default_language:?string, conflicts:array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int}}
 	 */
 	public static function summary(): array {
 		global $wpdb;
@@ -51,6 +53,7 @@ final class WpmlImporter {
 				'strings'            => 0,
 				'translated_strings' => 0,
 				'default_language'   => null,
+				'conflicts'          => self::empty_conflicts(),
 			);
 		}
 
@@ -87,15 +90,106 @@ final class WpmlImporter {
 			'strings'            => $strings,
 			'translated_strings' => $translated_strings,
 			'default_language'   => self::default_language_from_options(),
+			'conflicts'          => self::conflict_summary(),
+		);
+	}
+
+	/**
+	 * Count existing CodeOn rows that would disagree with WPML's source data.
+	 *
+	 * These are the rows that older importer versions overwrote with
+	 * ON DUPLICATE KEY UPDATE. Production migration should surface them before
+	 * writes so the operator can decide whether to reset CodeOn data, merge
+	 * manually, or import only the missing rows.
+	 *
+	 * @return array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int}
+	 */
+	public static function conflict_summary(): array {
+		global $wpdb;
+		if ( ! self::is_available() ) {
+			return self::empty_conflicts();
+		}
+
+		$prefix = $wpdb->prefix;
+
+		$language_settings = 0;
+		if ( self::table_exists( $prefix . 'icl_languages' ) ) {
+			$native_select = self::wpml_native_name_select();
+			$language_settings = (int) $wpdb->get_var(
+				"SELECT COUNT(*)
+				 FROM {$prefix}icl_languages l
+				 INNER JOIN {$prefix}cml_languages cl ON cl.code = l.code
+				 WHERE cl.locale != COALESCE(l.default_locale, l.code)
+				    OR cl.name != l.english_name
+				    OR cl.native != {$native_select}
+				    OR cl.active != COALESCE(l.active, 1)"
+			);
+		}
+
+		$post_mappings = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			 FROM {$prefix}icl_translations t
+			 INNER JOIN {$wpdb->posts} p ON p.ID = t.element_id
+			 INNER JOIN {$prefix}cml_post_language cpl ON cpl.post_id = t.element_id
+			 WHERE t.element_type LIKE 'post_%'
+			   AND t.element_id IS NOT NULL
+			   AND (cpl.group_id != t.trid OR cpl.language != t.language_code)"
+		);
+
+		$term_mappings = 0;
+		if ( self::table_exists( $prefix . 'icl_translations' ) ) {
+			$term_mappings = (int) $wpdb->get_var(
+				"SELECT COUNT(*)
+				 FROM {$prefix}icl_translations t
+				 INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = t.element_id
+				 INNER JOIN {$prefix}cml_term_language ctl ON ctl.term_id = tt.term_id
+				 WHERE t.element_type LIKE 'tax_%'
+				   AND t.element_id IS NOT NULL
+				   AND (ctl.group_id != t.trid OR ctl.language != t.language_code)"
+			);
+		}
+
+		$string_translations = 0;
+		if (
+			self::table_exists( $prefix . 'icl_strings' )
+			&& self::table_exists( $prefix . 'icl_string_translations' )
+		) {
+			$string_translations = (int) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT COUNT(*)
+					 FROM {$prefix}icl_string_translations t
+					 INNER JOIN {$prefix}icl_strings src ON src.id = t.string_id
+					 INNER JOIN {$prefix}cml_strings cs ON cs.hash = UNHEX(MD5(CONCAT(
+						COALESCE(src.context, ''),
+						'|',
+						COALESCE(src.gettext_context, ''),
+						'|',
+						src.value
+					 )))
+					 INNER JOIN {$prefix}cml_string_translations st ON st.string_id = cs.id AND st.language = t.language
+					 WHERE t.status != %d
+					   AND t.value IS NOT NULL
+					   AND t.value != ''
+					   AND st.translation != t.value",
+					self::STRING_STATUS_NEEDS_TRANSLATION
+				)
+			);
+		}
+
+		return array(
+			'language_settings'   => $language_settings,
+			'post_mappings'       => $post_mappings,
+			'term_mappings'       => $term_mappings,
+			'string_translations' => $string_translations,
 		);
 	}
 
 	// ---- Imports ---------------------------------------------------------
 
 	/**
-	 * @return array{languages:int, posts:int, terms:int, strings:int, translated_strings:int, default_set:bool, errors:array<int,string>}
+	 * @return array{languages:int, posts:int, terms:int, strings:int, translated_strings:int, default_set:bool, conflicts:array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int}, errors:array<int,string>}
 	 */
-	public static function import_all(): array {
+	public static function import_all( bool $allow_conflicts = false ): array {
 		$result = array(
 			'languages'          => 0,
 			'posts'              => 0,
@@ -103,38 +197,32 @@ final class WpmlImporter {
 			'strings'            => 0,
 			'translated_strings' => 0,
 			'default_set'        => false,
+			'conflicts'          => self::conflict_summary(),
 			'errors'             => array(),
 		);
 
+		if ( ! $allow_conflicts && self::has_conflicts( $result['conflicts'] ) ) {
+			$result['errors'][] = 'conflicts: existing CodeOn data differs from WPML data. Review the preflight report before importing.';
+			return $result;
+		}
+
+		self::begin_transaction();
 		try {
 			$result['languages'] = self::import_languages();
-		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'languages: ' . $e->getMessage();
-		}
-		try {
+			Languages::flush_cache();
 			$result['default_set'] = self::set_default_language();
-		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'default: ' . $e->getMessage();
-		}
-		try {
 			$result['posts'] = self::import_post_translations();
-		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'posts: ' . $e->getMessage();
-		}
-		try {
 			$result['terms'] = self::import_term_translations();
-		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'terms: ' . $e->getMessage();
-		}
-		try {
 			$result['strings'] = self::import_string_sources();
-		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'strings: ' . $e->getMessage();
-		}
-		try {
 			$result['translated_strings'] = self::import_string_translations();
+			self::commit_transaction();
 		} catch ( \Throwable $e ) {
-			$result['errors'][] = 'string translations: ' . $e->getMessage();
+			self::rollback_transaction();
+			$result['errors'][] = $e->getMessage();
+		}
+
+		if ( ! empty( $result['errors'] ) ) {
+			return $result;
 		}
 
 		Languages::flush_cache();
@@ -157,14 +245,10 @@ final class WpmlImporter {
 			return 0;
 		}
 
-		$has_translations_table = self::table_exists( $wpdb->prefix . 'icl_languages_translations' );
-
 		// Native name: WPML stores it in icl_languages_translations where display_language_code = language_code.
-		$native_select = $has_translations_table
-			? "COALESCE((SELECT name FROM {$wpdb->prefix}icl_languages_translations WHERE language_code = l.code AND display_language_code = l.code LIMIT 1), l.english_name)"
-			: 'l.english_name';
+		$native_select = self::wpml_native_name_select();
 
-		$sql = "INSERT INTO {$wpdb->prefix}cml_languages (code, locale, name, native, flag, rtl, active, is_default, position)
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_languages (code, locale, name, native, flag, rtl, active, is_default, position)
 			SELECT
 				l.code,
 				COALESCE(l.default_locale, l.code),
@@ -175,15 +259,10 @@ final class WpmlImporter {
 				COALESCE(l.active, 1),
 				0,
 				0
-			FROM {$wpdb->prefix}icl_languages l
-			ON DUPLICATE KEY UPDATE
-				locale = VALUES(locale),
-				name = VALUES(name),
-				native = VALUES(native),
-				active = VALUES(active)";
+			FROM {$wpdb->prefix}icl_languages l";
 
 		$count_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cml_languages" );
-		$wpdb->query( $sql );
+		self::query_or_throw( $sql, 'languages' );
 		$count_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cml_languages" );
 
 		return $count_after - $count_before;
@@ -222,17 +301,14 @@ final class WpmlImporter {
 			return 0;
 		}
 
-		$sql = "INSERT INTO {$wpdb->prefix}cml_post_language (post_id, group_id, language)
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_post_language (post_id, group_id, language)
 			SELECT t.element_id, t.trid, t.language_code
 			FROM {$wpdb->prefix}icl_translations t
 			INNER JOIN {$wpdb->posts} p ON p.ID = t.element_id
 			WHERE t.element_type LIKE 'post_%'
-			  AND t.element_id IS NOT NULL
-			ON DUPLICATE KEY UPDATE
-				group_id = VALUES(group_id),
-				language = VALUES(language)";
+			  AND t.element_id IS NOT NULL";
 
-		$wpdb->query( $sql );
+		self::query_or_throw( $sql, 'post translations' );
 		return (int) $wpdb->rows_affected;
 	}
 
@@ -243,17 +319,14 @@ final class WpmlImporter {
 		}
 
 		// WPML's element_id for tax_* rows is term_taxonomy_id; we need term_id.
-		$sql = "INSERT INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language)
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language)
 			SELECT tt.term_id, t.trid, t.language_code
 			FROM {$wpdb->prefix}icl_translations t
 			INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = t.element_id
 			WHERE t.element_type LIKE 'tax_%'
-			  AND t.element_id IS NOT NULL
-			ON DUPLICATE KEY UPDATE
-				group_id = VALUES(group_id),
-				language = VALUES(language)";
+			  AND t.element_id IS NOT NULL";
 
-		$wpdb->query( $sql );
+		self::query_or_throw( $sql, 'term translations' );
 		return (int) $wpdb->rows_affected;
 	}
 
@@ -285,7 +358,7 @@ final class WpmlImporter {
 			ON DUPLICATE KEY UPDATE
 				source_language = VALUES(source_language)";
 
-		$wpdb->query( $sql );
+		self::query_or_throw( $sql, 'string sources' );
 		return (int) $wpdb->rows_affected;
 	}
 
@@ -300,7 +373,7 @@ final class WpmlImporter {
 
 		// Join through hash to find our string ids in one statement.
 		$sql = $wpdb->prepare(
-			"INSERT INTO {$wpdb->prefix}cml_string_translations (string_id, language, translation, updated_at)
+			"INSERT IGNORE INTO {$wpdb->prefix}cml_string_translations (string_id, language, translation, updated_at)
 			SELECT cs.id, t.language, t.value, UNIX_TIMESTAMP()
 			FROM {$wpdb->prefix}icl_string_translations t
 			INNER JOIN {$wpdb->prefix}icl_strings src ON src.id = t.string_id
@@ -313,14 +386,11 @@ final class WpmlImporter {
 			)))
 			WHERE t.status != %d
 			  AND t.value IS NOT NULL
-			  AND t.value != ''
-			ON DUPLICATE KEY UPDATE
-				translation = VALUES(translation),
-				updated_at  = VALUES(updated_at)",
+			  AND t.value != ''",
 			self::STRING_STATUS_NEEDS_TRANSLATION
 		);
 
-		$wpdb->query( $sql );
+		self::query_or_throw( $sql, 'string translations' );
 		return (int) $wpdb->rows_affected;
 	}
 
@@ -331,6 +401,58 @@ final class WpmlImporter {
 		return (bool) $wpdb->get_var(
 			$wpdb->prepare( 'SHOW TABLES LIKE %s', $table )
 		);
+	}
+
+	/**
+	 * @return array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int}
+	 */
+	private static function empty_conflicts(): array {
+		return array(
+			'language_settings'   => 0,
+			'post_mappings'       => 0,
+			'term_mappings'       => 0,
+			'string_translations' => 0,
+		);
+	}
+
+	/**
+	 * @param array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int} $conflicts
+	 */
+	private static function has_conflicts( array $conflicts ): bool {
+		return $conflicts['language_settings'] > 0
+			|| $conflicts['post_mappings'] > 0
+			|| $conflicts['term_mappings'] > 0
+			|| $conflicts['string_translations'] > 0;
+	}
+
+	private static function wpml_native_name_select(): string {
+		global $wpdb;
+		return self::table_exists( $wpdb->prefix . 'icl_languages_translations' )
+			? "COALESCE((SELECT name FROM {$wpdb->prefix}icl_languages_translations WHERE language_code = l.code AND display_language_code = l.code LIMIT 1), l.english_name)"
+			: 'l.english_name';
+	}
+
+	private static function begin_transaction(): void {
+		global $wpdb;
+		$wpdb->query( 'START TRANSACTION' );
+	}
+
+	private static function commit_transaction(): void {
+		global $wpdb;
+		$wpdb->query( 'COMMIT' );
+	}
+
+	private static function rollback_transaction(): void {
+		global $wpdb;
+		$wpdb->query( 'ROLLBACK' );
+	}
+
+	private static function query_or_throw( string $sql, string $label ): void {
+		global $wpdb;
+		$result = $wpdb->query( $sql );
+		if ( false === $result ) {
+			throw new \RuntimeException( $label . ': ' . ( $wpdb->last_error ?: 'database query failed' ) );
+		}
 	}
 
 	private static function default_language_from_options(): ?string {

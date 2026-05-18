@@ -2,6 +2,29 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.8.0] — 2026-05-18
+
+### Added
+- WooCommerce payment gateway titles/descriptions and shipping rate labels now register into the strings catalog and translate at checkout.
+- WooCommerce orders now persist `_cml_language`; customer order tables and emails switch to the checkout language while rendering.
+- Product duplication now remaps translated product/category/tag/attribute term relationships where translated terms exist.
+- Variable product translation now remaps `attribute_pa_*` variation meta to translated attribute term slugs.
+- Integration-test scaffold for WordPress PHPUnit plus a package smoke-test script for release ZIPs.
+
+### Changed
+- WPML migration now has conflict preflight for language settings, post mappings, term mappings, and string translations. Admin import is blocked on conflicts and requires backup confirmation; CLI can explicitly `--allow-conflicts` to import only missing rows.
+- Uninstall preserves plugin data by default. Full table/option/file removal now requires the admin setting or `CML_DELETE_DATA_ON_UNINSTALL`.
+- Release workflow now validates `CML_VERSION`, checks stamped `BuildId.php` starts with `<?php`, runs syntax/PHPStan/unit tests before packaging, and smoke-tests the ZIP.
+- Plugin bootstrap always loads Composer's autoloader for root PSR-4 classes; Jetpack package autoloader remains optional for shared vendor packages.
+
+### Fixed
+- Nested page routing now resolves the full parent path instead of only the leaf slug, preventing duplicate child slugs under different parents from resolving the wrong page.
+- Language-prefixed canonical redirects now preserve `/en`/`/ru` while still blocking the original redirect loop.
+- Post and term query JOIN fragments are whitespace-safe when Woo/theme filters append later JOINs.
+- Native `.l10n.php` file paths now validate/sanitize locales before writing or deleting generated files.
+- Term translation admin actions now use taxonomy-specific capabilities and validate the source term belongs to the requested taxonomy.
+- Post translation creation now checks the source post type and its create capability before inserting translations.
+
 ## [0.7.37] — 2026-05-14
 
 ### Added

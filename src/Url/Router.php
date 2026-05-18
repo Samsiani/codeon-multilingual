@@ -25,6 +25,7 @@ final class Router {
 	private static ?RoutingStrategy $strategy = null;
 	private static bool $registered           = false;
 	private static bool $filtering            = false;
+	private static bool $stripped_request     = false;
 
 	/** @var array<string, string> */
 	private static array $build_cache = array();
@@ -65,14 +66,44 @@ final class Router {
 
 		CurrentLanguage::set( $lang );
 		self::$strategy->strip_from_request();
+		self::$stripped_request = true;
 
 		// We've virtually stripped the /code/ prefix from REQUEST_URI; WP's
 		// canonical-redirect logic compares the (modified) REQUEST_URI against
 		// the URL it thinks is canonical (built via home_url() which our filter
 		// prepends with /code/), sees a mismatch, and 301s back to the prefixed
-		// form — creating an infinite redirect loop. Suppress canonical entirely
-		// on language-prefixed requests.
-		add_filter( 'redirect_canonical', '__return_false' );
+		// form — creating an infinite redirect loop. Suppress only that loop,
+		// leaving unrelated canonical fixes available.
+		add_filter( 'redirect_canonical', array( self::class, 'filter_redirect_canonical' ), 10, 2 );
+	}
+
+	/**
+	 * @param string|false $redirect_url
+	 * @param string       $requested_url
+	 * @return string|false
+	 */
+	public static function filter_redirect_canonical( $redirect_url, string $requested_url ) {
+		if ( ! self::$stripped_request || ! is_string( $redirect_url ) || '' === $redirect_url ) {
+			return $redirect_url;
+		}
+
+		$current = CurrentLanguage::code();
+		if ( Languages::is_default( $current ) ) {
+			return $redirect_url;
+		}
+
+		$stripped_redirect = self::strip_lang_prefix( $redirect_url );
+		$redirect_had_lang = $stripped_redirect !== $redirect_url;
+
+		if ( $redirect_had_lang && $stripped_redirect === $requested_url ) {
+			return false;
+		}
+
+		if ( ! $redirect_had_lang ) {
+			return self::with_lang( $redirect_url, $current );
+		}
+
+		return $redirect_url;
 	}
 
 	public static function filter_url( string $url ): string {

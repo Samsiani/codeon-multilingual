@@ -39,10 +39,11 @@ final class MigrationPage {
 		$available = WpmlImporter::is_available();
 		$summary   = WpmlImporter::summary();
 
-		$import_url = wp_nonce_url(
-			add_query_arg( array( 'action' => self::ACTION_IMPORT ), admin_url( 'admin-post.php' ) ),
-			self::NONCE_IMPORT
-		);
+		$conflicts     = $summary['conflicts'];
+		$has_conflicts = $conflicts['language_settings'] > 0
+			|| $conflicts['post_mappings'] > 0
+			|| $conflicts['term_mappings'] > 0
+			|| $conflicts['string_translations'] > 0;
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Migration', 'codeon-multilingual' ); ?></h1>
@@ -87,14 +88,47 @@ final class MigrationPage {
 						<th scope="row"><?php esc_html_e( 'Translated strings', 'codeon-multilingual' ); ?></th>
 						<td><?php echo (int) $summary['translated_strings']; ?></td>
 					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Conflicts', 'codeon-multilingual' ); ?></th>
+						<td>
+							<?php if ( $has_conflicts ) : ?>
+								<strong style="color:#b32d2e"><?php esc_html_e( 'Review required', 'codeon-multilingual' ); ?></strong>
+							<?php else : ?>
+								<?php esc_html_e( 'None detected', 'codeon-multilingual' ); ?>
+							<?php endif; ?>
+							<ul style="margin:6px 0 0 20px;list-style:disc">
+								<li><?php printf( esc_html__( 'Language settings: %d', 'codeon-multilingual' ), (int) $conflicts['language_settings'] ); ?></li>
+								<li><?php printf( esc_html__( 'Post mappings: %d', 'codeon-multilingual' ), (int) $conflicts['post_mappings'] ); ?></li>
+								<li><?php printf( esc_html__( 'Term mappings: %d', 'codeon-multilingual' ), (int) $conflicts['term_mappings'] ); ?></li>
+								<li><?php printf( esc_html__( 'String translations: %d', 'codeon-multilingual' ), (int) $conflicts['string_translations'] ); ?></li>
+							</ul>
+						</td>
+					</tr>
 				</table>
 
-				<p>
-					<a href="<?php echo esc_url( $import_url ); ?>" class="button button-primary"
-						onclick="return confirm('<?php echo esc_js( __( 'Run the WPML import? This is idempotent and can be re-run safely.', 'codeon-multilingual' ) ); ?>');">
-						<?php esc_html_e( 'Import from WPML', 'codeon-multilingual' ); ?>
-					</a>
-				</p>
+				<?php if ( $has_conflicts ) : ?>
+					<div class="notice notice-warning inline">
+						<p>
+							<?php esc_html_e( 'Existing CodeOn data conflicts with WPML data. The admin importer is blocked to avoid overwriting live language settings, mappings, or translations. Resolve the conflicts manually, reset the affected CodeOn data, or use WP-CLI with an explicit conflict policy.', 'codeon-multilingual' ); ?>
+						</p>
+					</div>
+				<?php endif; ?>
+
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION_IMPORT ); ?>">
+					<?php wp_nonce_field( self::NONCE_IMPORT ); ?>
+					<p>
+						<label>
+							<input type="checkbox" name="cml_confirm_backup" value="1" required <?php disabled( $has_conflicts ); ?>>
+							<?php esc_html_e( 'I have a recent database backup and understand this import writes to CodeOn tables.', 'codeon-multilingual' ); ?>
+						</label>
+					</p>
+					<p>
+						<button type="submit" class="button button-primary" <?php disabled( $has_conflicts ); ?>>
+							<?php esc_html_e( 'Import from WPML', 'codeon-multilingual' ); ?>
+						</button>
+					</p>
+				</form>
 
 				<h3><?php esc_html_e( 'Out of scope (v0.3)', 'codeon-multilingual' ); ?></h3>
 				<ul style="margin-left:20px;list-style:disc">
@@ -117,6 +151,9 @@ final class MigrationPage {
 		if ( ! WpmlImporter::is_available() ) {
 			self::redirect_with( array( 'error' => 'no_wpml' ) );
 		}
+		if ( empty( $_POST['cml_confirm_backup'] ) ) {
+			self::redirect_with( array( 'error' => 'backup_required' ) );
+		}
 
 		$result = WpmlImporter::import_all();
 
@@ -128,6 +165,10 @@ final class MigrationPage {
 				'terms'      => (int) $result['terms'],
 				'strings'    => (int) $result['strings'],
 				'tstrings'   => (int) $result['translated_strings'],
+				'lconflicts' => (int) $result['conflicts']['language_settings'],
+				'pconflicts' => (int) $result['conflicts']['post_mappings'],
+				'tconflicts' => (int) $result['conflicts']['term_mappings'],
+				'sconflicts' => (int) $result['conflicts']['string_translations'],
 				'errors'     => empty( $result['errors'] ) ? '' : implode( '||', $result['errors'] ),
 			)
 		);
@@ -156,11 +197,21 @@ final class MigrationPage {
 				}
 				echo '</ul></div>';
 			}
+			$conflict_total = (int) ( $_GET['lconflicts'] ?? 0 )
+				+ (int) ( $_GET['pconflicts'] ?? 0 )
+				+ (int) ( $_GET['tconflicts'] ?? 0 )
+				+ (int) ( $_GET['sconflicts'] ?? 0 );
+			if ( $conflict_total > 0 ) {
+				echo '<div class="notice notice-warning is-dismissible"><p>'
+					. esc_html__( 'Preflight detected existing CodeOn rows that disagree with WPML data. Conflicting rows were not overwritten.', 'codeon-multilingual' )
+					. '</p></div>';
+			}
 		}
 		if ( isset( $_GET['error'] ) ) {
 			$error = sanitize_key( wp_unslash( (string) $_GET['error'] ) );
 			$msg   = match ( $error ) {
 				'no_wpml' => __( 'WPML tables not detected. Cannot import.', 'codeon-multilingual' ),
+				'backup_required' => __( 'Confirm that you have a recent database backup before running the import.', 'codeon-multilingual' ),
 				default   => __( 'Import failed.', 'codeon-multilingual' ),
 			};
 			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html( $msg ) . '</p></div>';

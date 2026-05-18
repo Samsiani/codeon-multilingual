@@ -1,12 +1,12 @@
 # Roadmap & gap analysis
 
-Current version: **v0.7.37** (released 2026-05-14)
+Current version: **v0.8.0** (released 2026-05-18)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
 ## Where we are
 
-The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the WPML compatibility shim, the WP-CLI command surface, the first-run setup wizard, the bundled SVG flag library, the per-language compiled-map cache, the menu translation flow (Multilingual → Menus + per-language Sync), the per-language column UI on every translatable posts/taxonomy admin list, and the full WooCommerce translation stack (product field locking, shop-page mapping per language, cart items follow current language with source fallback, attribute label translation via the strings catalog, attribute term translation via the categories model). 62 passing unit tests, production-deployed on artcase.ge.
+The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the WPML compatibility shim, the WP-CLI command surface, the first-run setup wizard, the bundled SVG flag library, the per-language compiled-map cache, the menu translation flow (Multilingual → Menus + per-language Sync), the per-language column UI on every translatable posts/taxonomy admin list, and the hardened WooCommerce translation stack (product field locking, shop-page mapping per language, cart/order language handling, payment/shipping labels, translated product terms and variation attribute slugs, attribute label translation via the strings catalog, attribute term translation via the categories model). 86 passing unit tests, live-tested on artcase.ge.
 
 ## Status vs v0.1.0 MVP commitments
 
@@ -29,11 +29,11 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | WC duplicate-SKU validator silenced for siblings | ✅ done | `Woo/TranslationLock::allow_sibling_sku_duplicate`, v0.7.19 |
 | **WC attribute labels** | ✅ done | `Woo/AttributeLabels.php`, v0.7.37. Auto-syncs to strings catalog; `woocommerce_attribute_label` swaps per language. |
 | **WC attribute terms** | ✅ done | `pa_*` taxonomies routed through `TermTranslator`; same per-language column UI as categories (v0.7.36). |
-| **WC shipping-zone strings (curated)** | ❌ **missing** | Captured only via auto-discovery when on (v0.8.0 will reuse `StringTranslator::register_source()`) |
-| **WC payment-method titles (curated)** | ❌ **missing** | Same |
+| **WC shipping-zone strings (curated)** | ✅ partial | Shipping rate labels via `Woo/MethodLabels.php`; broader zone/admin labels remain follow-up |
+| **WC payment-method titles (curated)** | ✅ done | Gateway titles/descriptions via `Woo/MethodLabels.php` |
 | **WC email subjects/bodies (curated)** | ❌ **missing** | Same |
 | **WC cart/checkout strings (curated)** | ❌ **missing** | Same |
-| **Variation attribute slug routing** | ❌ **missing** | `attribute_pa_color=წითელი` doesn't yet remap to `red` on `/en/` (v0.8.0) |
+| **Variation attribute slug routing** | ✅ partial | Variation translation remaps `attribute_pa_*` meta to translated term slugs when sibling terms exist |
 | Language switcher — shortcode | ✅ done | `[cml_language_switcher]` |
 | Language switcher — classic widget | ✅ done | `Frontend/LanguageSwitcherWidget.php` |
 | Language switcher — auto-floating | ✅ done | `Frontend/FloatingSwitcher.php`, v0.5.0 |
@@ -92,11 +92,11 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 ## What's missing — ranked by impact for production sites
 
-### 1. WC curated string registration ❌ (next priority — v0.8.0)
+### 1. WC curated string registration ◐ (partial in v0.8.0)
 
 **Why it matters:** WC ships hundreds of strings — shipping zone titles, payment method titles, email subjects, cart/checkout notices — that need to render translated on `/en/checkout/`, in customer emails, etc. The strings catalog can already hold them; v0.7.37's `StringTranslator::register_source()` is the integration API. We just need to enumerate and call it.
 
-**Scope:** ~150 LOC, single file `Woo/KnownStringsBootstrap.php` that registers known WC strings on `cml_activated` / `cml_upgraded`. Pairs with one filter per WC surface that doesn't go through `__()` (the attribute-label pattern, generalised).
+**Status:** v0.8.0 ships runtime registration/translation for gateway titles/descriptions and shipping rate labels via `Woo/MethodLabels.php`. Email subjects/headings and broad notice coverage still need curated registration.
 
 **Categories:**
 - Shipping zone titles
@@ -104,17 +104,17 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 - Email subjects + headings
 - Cart/checkout notices and labels
 
-### 2. Variation attribute slug routing ❌ (v0.8.0)
+### 2. Variation attribute slug routing ◐ (partial in v0.8.0)
 
 **Why it matters:** A Georgian product with variation `attribute_pa_color=წითელი` doesn't yet swap to `attribute_pa_color=red` on `/en/product/...`. The `pa_*` terms are translatable; the URL rewriter just doesn't know to remap them yet.
 
-**Scope:** ~100 LOC in `Woo/VariationTranslator.php`. Hook variation URL building + variation lookup-by-attribute to remap term slugs across language siblings.
+**Status:** v0.8.0 remaps `attribute_pa_*` variation meta when a variation is duplicated and translated attribute terms exist. Runtime URL/add-to-cart attribute remapping still needs broader integration coverage.
 
-### 3. WC email rendering in customer's language ❌ (v0.8.0)
+### 3. WC email rendering in customer's language ◐ (partial in v0.8.0)
 
 **Why it matters:** Order emails currently render in the site's locale, not the customer's. We need to switch `CurrentLanguage` to the order's stored language before WC builds the email body.
 
-**Scope:** ~50 LOC, single filter on `woocommerce_email_before_order_table` (or similar) + a stored language column on `wp_wc_orders`.
+**Status:** v0.8.0 stores `_cml_language`, switches order tables/emails to the stored language during render, and stores translated order item names at checkout. Full email subject/heading registration remains follow-up.
 
 ### 4. Polylang compat shim ❌
 
@@ -152,7 +152,7 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | ~~v0.7.34 – v0.7.35~~ | TermsListLanguage + term update fix | Subsubsub + translate icons on every taxonomy admin; `wp_update_term_parent` scopes `terms_clauses` per language so duplicate-slug check passes on translation saves | ✅ shipped |
 | ~~v0.7.36~~ | Per-language columns | Replaced single "Languages" column with one column per active language; flag + ✓/+ icons on posts AND taxonomies | ✅ shipped |
 | ~~v0.7.37~~ | WC attribute label translation | `Woo/AttributeLabels.php` + reusable `StringTranslator::register_source()` / `lookup_translation()` API | ✅ shipped |
-| **v0.8.0** | WC depth | Curated string registration (shipping/payment/email titles), variation attribute slug routing, WC emails in customer's language | next |
+| ~~v0.8.0~~ | Production hardening + WC depth | Safer WPML migration, full-path page routing, canonical fix, uninstall retention, payment/shipping labels, order language, term/variation remapping, release/package gates | ✅ shipped |
 | **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
 | **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |
 | **v0.9.1** | Polish | Admin per-user UI language, Gutenberg block, performance instrumentation page | planned |
