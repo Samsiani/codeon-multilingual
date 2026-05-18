@@ -93,10 +93,15 @@ tests_add_filter(
 		}
 
 		require CML_TEST_PLUGIN_FILE;
+
+		if ( class_exists( '\Samsiani\CodeonMultilingual\Core\Schema' ) ) {
+			\Samsiani\CodeonMultilingual\Core\Schema::install();
+		}
 	}
 );
 
 require $bootstrap;
+require_once __DIR__ . '/IntegrationTestCase.php';
 
 if ( class_exists( '\Samsiani\CodeonMultilingual\Core\Schema' ) ) {
 	\Samsiani\CodeonMultilingual\Core\Schema::install();
