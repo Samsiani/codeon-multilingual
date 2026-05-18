@@ -59,6 +59,9 @@ final class ValueLocalizer {
 		if ( '' === $home || ! self::is_internal_url( $url, $home ) ) {
 			return $url;
 		}
+		if ( ! self::is_frontend_routable_url( $url, $home ) ) {
+			return $url;
+		}
 
 		$stripped = Router::strip_lang_prefix( $url );
 		return Languages::is_default( $language )
@@ -109,6 +112,49 @@ final class ValueLocalizer {
 		$home_without_trailing = rtrim( $home, '/' );
 
 		return $url_without_trailing === $home_without_trailing || str_starts_with( $url, $home );
+	}
+
+	private static function is_frontend_routable_url( string $url, string $home ): bool {
+		$query = parse_url( $url, PHP_URL_QUERY );
+		if ( is_string( $query ) && str_contains( $query, 'rest_route=' ) ) {
+			return false;
+		}
+
+		$path = parse_url( $url, PHP_URL_PATH );
+		if ( ! is_string( $path ) || '' === $path || '/' === $path ) {
+			return true;
+		}
+
+		$relative = self::relative_path_for_home( $path, $home );
+		if ( '' === $relative ) {
+			return true;
+		}
+
+		foreach ( array( 'wp-admin/', 'wp-content/', 'wp-includes/', 'wp-json/' ) as $prefix ) {
+			if ( str_starts_with( $relative, $prefix ) ) {
+				return false;
+			}
+		}
+
+		if ( in_array( $relative, array( 'wp-login.php', 'xmlrpc.php' ), true ) ) {
+			return false;
+		}
+
+		return ! (bool) preg_match(
+			'/\.(?:avif|css|eot|gif|gz|ico|jpe?g|js|json|map|mov|mp3|mp4|otf|pdf|png|rar|svg|tar|ttf|txt|wav|webm|webp|woff2?|xml|zip)$/i',
+			$relative
+		);
+	}
+
+	private static function relative_path_for_home( string $path, string $home ): string {
+		$home_path = parse_url( $home, PHP_URL_PATH );
+		$home_path = is_string( $home_path ) ? rtrim( $home_path, '/' ) : '';
+
+		if ( '' !== $home_path && str_starts_with( $path, $home_path ) ) {
+			$path = substr( $path, strlen( $home_path ) ) ?: '/';
+		}
+
+		return ltrim( $path, '/' );
 	}
 
 	/**

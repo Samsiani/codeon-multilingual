@@ -92,7 +92,7 @@ final class RankMathSeoTest extends TestCase {
 		$this->assertSame( 'https://example.test/en/story/#richSnippet', $result['Article']['@id'] );
 		$this->assertSame( 'https://example.test/en/story/', $result['Article']['url'] );
 		$this->assertSame( 'https://example.test/en/story/#primaryimage', $result['Article']['image']['@id'] );
-		$this->assertSame( 'https://example.test/en/uploads/story.jpg', $result['Article']['image']['url'] );
+		$this->assertSame( 'https://example.test/uploads/story.jpg', $result['Article']['image']['url'] );
 		$this->assertSame( 15, $result['Article']['about']['term_id'] );
 	}
 

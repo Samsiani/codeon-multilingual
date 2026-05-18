@@ -14,8 +14,8 @@ shortcodes, templates, dynamic IDs, strings, or cache behavior.
 | Elementor | P0 | JSON adapter started | `_elementor_data` JSON strings, template IDs, links, widgets, loop/grid widgets |
 | Elementor Pro | P0 | Needs adapter | Theme Builder, forms, popups, Woo widgets, dynamic tags, conditions |
 | ACF / ACF Pro | P0 | Field-value adapter started | Options pages per language, flexible/repeater walker, relationship fields, field group policy |
-| Yoast SEO | P0 | Adapter started | Breadcrumb and schema URL/object localization; sitemap/canonical smoke tests remain |
-| Rank Math | P0 | Adapter started | Breadcrumb and schema URL/object localization; sitemap/canonical smoke tests remain |
+| Yoast SEO | P0 | Adapter started | Breadcrumb and schema URL/object localization with static asset/REST/admin URL guards; sitemap/canonical smoke tests remain |
+| Rank Math | P0 | Adapter started | Breadcrumb and schema URL/object localization with static asset/REST/admin URL guards; sitemap/canonical smoke tests remain |
 | Avada / Fusion Builder | P1 | Baseline shortcode/meta clone | Global elements, layout sections, dynamic data, shortcode ID/link remapping |
 | Divi Builder / Divi Theme Builder | P1 | Baseline shortcode clone | `et_pb_layout`, global modules, theme builder templates, shortcode ID/link remapping |
 | WPBakery | P1 | Good shortcode baseline | Template/library refs, grid explicit IDs, Woo elements, shortcode attribute remapping |
