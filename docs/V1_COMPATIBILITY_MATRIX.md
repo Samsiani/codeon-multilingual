@@ -9,18 +9,18 @@ shortcodes, templates, dynamic IDs, strings, or cache behavior.
 
 | Target | Priority | Current posture | v1.0 certification scope |
 |---|---:|---|---|
-| Gutenberg / Block Editor | P0 | Good baseline | `parse_blocks()` string/ID/link walker, reusable `wp_block`, navigation block, dynamic blocks |
+| Gutenberg / Block Editor | P0 | Attribute adapter started | `parse_blocks()` ID/link walker, reusable `wp_block`, navigation block, dynamic blocks |
 | WooCommerce Blocks / Store API | P0 | Partial | Cart, checkout, notices, product grids, variation add-to-cart, REST/Store API language |
-| Elementor | P0 | Baseline clone | `_elementor_data` JSON strings, template IDs, links, widgets, loop/grid widgets |
+| Elementor | P0 | JSON adapter started | `_elementor_data` JSON strings, template IDs, links, widgets, loop/grid widgets |
 | Elementor Pro | P0 | Needs adapter | Theme Builder, forms, popups, Woo widgets, dynamic tags, conditions |
-| ACF / ACF Pro | P0 | Meta clones | Options pages per language, flexible/repeater walker, relationship fields, field group policy |
+| ACF / ACF Pro | P0 | Field-value adapter started | Options pages per language, flexible/repeater walker, relationship fields, field group policy |
 | Yoast SEO | P0 | Adapter started | Breadcrumb and schema URL/object localization; sitemap/canonical smoke tests remain |
 | Rank Math | P0 | Adapter started | Breadcrumb and schema URL/object localization; sitemap/canonical smoke tests remain |
 | Avada / Fusion Builder | P1 | Baseline shortcode/meta clone | Global elements, layout sections, dynamic data, shortcode ID/link remapping |
 | Divi Builder / Divi Theme Builder | P1 | Baseline shortcode clone | `et_pb_layout`, global modules, theme builder templates, shortcode ID/link remapping |
 | WPBakery | P1 | Good shortcode baseline | Template/library refs, grid explicit IDs, Woo elements, shortcode attribute remapping |
 | Visual Composer Website Builder | P1 | Partial | Hub templates, shortcode/template refs, frontend editor smoke tests |
-| Beaver Builder / Beaver Themer | P1 | Meta clone likely | `_fl_builder_data`, saved rows/modules, Themer layouts, serialized strings/IDs |
+| Beaver Builder / Beaver Themer | P1 | Serialized meta adapter started | `_fl_builder_data`, saved rows/modules, Themer layouts, serialized strings/IDs |
 | Bricks Builder | P1 | Needs adapter | Builder content meta, templates, query loops, conditions, dynamic data, ACF integration |
 | Oxygen Builder | P1 | Needs adapter | Templates, conditions, reusable parts, shortcodes/meta, query components |
 | Breakdance | P1 | Needs adapter | Builder data store, templates, conditions, forms, AJAX rendering |

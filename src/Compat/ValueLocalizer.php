@@ -55,8 +55,8 @@ final class ValueLocalizer {
 			return $url;
 		}
 
-		$home = home_url( '/' );
-		if ( 0 !== strpos( $url, $home ) ) {
+		$home = self::home_base_url();
+		if ( '' === $home || ! self::is_internal_url( $url, $home ) ) {
 			return $url;
 		}
 
@@ -81,7 +81,34 @@ final class ValueLocalizer {
 			return $result;
 		}
 
+		if ( is_object( $value ) ) {
+			$result = clone $value;
+			foreach ( get_object_vars( $value ) as $key => $item ) {
+				$result->{$key} = self::walk_keyed_value( (string) $key, $item, $language, $policy );
+			}
+			return $result;
+		}
+
 		return $value;
+	}
+
+	private static function home_base_url(): string {
+		$home = '';
+		if ( function_exists( 'get_option' ) ) {
+			$home = (string) get_option( 'home', '' );
+		}
+		if ( '' === $home && function_exists( 'home_url' ) ) {
+			$home = (string) home_url( '/' );
+		}
+
+		return '' === $home ? '' : rtrim( $home, '/' ) . '/';
+	}
+
+	private static function is_internal_url( string $url, string $home ): bool {
+		$url_without_trailing  = rtrim( $url, '/' );
+		$home_without_trailing = rtrim( $home, '/' );
+
+		return $url_without_trailing === $home_without_trailing || str_starts_with( $url, $home );
 	}
 
 	/**

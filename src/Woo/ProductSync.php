@@ -157,11 +157,15 @@ final class ProductSync {
 		foreach ( $props as $prop ) {
 			$getter = 'get_' . $prop;
 			$setter = 'set_' . $prop;
-			if ( ! method_exists( $source, $getter ) || ! method_exists( $sibling, $setter ) ) {
+			if ( ! method_exists( $source, $getter ) || ! method_exists( $sibling, $getter ) || ! method_exists( $sibling, $setter ) ) {
 				continue;
 			}
 
 			$value = $source->{$getter}();
+			if ( self::values_equal( $value, $sibling->{$getter}() ) ) {
+				continue;
+			}
+
 			$sibling->{$setter}( $value );
 			$dirty = true;
 		}
@@ -169,6 +173,14 @@ final class ProductSync {
 		if ( $dirty ) {
 			$sibling->save();
 		}
+	}
+
+	/**
+	 * @param mixed $left
+	 * @param mixed $right
+	 */
+	private static function values_equal( $left, $right ): bool {
+		return $left == $right; // phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual -- Woo props can be scalar strings, numbers, arrays, or date objects.
 	}
 
 	/**

@@ -9,7 +9,9 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - WP-CLI `wp cml migrate sources` to report current support for WPML, Polylang, TranslatePress, Weglot/GTranslate, MultilingualPress, qTranslate-X/WPGlobus, and related migration families.
 - Health repair tooling: admin repair action plus `wp cml health repair` for orphaned rows, missing public post/term rows, orphaned string rows, and unknown source-language normalization.
 - Compatibility base layer: shared value-localization helper, Yoast/Rank Math breadcrumb/schema localization, and cache purge integration for CodeOn caches, LiteSpeed Cache hooks, and WP Rocket purge functions.
+- Builder/ACF data localization for duplicated translations: Gutenberg block attributes, Elementor JSON/settings meta, and ACF relationship/taxonomy/page-link values now remap explicit object IDs and internal URLs to target-language siblings.
 - WooCommerce relationship hardening: product translations now remap upsells, cross-sells, grouped children, and variation option display labels to current-language siblings where available.
+- Benchmark coverage now measures product and variation collection workloads through real `WP_Query` language filtering instead of direct SQL.
 - v1 migration and compatibility planning docs: `docs/MIGRATION-SOURCES.md` and `docs/V1_COMPATIBILITY_MATRIX.md`.
 
 ### Changed
@@ -18,6 +20,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - WP-CLI migration writes now require `--snapshot=<file>` or the explicit unsafe bypass `--no-snapshot --confirm-no-snapshot`.
 - `--allow-conflicts` no longer rewrites CodeOn default-language settings when language-setting conflicts exist.
 - Polylang import now requires taxonomy-backed Polylang language rows for writes and flushes language caches before setting the imported default language.
+- WooCommerce product sync now skips sibling saves when synced price/stock/shipping/tax values already match.
 
 ## [0.9.0] — 2026-05-18
 

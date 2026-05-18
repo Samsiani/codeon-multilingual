@@ -22,6 +22,7 @@ final class WooProductSyncTest extends TestCase {
 		Monkey\setUp();
 		TranslationGroups::flush();
 		$this->updated_meta = array();
+		Functions\when( 'apply_filters' )->alias( static fn( string $hook, $value ) => $value );
 
 		global $wpdb;
 		$wpdb = new class {
@@ -138,5 +139,86 @@ final class WooProductSyncTest extends TestCase {
 		ProductSync::on_translation_created( 102, 101, 'ka', 101 );
 
 		$this->assertSame( array(), $this->updated_meta );
+	}
+
+	public function test_props_updated_skips_save_when_sibling_values_already_match(): void {
+		$source  = new WooProductSyncProductStub( 201, '10', 'instock' );
+		$sibling = new WooProductSyncProductStub( 202, '10', 'instock' );
+
+		Functions\expect( 'wc_get_product' )
+			->once()
+			->with( 202 )
+			->andReturn( $sibling );
+
+		ProductSync::on_props_updated( $source, array( 'price', 'stock_status' ) );
+
+		$this->assertSame( 0, $sibling->set_count );
+		$this->assertSame( 0, $sibling->save_count );
+	}
+
+	public function test_props_updated_saves_sibling_when_synced_value_changes(): void {
+		$source  = new WooProductSyncProductStub( 201, '12', 'outofstock' );
+		$sibling = new WooProductSyncProductStub( 202, '10', 'instock' );
+
+		Functions\expect( 'wc_get_product' )
+			->once()
+			->with( 202 )
+			->andReturn( $sibling );
+
+		ProductSync::on_props_updated( $source, array( 'price', 'stock_status' ) );
+
+		$this->assertSame( '12', $sibling->get_price() );
+		$this->assertSame( 'outofstock', $sibling->get_stock_status() );
+		$this->assertSame( 2, $sibling->set_count );
+		$this->assertSame( 1, $sibling->save_count );
+	}
+
+	public function test_props_updated_ignores_unsynced_props_without_loading_sibling(): void {
+		$source = new WooProductSyncProductStub( 201, '12', 'instock' );
+
+		Functions\expect( 'wc_get_product' )->never();
+
+		ProductSync::on_props_updated( $source, array( 'name' ) );
+
+		$this->assertSame( 0, $source->set_count );
+		$this->assertSame( 0, $source->save_count );
+	}
+}
+
+final class WooProductSyncProductStub {
+
+	public int $save_count = 0;
+	public int $set_count  = 0;
+
+	public function __construct(
+		private int $id,
+		private string $price,
+		private string $stock_status
+	) {}
+
+	public function get_id(): int {
+		return $this->id;
+	}
+
+	public function get_price(): string {
+		return $this->price;
+	}
+
+	public function set_price( string $price ): void {
+		$this->price = $price;
+		++$this->set_count;
+	}
+
+	public function get_stock_status(): string {
+		return $this->stock_status;
+	}
+
+	public function set_stock_status( string $stock_status ): void {
+		$this->stock_status = $stock_status;
+		++$this->set_count;
+	}
+
+	public function save(): void {
+		++$this->save_count;
 	}
 }

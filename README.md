@@ -111,7 +111,7 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml backfill run [--all]` / `status` / `reset`
 - `wp cml health summary` / `report [--failed-only]`
 - `wp cml health repair [--dry-run|--apply] [--scope=all|orphaned-post-rows|orphaned-term-rows|orphaned-string-rows|missing-post-rows|missing-term-rows|unknown-source-languages]`
-- `wp cml benchmark report` / `seed --yes`
+- `wp cml benchmark report` / `seed --yes` — strings plus real `WP_Query` product/variation collection workloads in the selected language
 
 **v1 hardening branch**
 - WPML/Polylang migration preflight is stricter about default-language and source-language conflicts.

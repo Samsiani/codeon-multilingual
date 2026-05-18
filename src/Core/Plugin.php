@@ -15,6 +15,7 @@ use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
+use Samsiani\CodeonMultilingual\Compat\BuilderData;
 use Samsiani\CodeonMultilingual\Compat\CachePurge;
 use Samsiani\CodeonMultilingual\Compat\RankMathSeo;
 use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
@@ -123,6 +124,7 @@ final class Plugin {
 
 		// Compatibility shims.
 		WpmlFunctions::register();
+		BuilderData::register();
 		CachePurge::register();
 		YoastSeo::register();
 		RankMathSeo::register();

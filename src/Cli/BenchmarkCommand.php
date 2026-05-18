@@ -3,12 +3,15 @@ declare(strict_types=1);
 
 namespace Samsiani\CodeonMultilingual\Cli;
 
+use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
+use Samsiani\CodeonMultilingual\Query\PostsClauses;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use WP_CLI;
 use WP_CLI\Utils;
 use WP_CLI_Command;
+use WP_Query;
 
 /**
  * Production performance probes for real WordPress installs.
@@ -59,6 +62,10 @@ final class BenchmarkCommand extends WP_CLI_Command {
 		$language = self::benchmark_language( $assoc_args );
 		$limit    = self::bounded_int( $assoc_args['limit'] ?? null, self::DEFAULT_LIMIT, 1, 10000 );
 
+		CurrentLanguage::set( $language );
+		PostsClauses::reset_cache();
+		PostsClauses::register();
+
 		$metrics = array(
 			self::measure(
 				'strings',
@@ -66,11 +73,11 @@ final class BenchmarkCommand extends WP_CLI_Command {
 			),
 			self::measure(
 				'products',
-				static fn(): int => self::benchmark_post_type( 'product', $limit )
+				static fn(): int => self::benchmark_post_type_for_test( 'product', $limit )
 			),
 			self::measure(
 				'variations',
-				static fn(): int => self::benchmark_post_type( 'product_variation', $limit )
+				static fn(): int => self::benchmark_post_type_for_test( 'product_variation', $limit )
 			),
 		);
 
@@ -228,27 +235,28 @@ final class BenchmarkCommand extends WP_CLI_Command {
 		return count( $hashes );
 	}
 
-	private static function benchmark_post_type( string $post_type, int $limit ): int {
-		global $wpdb;
-
-		$ids = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT ID
-				 FROM {$wpdb->posts}
-				 WHERE post_type = %s
-				   AND post_status NOT IN ('trash', 'auto-draft')
-				 ORDER BY ID DESC
-				 LIMIT %d",
-				$post_type,
-				$limit
+	public static function benchmark_post_type_for_test( string $post_type, int $limit ): int {
+		$query = new WP_Query(
+			array(
+				'post_type'              => $post_type,
+				'post_status'            => array( 'publish', 'private', 'draft' ),
+				'posts_per_page'         => $limit,
+				'orderby'                => 'ID',
+				'order'                  => 'DESC',
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'cml_admin_lang_filter'  => true,
 			)
 		);
 
-		if ( ! is_array( $ids ) || array() === $ids ) {
+		if ( ! is_array( $query->posts ) || array() === $query->posts ) {
 			return 0;
 		}
 
-		$post_ids = array_map( 'intval', $ids );
+		$post_ids = array_map( 'intval', $query->posts );
 		TranslationGroups::preload( $post_ids );
 
 		$groups = array();
