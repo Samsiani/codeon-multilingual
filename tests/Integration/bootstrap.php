@@ -36,6 +36,24 @@ if ( ! file_exists( $plugin_root . '/vendor/autoload.php' ) ) {
 
 require_once $plugin_root . '/vendor/autoload.php';
 
+// WP-CLI is not loaded by the WordPress PHPUnit scaffold, but integration tests
+// may call pure helper methods on CLI command classes.
+if ( ! class_exists( '\\WP_CLI_Command' ) ) {
+	class WP_CLI_Command { // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
+	}
+}
+if ( ! class_exists( '\\WP_CLI' ) ) {
+	final class WP_CLI { // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound
+		public static function add_command( string $name, $class ): void {}
+		public static function log( string $msg ): void {}
+		public static function success( string $msg ): void {}
+		public static function warning( string $msg ): void {}
+		public static function error( string $msg ): void {
+			throw new \RuntimeException( $msg );
+		}
+	}
+}
+
 if ( ! defined( 'CML_TEST_PLUGIN_FILE' ) ) {
 	define( 'CML_TEST_PLUGIN_FILE', $plugin_root . '/codeon-multilingual.php' );
 }
