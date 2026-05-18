@@ -82,11 +82,6 @@ tests_add_filter(
 			}
 		}
 
-		if ( $loaded_woocommerce && class_exists( '\WC_Install' ) ) {
-			update_option( 'woocommerce_allow_tracking', 'no' );
-			\WC_Install::install();
-		}
-
 		if ( ! defined( 'CML_TEST_HAS_WOOCOMMERCE' ) ) {
 			define( 'CML_TEST_HAS_WOOCOMMERCE', $loaded_woocommerce );
 		}
