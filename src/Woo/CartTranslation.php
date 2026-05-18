@@ -18,10 +18,9 @@ use Samsiani\CodeonMultilingual\Core\TranslationGroups;
  *
  * The data layer (price, stock, etc.) is identical across the group thanks
  * to `Woo/ProductSync`, so swapping the product object only affects display
- * fields. `woocommerce_cart_item_product` is the canonical filter — every
- * cart template renders `$product = $cart_item['data']` and then uses that
- * for title/link/image, so a single swap covers shop cart, mini-cart,
- * checkout review, order-received, and emails.
+ * fields. Classic templates run through `woocommerce_cart_item_product`.
+ * Store API schemas read `$cart_item['data']` directly, so Store API
+ * requests also swap that in-memory product object before serialization.
  */
 final class CartTranslation {
 
@@ -39,6 +38,8 @@ final class CartTranslation {
 		// Swap the WC_Product object handed to templates so title / image /
 		// permalink / attributes all reflect the translation.
 		add_filter( 'woocommerce_cart_item_product', array( self::class, 'translate_product' ), 10, 3 );
+		add_filter( 'woocommerce_get_cart_item_from_session', array( self::class, 'translate_store_api_cart_item_data' ), 20, 3 );
+		add_filter( 'woocommerce_add_cart_item', array( self::class, 'translate_store_api_cart_item_data' ), 20, 2 );
 		// Some themes / extensions render the link via this dedicated filter
 		// instead of inferring from the product object.
 		add_filter( 'woocommerce_cart_item_permalink', array( self::class, 'translate_permalink' ), 10, 3 );
@@ -63,6 +64,42 @@ final class CartTranslation {
 		}
 		$translated = wc_get_product( $translated_id );
 		return $translated ? $translated : $product_obj;
+	}
+
+	/**
+	 * Store API cart schemas read `$cart_item['data']` directly instead of
+	 * using `woocommerce_cart_item_product`. Swap only for Store API requests
+	 * and keep product_id / variation_id untouched so cart identity persists.
+	 *
+	 * @param array<string,mixed> $cart_item
+	 * @param array<string,mixed> $values
+	 * @param string              $cart_item_key
+	 * @return array<string,mixed>
+	 */
+	public static function translate_store_api_cart_item_data( array $cart_item, array $values = array(), string $cart_item_key = '' ): array {
+		unset( $values, $cart_item_key );
+
+		if ( ! StoreApiLanguage::is_current_request() ) {
+			return $cart_item;
+		}
+		if ( ! isset( $cart_item['data'] ) || ! is_object( $cart_item['data'] ) || ! method_exists( $cart_item['data'], 'get_id' ) ) {
+			return $cart_item;
+		}
+
+		$translated_id = self::translated_product_id( (int) $cart_item['data']->get_id() );
+		if ( $translated_id <= 0 || $translated_id === (int) $cart_item['data']->get_id() ) {
+			return $cart_item;
+		}
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			return $cart_item;
+		}
+
+		$translated = wc_get_product( $translated_id );
+		if ( $translated ) {
+			$cart_item['data'] = $translated;
+		}
+
+		return $cart_item;
 	}
 
 	/**

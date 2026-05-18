@@ -46,7 +46,7 @@ shortcodes, templates, dynamic IDs, strings, or cache behavior.
 | Target | Priority | v1.0 certification scope |
 |---|---:|---|
 | WooCommerce core | P0 | Products, variations, attributes, categories, tags, cart, checkout, emails, downloadable files |
-| WooCommerce Blocks | P0 | Store API language bridge, cart item permalink, and shared variation display hooks are covered; cart item object swap plus cart/checkout block response smoke tests remain |
+| WooCommerce Blocks | P0 | Store API language bridge, cart item object/permalink swap, and shared variation display hooks are covered; cart/checkout block response smoke tests remain |
 | Stripe | P0 | Gateway title/description, checkout labels, order emails, webhook-created notes |
 | PayPal Payments | P0 | Gateway labels, hosted-button redirects, order notes/emails |
 | Bank transfer / COD / Cheque | P0 | Core method title/description and email text |

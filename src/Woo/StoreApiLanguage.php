@@ -21,6 +21,7 @@ final class StoreApiLanguage {
 	private const LANG_REGEX      = '#^[a-z]{2,3}(?:-[a-z0-9]+)?$#i';
 
 	private static bool $registered = false;
+	private static bool $store_api_request = false;
 
 	public static function register(): void {
 		if ( self::$registered ) {
@@ -44,12 +45,18 @@ final class StoreApiLanguage {
 			return $result;
 		}
 
+		self::$store_api_request = true;
+
 		$language = self::request_language( $request );
 		if ( null !== $language ) {
 			CurrentLanguage::set( $language );
 		}
 
 		return $result;
+	}
+
+	public static function is_current_request(): bool {
+		return self::$store_api_request;
 	}
 
 	/**
