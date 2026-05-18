@@ -102,6 +102,8 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 		$this->register_polylang_taxonomies();
 		$language_taxonomies = $this->seed_polylang_languages();
 		update_option( 'polylang', array( 'default_lang' => 'en' ) );
+		delete_term_meta( $this->term_id_for_tt_id( $language_taxonomies['en'] ), '_pll_strings_translations' );
+		delete_term_meta( $this->term_id_for_tt_id( $language_taxonomies['ka'] ), '_pll_strings_translations' );
 
 		$ka_language_term_id = $this->term_id_for_tt_id( $language_taxonomies['ka'] );
 		$legacy_post_id     = self::factory()->post->create(
