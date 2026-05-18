@@ -10,7 +10,7 @@ use Samsiani\CodeonMultilingual\Core\Settings;
  */
 final class UninstallPolicyTest extends IntegrationTestCase {
 
-	public function test_uninstall_preserves_data_by_default_and_drops_when_opted_in(): void {
+	public function test_uninstall_preserves_data_by_default(): void {
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 			define( 'WP_UNINSTALL_PLUGIN', true );
 		}
@@ -19,6 +19,13 @@ final class UninstallPolicyTest extends IntegrationTestCase {
 		require dirname( CML_TEST_PLUGIN_FILE ) . '/uninstall.php';
 
 		$this->assertTrue( $this->cml_table_exists( 'cml_languages' ) );
+		$this->assertTrue( $this->cml_table_exists( 'cml_post_language' ) );
+	}
+
+	public function test_uninstall_drops_data_when_opted_in(): void {
+		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			define( 'WP_UNINSTALL_PLUGIN', true );
+		}
 
 		Settings::save( array( 'delete_data_on_uninstall' => true ) );
 		require dirname( CML_TEST_PLUGIN_FILE ) . '/uninstall.php';
