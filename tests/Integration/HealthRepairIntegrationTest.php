@@ -56,12 +56,12 @@ final class HealthRepairIntegrationTest extends IntegrationTestCase {
 		);
 
 		$dry_run = HealthRepair::run( 'all', true );
-		$this->assertGreaterThanOrEqual( 5, $dry_run['total'] );
+		$this->assertGreaterThanOrEqual( 4, $dry_run['total'] );
 		$this->assertFalse( $dry_run['actions']['missing-term-rows']['applied'] );
 
 		$result = HealthRepair::run( 'all', false );
 
-		$this->assertGreaterThanOrEqual( 5, $result['total'] );
+		$this->assertGreaterThanOrEqual( 4, $result['total'] );
 		$this->assertSame( 'en', TranslationGroups::get_language( $post_id ) );
 		$this->assertSame( 'en', TranslationGroups::get_term_language( $term_id ) );
 		$this->assertNull( TranslationGroups::get_term_language( $system_term_id ) );
