@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Samsiani\CodeonMultilingual\Cli\BenchmarkCommand;
 use Samsiani\CodeonMultilingual\Cli\HealthCommand;
 use Samsiani\CodeonMultilingual\Cli\LanguageCommand;
+use Samsiani\CodeonMultilingual\Cli\MigrateCommand;
 use Samsiani\CodeonMultilingual\Cli\StringsCommand;
 
 /**
@@ -185,5 +186,33 @@ final class CliHelpersTest extends TestCase {
 		$this->assertSame( '7', $rows[0]['count'] );
 		$this->assertSame( 'yes', $rows[0]['applied'] );
 		$this->assertSame( 'no', $rows[1]['applied'] );
+	}
+
+	public function test_migration_import_snapshot_policy_requires_snapshot_or_explicit_bypass(): void {
+		$this->assertNotNull( MigrateCommand::import_snapshot_policy_error( array() ) );
+		$this->assertNull( MigrateCommand::import_snapshot_policy_error( array( 'snapshot' => '/tmp/codeon.json' ) ) );
+		$this->assertNull(
+			MigrateCommand::import_snapshot_policy_error(
+				array(
+					'no-snapshot'         => '1',
+					'confirm-no-snapshot' => '1',
+				)
+			)
+		);
+		$this->assertNotNull(
+			MigrateCommand::import_snapshot_policy_error(
+				array(
+					'no-snapshot' => '1',
+				)
+			)
+		);
+		$this->assertNotNull(
+			MigrateCommand::import_snapshot_policy_error(
+				array(
+					'snapshot'             => '/tmp/codeon.json',
+					'confirm-no-snapshot'  => '1',
+				)
+			)
+		);
 	}
 }

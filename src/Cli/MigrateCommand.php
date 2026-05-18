@@ -22,7 +22,7 @@ use WP_CLI_Command;
  *
  *     wp cml migrate wpml --dry-run
  *     wp cml migrate wpml --snapshot=/secure/backups/codeon-before-wpml.json
- *     wp cml migrate wpml
+ *     wp cml migrate wpml --no-snapshot --confirm-no-snapshot
  *     wp cml migrate polylang --dry-run
  *     wp cml migrate polylang --snapshot=/secure/backups/codeon-before-polylang.json
  *     wp cml migrate export --output=/secure/backups/codeon-before-wpml.json
@@ -49,6 +49,14 @@ final class MigrateCommand extends WP_CLI_Command {
 	 *
 	 * [--force-snapshot]
 	 * : Allow --snapshot to overwrite an existing file.
+	 *
+	 * [--no-snapshot]
+	 * : Explicitly skip the rollback snapshot requirement. Must be combined
+	 * with --confirm-no-snapshot.
+	 *
+	 * [--confirm-no-snapshot]
+	 * : Confirms that this write import is intentionally running without a
+	 * CodeOn rollback snapshot.
 	 *
 	 * @param array<int, string>    $args
 	 * @param array<string, string> $assoc_args
@@ -83,16 +91,7 @@ final class MigrateCommand extends WP_CLI_Command {
 			return;
 		}
 
-		$snapshot = (string) ( $assoc_args['snapshot'] ?? '' );
-		if ( '' !== $snapshot ) {
-			if ( '-' === $snapshot ) {
-				WP_CLI::error( '--snapshot must be a file path when used with import.' );
-			}
-			self::write_snapshot_file( $snapshot, isset( $assoc_args['force-snapshot'] ), '--force-snapshot' );
-			WP_CLI::log( "Rollback snapshot written to {$snapshot}." );
-		} else {
-			WP_CLI::warning( 'No CodeOn rollback snapshot was exported. Use --snapshot=<file> before production imports.' );
-		}
+		self::prepare_import_snapshot( $assoc_args );
 
 		$result = WpmlImporter::import_all( isset( $assoc_args['allow-conflicts'] ) );
 
@@ -134,6 +133,14 @@ final class MigrateCommand extends WP_CLI_Command {
 	 * [--force-snapshot]
 	 * : Allow --snapshot to overwrite an existing file.
 	 *
+	 * [--no-snapshot]
+	 * : Explicitly skip the rollback snapshot requirement. Must be combined
+	 * with --confirm-no-snapshot.
+	 *
+	 * [--confirm-no-snapshot]
+	 * : Confirms that this write import is intentionally running without a
+	 * CodeOn rollback snapshot.
+	 *
 	 * @param array<int, string>    $args
 	 * @param array<string, string> $assoc_args
 	 */
@@ -168,16 +175,7 @@ final class MigrateCommand extends WP_CLI_Command {
 			return;
 		}
 
-		$snapshot = (string) ( $assoc_args['snapshot'] ?? '' );
-		if ( '' !== $snapshot ) {
-			if ( '-' === $snapshot ) {
-				WP_CLI::error( '--snapshot must be a file path when used with import.' );
-			}
-			self::write_snapshot_file( $snapshot, isset( $assoc_args['force-snapshot'] ), '--force-snapshot' );
-			WP_CLI::log( "Rollback snapshot written to {$snapshot}." );
-		} else {
-			WP_CLI::warning( 'No CodeOn rollback snapshot was exported. Use --snapshot=<file> before production imports.' );
-		}
+		self::prepare_import_snapshot( $assoc_args );
 
 		$result = PolylangImporter::import_all( isset( $assoc_args['allow-conflicts'] ) );
 
@@ -327,5 +325,48 @@ final class MigrateCommand extends WP_CLI_Command {
 		if ( false === file_put_contents( $path, $json ) ) {
 			WP_CLI::error( "Could not write snapshot to {$path}." );
 		}
+	}
+
+	/**
+	 * @param array<string,string> $assoc_args
+	 */
+	public static function import_snapshot_policy_error( array $assoc_args ): ?string {
+		$snapshot    = (string) ( $assoc_args['snapshot'] ?? '' );
+		$no_snapshot = isset( $assoc_args['no-snapshot'] );
+		$confirm     = isset( $assoc_args['confirm-no-snapshot'] );
+
+		if ( '' !== $snapshot && ( $no_snapshot || $confirm ) ) {
+			return '--snapshot cannot be combined with --no-snapshot or --confirm-no-snapshot.';
+		}
+		if ( '-' === $snapshot ) {
+			return '--snapshot must be a file path when used with import.';
+		}
+		if ( '' !== $snapshot ) {
+			return null;
+		}
+		if ( $no_snapshot && $confirm ) {
+			return null;
+		}
+
+		return 'Migration import refused: pass --snapshot=<file> to create a CodeOn rollback snapshot, or explicitly bypass with --no-snapshot --confirm-no-snapshot.';
+	}
+
+	/**
+	 * @param array<string,string> $assoc_args
+	 */
+	private static function prepare_import_snapshot( array $assoc_args ): void {
+		$error = self::import_snapshot_policy_error( $assoc_args );
+		if ( null !== $error ) {
+			WP_CLI::error( $error );
+		}
+
+		$snapshot = (string) ( $assoc_args['snapshot'] ?? '' );
+		if ( '' === $snapshot ) {
+			WP_CLI::warning( 'Running without a CodeOn rollback snapshot because --no-snapshot --confirm-no-snapshot was supplied.' );
+			return;
+		}
+
+		self::write_snapshot_file( $snapshot, isset( $assoc_args['force-snapshot'] ), '--force-snapshot' );
+		WP_CLI::log( "Rollback snapshot written to {$snapshot}." );
 	}
 }

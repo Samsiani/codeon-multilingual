@@ -33,7 +33,6 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 		$this->assign_polylang_taxonomies( $ka_term, $language_taxonomies['term_ka'], $term_group );
 
 		self::factory()->post->create( array( 'post_type' => 'polylang_mo', 'post_status' => 'publish' ) );
-		$this->clear_codeon_language_rows( array( $source_post, $ka_post ), array( $source_term, $ka_term ) );
 
 		$summary = PolylangImporter::summary();
 		$this->assertSame( 2, $summary['languages'] );
@@ -105,6 +104,21 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 	private function create_language_taxonomy( string $taxonomy, string $slug, string $name, string $locale, string $flag ): int {
 		global $wpdb;
 
+		$existing = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT tt.term_taxonomy_id
+				 FROM {$wpdb->term_taxonomy} tt
+				 INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id
+				 WHERE tt.taxonomy = %s AND t.slug = %s
+				 LIMIT 1",
+				$taxonomy,
+				$slug
+			)
+		);
+		if ( $existing > 0 ) {
+			return $existing;
+		}
+
 		$term_id = (int) self::factory()->term->create(
 			array(
 				'taxonomy'    => $taxonomy,
@@ -165,29 +179,4 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 		}
 	}
 
-	/**
-	 * @param array<int,int> $post_ids
-	 * @param array<int,int> $term_ids
-	 */
-	private function clear_codeon_language_rows( array $post_ids, array $term_ids ): void {
-		global $wpdb;
-
-		if ( array() !== $post_ids ) {
-			$post_placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Placeholder list is generated from the number of integer ids.
-			$wpdb->query(
-				$wpdb->prepare( "DELETE FROM {$wpdb->prefix}cml_post_language WHERE post_id IN ({$post_placeholders})", ...$post_ids )
-			);
-		}
-
-		if ( array() !== $term_ids ) {
-			$term_placeholders = implode( ',', array_fill( 0, count( $term_ids ), '%d' ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Placeholder list is generated from the number of integer ids.
-			$wpdb->query(
-				$wpdb->prepare( "DELETE FROM {$wpdb->prefix}cml_term_language WHERE term_id IN ({$term_placeholders})", ...$term_ids )
-			);
-		}
-
-		TranslationGroups::flush();
-	}
 }

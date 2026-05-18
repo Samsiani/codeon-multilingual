@@ -103,8 +103,8 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml strings scan [--theme=<slug>] [--plugin=<slug>] [--all]`
 - `wp cml strings export --lang=<code> [--format=po|json] [--domain=<d>] [--output=<file>]`
 - `wp cml strings import <file> [--format=auto|po|json] [--lang=<code>]`
-- `wp cml migrate wpml [--dry-run] [--snapshot=<file>]`
-- `wp cml migrate polylang [--dry-run] [--snapshot=<file>]`
+- `wp cml migrate wpml [--dry-run] --snapshot=<file>`
+- `wp cml migrate polylang [--dry-run] --snapshot=<file>`
 - `wp cml migrate sources`
 - `wp cml migrate export --output=<file>`
 - `wp cml migrate rollback <file> [--dry-run|--confirm-rollback]`

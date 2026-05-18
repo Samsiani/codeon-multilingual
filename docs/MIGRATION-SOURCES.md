@@ -9,8 +9,8 @@ import, snapshot rollback, tests, and post-import health checks.
 - Source plugin tables are read-only. CodeOn never deletes WPML, Polylang, or
   other source-plugin data during import.
 - Every production import must offer a dry run first.
-- Every production import must recommend or create a CodeOn snapshot before
-  writing.
+- Every production import must create a CodeOn snapshot before writing, unless
+  the operator uses an explicit unsafe bypass.
 - Existing CodeOn rows are not overwritten silently. Conflicts stop the admin
   importer and require an explicit WP-CLI policy.
 - Re-running the same import must be idempotent.
@@ -52,6 +52,7 @@ Each adapter must produce this report shape before any writes:
 wp cml migrate sources
 wp cml migrate wpml --dry-run
 wp cml migrate wpml --snapshot=/path/codeon-before-wpml.json
+wp cml migrate wpml --no-snapshot --confirm-no-snapshot
 wp cml migrate polylang --dry-run
 wp cml migrate polylang --snapshot=/path/codeon-before-polylang.json
 wp cml migrate export --output=/path/codeon-snapshot.json

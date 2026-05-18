@@ -123,11 +123,13 @@ final class PolylangImporter {
 
 		self::begin_transaction();
 		try {
-			$result['languages']   = self::import_languages();
+			$result['languages'] = self::import_languages();
 			Languages::flush_cache();
-			$result['default_set'] = self::set_default_language();
-			$result['posts']       = self::import_post_translations();
-			$result['terms']       = self::import_term_translations();
+			if ( ! $allow_conflicts || 0 === $result['conflicts']['language_settings'] ) {
+				$result['default_set'] = self::set_default_language();
+			}
+			$result['posts'] = self::import_post_translations();
+			$result['terms'] = self::import_term_translations();
 			self::commit_transaction();
 		} catch ( \Throwable $e ) {
 			self::rollback_transaction();
@@ -204,11 +206,18 @@ final class PolylangImporter {
 			return 0;
 		}
 
+		$count = self::replace_placeholder_mappings(
+			self::post_mapping_select_sql(),
+			'cml_post_language',
+			'post_id',
+			'post translations'
+		);
+
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_post_language (post_id, group_id, language)
 			" . self::post_mapping_select_sql();
 		self::query_or_throw( $sql, 'post translations' );
 
-		return (int) $wpdb->rows_affected;
+		return $count + (int) $wpdb->rows_affected;
 	}
 
 	public static function import_term_translations(): int {
@@ -218,11 +227,18 @@ final class PolylangImporter {
 			return 0;
 		}
 
+		$count = self::replace_placeholder_mappings(
+			self::term_mapping_select_sql(),
+			'cml_term_language',
+			'term_id',
+			'term translations'
+		);
+
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language)
 			" . self::term_mapping_select_sql();
 		self::query_or_throw( $sql, 'term translations' );
 
-		return (int) $wpdb->rows_affected;
+		return $count + (int) $wpdb->rows_affected;
 	}
 
 	/**
@@ -364,13 +380,43 @@ final class PolylangImporter {
 
 		$table = $wpdb->prefix . $suffix;
 
-		return (int) $wpdb->get_var(
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- SQL fragments are generated internally from fixed importer queries and validated column names.
+		$count = (int) $wpdb->get_var(
 			"SELECT COUNT(*)
 			 FROM ({$select_sql}) source_rows
 			 INNER JOIN {$table} cml ON cml.{$id_column} = source_rows.{$id_column}
-			 WHERE cml.group_id != source_rows.group_id
-				OR cml.language != source_rows.language"
+			 WHERE (cml.group_id != source_rows.group_id
+				OR cml.language != source_rows.language)
+			   AND NOT (" . self::placeholder_mapping_predicate( 'cml', $id_column ) . ')'
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
+
+		return $count;
+	}
+
+	private static function replace_placeholder_mappings( string $select_sql, string $suffix, string $id_column, string $label ): int {
+		global $wpdb;
+
+		$table = $wpdb->prefix . $suffix;
+		$sql   = "UPDATE {$table} cml
+			INNER JOIN ({$select_sql}) source_rows ON source_rows.{$id_column} = cml.{$id_column}
+			SET cml.group_id = source_rows.group_id,
+				cml.language = source_rows.language
+			WHERE " . self::placeholder_mapping_predicate( 'cml', $id_column ) . '
+			  AND (cml.group_id != source_rows.group_id OR cml.language != source_rows.language)';
+
+		self::query_or_throw( $sql, $label . ' placeholder replacements' );
+		return (int) $wpdb->rows_affected;
+	}
+
+	private static function placeholder_mapping_predicate( string $alias, string $id_column ): string {
+		return "{$alias}.group_id = {$alias}.{$id_column}
+			AND {$alias}.language = COALESCE((" . self::default_language_subquery() . "), '')";
+	}
+
+	private static function default_language_subquery(): string {
+		global $wpdb;
+		return "SELECT code FROM {$wpdb->prefix}cml_languages WHERE is_default = 1 ORDER BY position ASC, code ASC LIMIT 1";
 	}
 
 	private static function polylang_string_posts_count(): int {

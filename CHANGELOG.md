@@ -14,6 +14,9 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ### Changed
 - WPML migration conflict preflight now treats default-language drift and existing string source-language drift as blocking conflicts instead of silently changing live CodeOn rows.
+- WPML and Polylang imports now replace CodeOn's auto-created default identity placeholder rows instead of treating them as real conflicts.
+- WP-CLI migration writes now require `--snapshot=<file>` or the explicit unsafe bypass `--no-snapshot --confirm-no-snapshot`.
+- `--allow-conflicts` no longer rewrites CodeOn default-language settings when language-setting conflicts exist.
 - Polylang import now requires taxonomy-backed Polylang language rows for writes and flushes language caches before setting the imported default language.
 
 ## [0.9.0] — 2026-05-18

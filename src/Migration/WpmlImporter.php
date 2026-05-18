@@ -131,26 +131,18 @@ final class WpmlImporter {
 			);
 		}
 
-		$post_mappings = (int) $wpdb->get_var(
-			"SELECT COUNT(*)
-			 FROM {$prefix}icl_translations t
-			 INNER JOIN {$wpdb->posts} p ON p.ID = t.element_id
-			 INNER JOIN {$prefix}cml_post_language cpl ON cpl.post_id = t.element_id
-			 WHERE t.element_type LIKE 'post_%'
-			   AND t.element_id IS NOT NULL
-			   AND (cpl.group_id != t.trid OR cpl.language != t.language_code)"
+		$post_mappings = self::mapping_conflicts_count(
+			self::post_mapping_select_sql(),
+			'cml_post_language',
+			'post_id'
 		);
 
 		$term_mappings = 0;
 		if ( self::table_exists( $prefix . 'icl_translations' ) ) {
-			$term_mappings = (int) $wpdb->get_var(
-				"SELECT COUNT(*)
-				 FROM {$prefix}icl_translations t
-				 INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = t.element_id
-				 INNER JOIN {$prefix}cml_term_language ctl ON ctl.term_id = tt.term_id
-				 WHERE t.element_type LIKE 'tax_%'
-				   AND t.element_id IS NOT NULL
-				   AND (ctl.group_id != t.trid OR ctl.language != t.language_code)"
+			$term_mappings = self::mapping_conflicts_count(
+				self::term_mapping_select_sql(),
+				'cml_term_language',
+				'term_id'
 			);
 		}
 
@@ -232,7 +224,9 @@ final class WpmlImporter {
 		try {
 			$result['languages'] = self::import_languages();
 			Languages::flush_cache();
-			$result['default_set']        = self::set_default_language();
+			if ( ! $allow_conflicts || 0 === $result['conflicts']['language_settings'] ) {
+				$result['default_set'] = self::set_default_language();
+			}
 			$result['posts']              = self::import_post_translations();
 			$result['terms']              = self::import_term_translations();
 			$result['strings']            = self::import_string_sources();
@@ -323,15 +317,18 @@ final class WpmlImporter {
 			return 0;
 		}
 
+		$count = self::replace_placeholder_mappings(
+			self::post_mapping_select_sql(),
+			'cml_post_language',
+			'post_id',
+			'post translations'
+		);
+
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_post_language (post_id, group_id, language)
-			SELECT t.element_id, t.trid, t.language_code
-			FROM {$wpdb->prefix}icl_translations t
-			INNER JOIN {$wpdb->posts} p ON p.ID = t.element_id
-			WHERE t.element_type LIKE 'post_%'
-			  AND t.element_id IS NOT NULL";
+			" . self::post_mapping_select_sql();
 
 		self::query_or_throw( $sql, 'post translations' );
-		return (int) $wpdb->rows_affected;
+		return $count + (int) $wpdb->rows_affected;
 	}
 
 	public static function import_term_translations(): int {
@@ -340,16 +337,18 @@ final class WpmlImporter {
 			return 0;
 		}
 
-		// WPML's element_id for tax_* rows is term_taxonomy_id; we need term_id.
+		$count = self::replace_placeholder_mappings(
+			self::term_mapping_select_sql(),
+			'cml_term_language',
+			'term_id',
+			'term translations'
+		);
+
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_term_language (term_id, group_id, language)
-			SELECT tt.term_id, t.trid, t.language_code
-			FROM {$wpdb->prefix}icl_translations t
-			INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = t.element_id
-			WHERE t.element_type LIKE 'tax_%'
-			  AND t.element_id IS NOT NULL";
+			" . self::term_mapping_select_sql();
 
 		self::query_or_throw( $sql, 'term translations' );
-		return (int) $wpdb->rows_affected;
+		return $count + (int) $wpdb->rows_affected;
 	}
 
 	public static function import_string_sources(): int {
@@ -417,6 +416,70 @@ final class WpmlImporter {
 	}
 
 	// ---- Internals -------------------------------------------------------
+
+	private static function post_mapping_select_sql(): string {
+		global $wpdb;
+
+		return "SELECT t.element_id AS post_id, t.trid AS group_id, t.language_code AS language
+			FROM {$wpdb->prefix}icl_translations t
+			INNER JOIN {$wpdb->posts} p ON p.ID = t.element_id
+			WHERE t.element_type LIKE 'post_%'
+			  AND t.element_id IS NOT NULL";
+	}
+
+	private static function term_mapping_select_sql(): string {
+		global $wpdb;
+
+		return "SELECT tt.term_id AS term_id, t.trid AS group_id, t.language_code AS language
+			FROM {$wpdb->prefix}icl_translations t
+			INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = t.element_id
+			WHERE t.element_type LIKE 'tax_%'
+			  AND t.element_id IS NOT NULL";
+	}
+
+	private static function mapping_conflicts_count( string $select_sql, string $suffix, string $id_column ): int {
+		global $wpdb;
+
+		$table = $wpdb->prefix . $suffix;
+
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- SQL fragments are generated internally from fixed importer queries and validated column names.
+		$count = (int) $wpdb->get_var(
+			"SELECT COUNT(*)
+			 FROM ({$select_sql}) source_rows
+			 INNER JOIN {$table} cml ON cml.{$id_column} = source_rows.{$id_column}
+			 WHERE (cml.group_id != source_rows.group_id
+				OR cml.language != source_rows.language)
+			   AND NOT (" . self::placeholder_mapping_predicate( 'cml', $id_column ) . ')'
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
+
+		return $count;
+	}
+
+	private static function replace_placeholder_mappings( string $select_sql, string $suffix, string $id_column, string $label ): int {
+		global $wpdb;
+
+		$table = $wpdb->prefix . $suffix;
+		$sql   = "UPDATE {$table} cml
+			INNER JOIN ({$select_sql}) source_rows ON source_rows.{$id_column} = cml.{$id_column}
+			SET cml.group_id = source_rows.group_id,
+				cml.language = source_rows.language
+			WHERE " . self::placeholder_mapping_predicate( 'cml', $id_column ) . '
+			  AND (cml.group_id != source_rows.group_id OR cml.language != source_rows.language)';
+
+		self::query_or_throw( $sql, $label . ' placeholder replacements' );
+		return (int) $wpdb->rows_affected;
+	}
+
+	private static function placeholder_mapping_predicate( string $alias, string $id_column ): string {
+		return "{$alias}.group_id = {$alias}.{$id_column}
+			AND {$alias}.language = COALESCE((" . self::default_language_subquery() . "), '')";
+	}
+
+	private static function default_language_subquery(): string {
+		global $wpdb;
+		return "SELECT code FROM {$wpdb->prefix}cml_languages WHERE is_default = 1 ORDER BY position ASC, code ASC LIMIT 1";
+	}
 
 	private static function table_exists( string $table ): bool {
 		global $wpdb;

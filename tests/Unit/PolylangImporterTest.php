@@ -15,12 +15,12 @@ final class PolylangImporterTest extends TestCase {
 		parent::setUp();
 		Monkey\setUp();
 
-		$GLOBALS['cml_polylang_test_option'] = array( 'default_lang' => 'en' );
-		Functions\when( 'get_option' )->alias(
-			static function ( string $name ) {
-				return 'polylang' === $name ? $GLOBALS['cml_polylang_test_option'] : false;
-			}
-		);
+			$GLOBALS['cml_polylang_test_option'] = array( 'default_lang' => 'en' );
+			Functions\when( 'get_option' )->alias(
+				static function ( string $name, $default = false ) {
+					return 'polylang' === $name ? $GLOBALS['cml_polylang_test_option'] : false;
+				}
+			);
 		Functions\when( 'wp_cache_get' )->justReturn( false );
 		Functions\when( 'wp_cache_set' )->justReturn( true );
 		Functions\when( 'wp_cache_delete' )->justReturn( true );
@@ -67,15 +67,19 @@ final class PolylangImporterTest extends TestCase {
 		global $wpdb;
 		$wpdb = new PolylangImporterWpdbStub();
 
-		$this->assertSame( 7, PolylangImporter::import_post_translations() );
-		$this->assertSame( 7, PolylangImporter::import_term_translations() );
+		$this->assertSame( 14, PolylangImporter::import_post_translations() );
+		$this->assertSame( 14, PolylangImporter::import_term_translations() );
 
 		$sql = implode( "\n\n", $wpdb->queries );
 
+		$this->assertStringContainsString( 'UPDATE wp_cml_post_language cml', $sql );
 		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_post_language', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.post_id', $sql );
 		$this->assertStringContainsString( "tt_lang.taxonomy = 'language'", $sql );
 		$this->assertStringContainsString( "tt_group.taxonomy = 'post_translations'", $sql );
+		$this->assertStringContainsString( 'UPDATE wp_cml_term_language cml', $sql );
 		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_term_language', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.term_id', $sql );
 		$this->assertStringContainsString( "tt_lang.taxonomy = 'term_language'", $sql );
 		$this->assertStringContainsString( "tt_group.taxonomy = 'term_translations'", $sql );
 	}
@@ -130,6 +134,30 @@ final class PolylangImporterTest extends TestCase {
 		$this->assertSame( 0, $result['languages'] );
 		$this->assertSame( array(), $wpdb->inserts );
 	}
+
+	public function test_allow_conflicts_does_not_rewrite_language_defaults(): void {
+		global $wpdb;
+		$wpdb                        = new PolylangImporterWpdbStub();
+		$wpdb->has_language_conflict = true;
+		$wpdb->languages['en']       = (object) array(
+			'code'       => 'en',
+			'locale'     => 'en_GB',
+			'name'       => 'English',
+			'native'     => 'English',
+			'flag'       => 'us',
+			'rtl'        => 0,
+			'active'     => 1,
+			'is_default' => 1,
+			'position'   => 0,
+		);
+
+		$result = PolylangImporter::import_all( true );
+
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 1, $result['conflicts']['language_settings'] );
+		$this->assertFalse( $result['default_set'] );
+		$this->assertSame( 0, $wpdb->language_updates );
+	}
 }
 
 final class PolylangImporterWpdbStub {
@@ -156,6 +184,9 @@ final class PolylangImporterWpdbStub {
 		'language'      => 2,
 		'term_language' => 2,
 	);
+
+	public bool $has_language_conflict = false;
+	public int $language_updates       = 0;
 
 	public function prepare( string $sql, ...$args ): string {
 		foreach ( $args as $arg ) {
@@ -201,6 +232,16 @@ final class PolylangImporterWpdbStub {
 	}
 
 	public function get_row( string $sql ) {
+		if ( $this->has_language_conflict && str_contains( $sql, 'FROM wp_cml_languages' ) && str_contains( $sql, "code = 'en'" ) ) {
+			return (object) array(
+				'locale'     => 'en_GB',
+				'name'       => 'English',
+				'native'     => 'English',
+				'active'     => 1,
+				'is_default' => 1,
+			);
+		}
+
 		return null;
 	}
 
@@ -264,6 +305,7 @@ final class PolylangImporterWpdbStub {
 	 */
 	public function update( string $table, array $data, array $where, array $format, array $where_format ) {
 		if ( 'wp_cml_languages' === $table ) {
+			++$this->language_updates;
 			foreach ( $this->languages as $code => $language ) {
 				$matches = true;
 				foreach ( $where as $where_key => $where_value ) {

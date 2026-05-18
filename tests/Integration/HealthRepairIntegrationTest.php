@@ -53,15 +53,19 @@ final class HealthRepairIntegrationTest extends IntegrationTestCase {
 				'created_at'      => time(),
 			),
 			array( '%s', '%s', '%s', '%s', '%s', '%d' )
-		);
+			);
 
-		$dry_run = HealthRepair::run( 'all', true );
-		$this->assertGreaterThanOrEqual( 4, $dry_run['total'] );
-		$this->assertFalse( $dry_run['actions']['missing-term-rows']['applied'] );
+			$wpdb->delete( $wpdb->prefix . 'cml_post_language', array( 'post_id' => $post_id ), array( '%d' ) );
+			$wpdb->delete( $wpdb->prefix . 'cml_term_language', array( 'term_id' => $term_id ), array( '%d' ) );
+			TranslationGroups::flush();
+
+			$dry_run = HealthRepair::run( 'all', true );
+			$this->assertGreaterThanOrEqual( 5, $dry_run['total'] );
+			$this->assertFalse( $dry_run['actions']['missing-term-rows']['applied'] );
 
 		$result = HealthRepair::run( 'all', false );
 
-		$this->assertGreaterThanOrEqual( 4, $result['total'] );
+			$this->assertGreaterThanOrEqual( 5, $result['total'] );
 		$this->assertSame( 'en', TranslationGroups::get_language( $post_id ) );
 		$this->assertSame( 'en', TranslationGroups::get_term_language( $term_id ) );
 		$this->assertNull( TranslationGroups::get_term_language( $system_term_id ) );

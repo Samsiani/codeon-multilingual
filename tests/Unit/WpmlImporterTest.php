@@ -12,13 +12,16 @@ final class WpmlImporterTest extends TestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		Monkey\setUp();
+			Monkey\setUp();
 
-		Functions\when( 'get_option' )->alias(
-			static function ( string $name ) {
-				return 'icl_sitepress_settings' === $name ? array( 'default_language' => 'ka' ) : false;
-			}
-		);
+			Functions\when( 'get_option' )->alias(
+				static function ( string $name, $default = false ) {
+					return 'icl_sitepress_settings' === $name ? array( 'default_language' => 'ka' ) : false;
+				}
+			);
+			Functions\when( 'wp_cache_get' )->justReturn( array() );
+			Functions\when( 'wp_cache_set' )->justReturn( true );
+			Functions\when( 'wp_cache_delete' )->justReturn( true );
 	}
 
 	protected function tearDown(): void {
@@ -38,6 +41,8 @@ final class WpmlImporterTest extends TestCase {
 		$this->assertStringContainsString( 'cl.is_default', $sql );
 		$this->assertStringContainsString( 'CASE WHEN l.code = ', $sql );
 		$this->assertStringContainsString( 'cs.source_language != COALESCE(src.language', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.post_id', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.term_id', $sql );
 	}
 
 	public function test_string_source_import_does_not_update_existing_source_language(): void {
@@ -49,6 +54,33 @@ final class WpmlImporterTest extends TestCase {
 		$sql = implode( "\n\n", $wpdb->queries );
 		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_strings', $sql );
 		$this->assertStringNotContainsString( 'ON DUPLICATE KEY UPDATE', $sql );
+	}
+
+	public function test_post_and_term_imports_replace_default_identity_placeholders_before_insert(): void {
+		global $wpdb;
+		$wpdb = new WpmlImporterWpdbStub();
+
+		$this->assertSame( 12, WpmlImporter::import_post_translations() );
+		$this->assertSame( 12, WpmlImporter::import_term_translations() );
+
+		$sql = implode( "\n\n", $wpdb->queries );
+		$this->assertStringContainsString( 'UPDATE wp_cml_post_language cml', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.post_id', $sql );
+		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_post_language', $sql );
+		$this->assertStringContainsString( 'UPDATE wp_cml_term_language cml', $sql );
+		$this->assertStringContainsString( 'cml.group_id = cml.term_id', $sql );
+		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_term_language', $sql );
+	}
+
+	public function test_allow_conflicts_does_not_rewrite_language_defaults(): void {
+		global $wpdb;
+		$wpdb = new WpmlImporterWpdbStub();
+
+		$result = WpmlImporter::import_all( true );
+
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 2, $result['conflicts']['language_settings'] );
+		$this->assertFalse( $result['default_set'] );
 	}
 }
 
