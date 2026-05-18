@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Migration;
 
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
+use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 
 /**
  * Imports Polylang's taxonomy-backed language relationships into CodeOn.
@@ -138,7 +139,9 @@ final class PolylangImporter {
 
 		if ( empty( $result['errors'] ) ) {
 			Languages::flush_cache();
+			StringTranslator::flush_cache();
 			TranslationGroups::flush();
+			self::notify_imported( $result );
 		}
 
 		return $result;
@@ -553,6 +556,15 @@ final class PolylangImporter {
 		if ( false === $result ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception text is returned to escaped admin/CLI callers.
 			throw new \RuntimeException( $label . ': ' . ( $wpdb->last_error ?: 'database query failed' ) );
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $result
+	 */
+	private static function notify_imported( array $result ): void {
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'cml_migration_imported', 'polylang', $result );
 		}
 	}
 }

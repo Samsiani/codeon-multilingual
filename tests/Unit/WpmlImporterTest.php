@@ -81,6 +81,17 @@ final class WpmlImporterTest extends TestCase {
 		$this->assertSame( array(), $result['errors'] );
 		$this->assertSame( 2, $result['conflicts']['language_settings'] );
 		$this->assertFalse( $result['default_set'] );
+		$this->assertSame( 1, did_action( 'cml_migration_imported' ) );
+	}
+
+	public function test_conflict_blocked_import_does_not_emit_migration_imported(): void {
+		global $wpdb;
+		$wpdb = new WpmlImporterWpdbStub();
+
+		$result = WpmlImporter::import_all();
+
+		$this->assertNotEmpty( $result['errors'] );
+		$this->assertSame( 0, did_action( 'cml_migration_imported' ) );
 	}
 }
 

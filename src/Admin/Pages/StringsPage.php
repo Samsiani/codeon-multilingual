@@ -413,6 +413,7 @@ final class StringsPage {
 		$wpdb->query( "DELETE st FROM {$wpdb->prefix}cml_string_translations st LEFT JOIN {$wpdb->prefix}cml_strings s ON s.id = st.string_id WHERE s.id IS NULL" );
 
 		StringTranslator::flush_cache();
+		StringTranslator::notify_catalog_changed( 'purge', array() );
 
 		wp_safe_redirect(
 			add_query_arg(

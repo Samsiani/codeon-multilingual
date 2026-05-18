@@ -164,6 +164,7 @@ final class StringTranslator {
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
+		$inserted = (int) $wpdb->rows_affected;
 
 		// Newly discovered strings join the known set so we don't re-buffer them.
 		foreach ( self::$seen_new as $hash => $_ ) {
@@ -174,6 +175,9 @@ final class StringTranslator {
 		self::$seen_new = array();
 
 		wp_cache_delete( 'known_hashes', self::CACHE_GROUP );
+		if ( $inserted > 0 ) {
+			self::notify_catalog_changed( 'auto_discovery', array( 'inserted' => $inserted ) );
+		}
 	}
 
 	// ---- Caches ----------------------------------------------------------
@@ -309,6 +313,13 @@ final class StringTranslator {
 			// Row was new — invalidate known-hash + compiled caches so the
 			// new source becomes visible to the admin without a manual flush.
 			self::flush_cache();
+			self::notify_catalog_changed(
+				'source_registered',
+				array(
+					'domain'  => $domain,
+					'context' => $context,
+				)
+			);
 		}
 	}
 
@@ -360,6 +371,15 @@ final class StringTranslator {
 		wp_cache_delete( 'known_hashes', self::CACHE_GROUP );
 		foreach ( Languages::all() as $lang ) {
 			wp_cache_delete( 'compiled_' . $lang->code, self::CACHE_GROUP );
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $context
+	 */
+	public static function notify_catalog_changed( string $reason, array $context = array() ): void {
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'cml_string_catalog_changed', $reason, $context );
 		}
 	}
 }

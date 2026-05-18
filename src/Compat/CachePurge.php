@@ -24,6 +24,9 @@ final class CachePurge {
 		add_action( 'cml_term_translation_created', array( self::class, 'term_translation_created' ), 20, 5 );
 		add_action( 'cml_menu_translation_created', array( self::class, 'purge_all' ) );
 		add_action( 'cml_menu_translation_synced', array( self::class, 'purge_all' ) );
+		add_action( 'cml_language_changed', array( self::class, 'language_changed' ), 20, 2 );
+		add_action( 'cml_string_catalog_changed', array( self::class, 'string_catalog_changed' ), 20, 2 );
+		add_action( 'cml_migration_imported', array( self::class, 'migration_imported' ), 20, 2 );
 		add_action( 'cml_activated', array( self::class, 'purge_all' ) );
 		add_action( 'cml_upgraded', array( self::class, 'purge_all' ) );
 	}
@@ -47,6 +50,30 @@ final class CachePurge {
 	public static function term_translation_created( int $target_id, int $source_id, string $taxonomy, string $language, int $group_id ): void {
 		TranslationGroups::invalidate_term( $target_id );
 		TranslationGroups::invalidate_term( $source_id );
+		self::purge_all();
+	}
+
+	public static function language_changed( string $action, string $code ): void {
+		unset( $action, $code );
+
+		self::purge_all();
+	}
+
+	/**
+	 * @param array<string,mixed> $context
+	 */
+	public static function string_catalog_changed( string $reason, array $context ): void {
+		unset( $reason, $context );
+
+		self::purge_all();
+	}
+
+	/**
+	 * @param array<string,mixed> $result
+	 */
+	public static function migration_imported( string $source, array $result ): void {
+		unset( $source, $result );
+
 		self::purge_all();
 	}
 

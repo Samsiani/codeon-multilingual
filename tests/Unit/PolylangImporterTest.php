@@ -115,6 +115,7 @@ final class PolylangImporterTest extends TestCase {
 		$this->assertTrue( $result['default_set'] );
 		$this->assertSame( 1, (int) $wpdb->languages['ka']->is_default );
 		$this->assertSame( 0, (int) $wpdb->languages['en']->is_default );
+		$this->assertSame( 1, did_action( 'cml_migration_imported' ) );
 	}
 
 	public function test_import_all_requires_taxonomy_backed_polylang_rows(): void {
@@ -133,6 +134,7 @@ final class PolylangImporterTest extends TestCase {
 		$this->assertNotEmpty( $result['errors'] );
 		$this->assertSame( 0, $result['languages'] );
 		$this->assertSame( array(), $wpdb->inserts );
+		$this->assertSame( 0, did_action( 'cml_migration_imported' ) );
 	}
 
 	public function test_allow_conflicts_does_not_rewrite_language_defaults(): void {

@@ -137,9 +137,13 @@ final class Languages {
 			$row,
 			array( '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d' )
 		);
+		$created  = false !== $inserted;
 		self::flush_cache();
+		if ( $created ) {
+			self::notify_changed( 'created', $row['code'] );
+		}
 
-		return false !== $inserted;
+		return $created;
 	}
 
 	public static function update_active( string $code, bool $active ): bool {
@@ -152,6 +156,9 @@ final class Languages {
 			array( '%s' )
 		);
 		self::flush_cache();
+		if ( false !== $updated ) {
+			self::notify_changed( 'updated', $code );
+		}
 		return false !== $updated;
 	}
 
@@ -164,6 +171,7 @@ final class Languages {
 		$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
 		$wpdb->update( $table, array( 'is_default' => 1 ), array( 'code' => $code ), array( '%d' ), array( '%s' ) );
 		self::flush_cache();
+		self::notify_changed( 'default_set', $code );
 		return true;
 	}
 
@@ -178,6 +186,15 @@ final class Languages {
 		global $wpdb;
 		$deleted = $wpdb->delete( $wpdb->prefix . 'cml_languages', array( 'code' => $code ), array( '%s' ) );
 		self::flush_cache();
+		if ( false !== $deleted && $deleted > 0 ) {
+			self::notify_changed( 'deleted', $code );
+		}
 		return false !== $deleted && $deleted > 0;
+	}
+
+	public static function notify_changed( string $action, string $code ): void {
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'cml_language_changed', $action, $code );
+		}
 	}
 }

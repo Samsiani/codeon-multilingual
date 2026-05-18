@@ -528,6 +528,7 @@ final class LanguagesPage {
 		}
 
 		Languages::flush_cache();
+		Languages::notify_changed( $is_edit ? 'updated' : 'created', $code );
 
 		self::redirect_with( array( 'saved' => '1' ) );
 	}
@@ -550,6 +551,7 @@ final class LanguagesPage {
 		global $wpdb;
 		$wpdb->delete( $wpdb->prefix . 'cml_languages', array( 'code' => $code ), array( '%s' ) );
 		Languages::flush_cache();
+		Languages::notify_changed( 'deleted', $code );
 
 		self::redirect_with( array( 'deleted' => '1' ) );
 	}
@@ -571,6 +573,7 @@ final class LanguagesPage {
 		$wpdb->update( $table, array( 'is_default' => 0 ), array( 'is_default' => 1 ), array( '%d' ), array( '%d' ) );
 		$wpdb->update( $table, array( 'is_default' => 1 ), array( 'code' => $code ), array( '%d' ), array( '%s' ) );
 		Languages::flush_cache();
+		Languages::notify_changed( 'default_set', $code );
 
 		self::redirect_with( array( 'default_set' => '1' ) );
 	}

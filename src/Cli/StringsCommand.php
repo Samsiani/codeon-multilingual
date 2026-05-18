@@ -261,6 +261,15 @@ final class StringsCommand extends WP_CLI_Command {
 
 		$stats = self::write_entries_to_db( $parsed['entries'], $language );
 		StringTranslator::flush_cache();
+		StringTranslator::notify_catalog_changed(
+			'import',
+			array(
+				'language' => $language,
+				'inserted' => $stats['inserted'],
+				'updated'  => $stats['updated'],
+				'skipped'  => $stats['skipped'],
+			)
+		);
 
 		if ( isset( $assoc_args['regenerate-l10n'] ) && L10nFileWriter::is_enabled() ) {
 			$result = L10nFileWriter::regenerate_all();

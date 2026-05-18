@@ -158,9 +158,13 @@ final class Scanner {
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
+		$inserted = (int) $wpdb->rows_affected;
 		StringTranslator::flush_cache();
+		if ( $inserted > 0 ) {
+			StringTranslator::notify_catalog_changed( 'scan', array( 'inserted' => $inserted ) );
+		}
 
-		return (int) $wpdb->rows_affected;
+		return $inserted;
 	}
 
 	private static function plugins_dir(): string {

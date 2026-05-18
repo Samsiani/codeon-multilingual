@@ -252,6 +252,8 @@ final class WpmlImporter {
 			L10nFileWriter::regenerate_all();
 		}
 
+		self::notify_imported( $result );
+
 		return $result;
 	}
 
@@ -539,6 +541,15 @@ final class WpmlImporter {
 		if ( false === $result ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception text is not rendered directly; callers escape admin output.
 			throw new \RuntimeException( $label . ': ' . ( $wpdb->last_error ?: 'database query failed' ) );
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $result
+	 */
+	private static function notify_imported( array $result ): void {
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'cml_migration_imported', 'wpml', $result );
 		}
 	}
 

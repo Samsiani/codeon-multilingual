@@ -12,6 +12,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - Builder/ACF data localization for duplicated translations: Gutenberg block attributes, Elementor JSON/settings meta, and ACF relationship/taxonomy/page-link values now remap explicit object IDs and internal URLs to target-language siblings.
 - WooCommerce relationship hardening: product translations now remap upsells, cross-sells, grouped children, and variation option display labels to current-language siblings where available.
 - Benchmark coverage now measures product and variation collection workloads through real `WP_Query` language filtering instead of direct SQL.
+- Cache purge coverage now includes language mutations, string translation/catalog changes, and successful migration imports so external page caches do not serve stale multilingual output.
 - v1 migration and compatibility planning docs: `docs/MIGRATION-SOURCES.md` and `docs/V1_COMPATIBILITY_MATRIX.md`.
 
 ### Changed

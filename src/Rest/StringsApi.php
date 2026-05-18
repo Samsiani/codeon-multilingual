@@ -116,6 +116,13 @@ final class StringsApi {
 		}
 
 		StringTranslator::flush_cache();
+		StringTranslator::notify_catalog_changed(
+			'translation_' . $action,
+			array(
+				'string_id' => $id,
+				'language'  => $language,
+			)
+		);
 
 		// Native .l10n.php path is opt-in. When enabled, rewrite the file for
 		// the affected domain + language so the next request reads it via WP's
