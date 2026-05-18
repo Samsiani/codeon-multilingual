@@ -46,6 +46,7 @@ use Samsiani\CodeonMultilingual\Woo\MethodLabels;
 use Samsiani\CodeonMultilingual\Woo\OrderLanguage;
 use Samsiani\CodeonMultilingual\Woo\PageMapping;
 use Samsiani\CodeonMultilingual\Woo\ProductSync;
+use Samsiani\CodeonMultilingual\Woo\StoreApiLanguage;
 use Samsiani\CodeonMultilingual\Woo\TranslationLock;
 use Samsiani\CodeonMultilingual\Woo\VariationTranslator;
 
@@ -103,6 +104,7 @@ final class Plugin {
 		AttributeLabels::register();
 		MethodLabels::register();
 		OrderLanguage::register();
+		StoreApiLanguage::register();
 
 		// Strings.
 		StringTranslator::register();
