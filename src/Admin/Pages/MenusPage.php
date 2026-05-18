@@ -143,7 +143,10 @@ final class MenusPage {
 		$item_count  = is_array( $count_query ) ? count( $count_query ) : 0;
 
 		$edit_url = add_query_arg(
-			array( 'action' => 'edit', 'menu' => (int) $source->term_id ),
+			array(
+				'action' => 'edit',
+				'menu'   => (int) $source->term_id,
+			),
 			admin_url( 'nav-menus.php' )
 		);
 		?>
@@ -177,12 +180,24 @@ final class MenusPage {
 						<strong style="display:inline-block;min-width:42px;font-family:monospace"><?php echo esc_html( $code_upper ); ?></strong>
 						<?php if ( $sibling instanceof \WP_Term ) : ?>
 							<span class="dashicons dashicons-yes-alt" style="color:#46b450;font-size:16px;vertical-align:-3px"></span>
-							<a href="<?php echo esc_url( add_query_arg( array( 'action' => 'edit', 'menu' => (int) $sibling->term_id ), admin_url( 'nav-menus.php' ) ) ); ?>">
+							<a href="
+							<?php
+							echo esc_url(
+								add_query_arg(
+									array(
+										'action' => 'edit',
+										'menu'   => (int) $sibling->term_id,
+									),
+									admin_url( 'nav-menus.php' )
+								)
+							);
+							?>
+										">
 								<?php echo esc_html( $sibling->name ); ?>
 							</a>
 							&nbsp;·&nbsp;
 							<a href="<?php echo esc_url( MenuTranslator::sync_url( (int) $source->term_id, (string) $code ) ); ?>"
-							   onclick="return confirm('<?php echo esc_js( __( 'Re-sync will wipe the translated menu\'s items and re-clone from source. Custom edits to that menu will be lost. Continue?', 'codeon-multilingual' ) ); ?>');">
+								onclick="return confirm('<?php echo esc_js( __( 'Re-sync will wipe the translated menu\'s items and re-clone from source. Custom edits to that menu will be lost. Continue?', 'codeon-multilingual' ) ); ?>');">
 								<?php esc_html_e( 'Re-sync', 'codeon-multilingual' ); ?>
 							</a>
 						<?php else : ?>

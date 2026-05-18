@@ -124,6 +124,7 @@ final class Backfill {
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_post_language (post_id, group_id, language) VALUES "
 			. implode( ',', $placeholders );
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
 
 		$max_id = (int) max( array_map( 'intval', $ids ) );

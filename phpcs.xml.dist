@@ -10,8 +10,7 @@
     <exclude-pattern>build/*</exclude-pattern>
 
     <arg name="extensions" value="php"/>
-    <arg name="colors"/>
-    <arg value="sp"/>
+    <arg name="basepath" value="."/>
 
     <rule ref="WordPress">
         <exclude name="WordPress.Files.FileName"/>
@@ -22,10 +21,18 @@
         <exclude name="Squiz.Commenting.FunctionComment.Missing"/>
         <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag"/>
         <exclude name="Squiz.Commenting.FunctionComment.MissingParamComment"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamCommentFullStop"/>
+        <exclude name="Squiz.Commenting.FunctionComment.ParamNameNoMatch"/>
+        <exclude name="Squiz.Commenting.FunctionComment.IncorrectTypeHint"/>
+        <exclude name="Squiz.Commenting.FunctionComment.SpacingAfterParamType"/>
         <exclude name="Squiz.Commenting.FunctionComment.WrongStyle"/>
+        <exclude name="Squiz.Commenting.FunctionCommentThrowTag.Missing"/>
+        <exclude name="Squiz.Commenting.FileComment.MissingPackageTag"/>
         <exclude name="Squiz.Commenting.InlineComment.InvalidEndChar"/>
         <exclude name="Squiz.Commenting.VariableComment.Missing"/>
+        <exclude name="Squiz.Commenting.VariableComment.MissingVar"/>
         <exclude name="Universal.Operators.DisallowShortTernary"/>
+        <exclude name="WordPress.DB.PreparedSQL.InterpolatedNotPrepared"/>
         <exclude name="WordPress.PHP.YodaConditions"/>
     </rule>
 

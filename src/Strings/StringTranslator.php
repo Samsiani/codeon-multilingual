@@ -162,6 +162,7 @@ final class StringTranslator {
 		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at) VALUES "
 			. implode( ',', $placeholders );
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
 
 		// Newly discovered strings join the known set so we don't re-buffer them.

@@ -132,14 +132,14 @@ final class TranslationLock {
 		// in the script. The source-product title becomes an anchor in PHP
 		// only if a URL is present, then exposed to the JS as a structured
 		// payload of { prefix, linkText, linkUrl, suffix }.
-		$banner_prefix   = __( "You're editing a translation of ", 'codeon-multilingual' );
-		$banner_suffix   = sprintf(
+		$banner_prefix = __( "You're editing a translation of ", 'codeon-multilingual' );
+		$banner_suffix = sprintf(
 			/* translators: %s: source language native name */
 			__( ' (%s). Synced fields below are locked — edit the original to change them.', 'codeon-multilingual' ),
 			$source_lang_label
 		);
-		$field_note      = __( 'Locked — copies from the original language. Edit the source product to change this.', 'codeon-multilingual' );
-		$banner_payload  = array(
+		$field_note     = __( 'Locked — copies from the original language. Edit the source product to change this.', 'codeon-multilingual' );
+		$banner_payload = array(
 			'prefix'   => $banner_prefix,
 			'linkText' => $source_title,
 			'linkUrl'  => $source_edit_url,

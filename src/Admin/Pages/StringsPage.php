@@ -39,7 +39,7 @@ final class StringsPage {
 		self::$registered = true;
 
 		add_action( 'admin_post_' . self::ACTION_PURGE, array( self::class, 'handle_purge' ) );
-		add_action( 'admin_enqueue_scripts',            array( self::class, 'enqueue_assets' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue_assets' ) );
 	}
 
 	public static function enqueue_assets( string $hook ): void {
@@ -95,9 +95,9 @@ final class StringsPage {
 	private static function render_list(): void {
 		global $wpdb;
 
-		$search        = isset( $_GET['s'] )      ? sanitize_text_field( wp_unslash( (string) $_GET['s'] ) )      : '';
+		$search        = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['s'] ) ) : '';
 		$domain_filter = isset( $_GET['domain'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['domain'] ) ) : '';
-		$status_filter = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( (string) $_GET['status'] ) )        : '';
+		$status_filter = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( (string) $_GET['status'] ) ) : '';
 		$paged         = max( 1, isset( $_GET['paged'] ) ? (int) $_GET['paged'] : 1 );
 		$offset        = ( $paged - 1 ) * self::PER_PAGE;
 
@@ -120,13 +120,13 @@ final class StringsPage {
 			$prepare_args[] = $domain_filter;
 		}
 
-		$having       = '';
-		$having_args  = array();
+		$having      = '';
+		$having_args = array();
 		if ( $needed_count > 0 ) {
 			if ( 'untranslated' === $status_filter ) {
 				$having = ' HAVING translated_count = 0';
 			} elseif ( 'partial' === $status_filter ) {
-				$having       = ' HAVING translated_count > 0 AND translated_count < %d';
+				$having        = ' HAVING translated_count > 0 AND translated_count < %d';
 				$having_args[] = $needed_count;
 			} elseif ( 'translated' === $status_filter ) {
 				$having        = ' HAVING translated_count >= %d';
@@ -141,9 +141,10 @@ final class StringsPage {
 			WHERE {$where}
 			{$having}
 		) sub";
-		$total = (int) $wpdb->get_var(
-			$wpdb->prepare( $count_sql, ...array_merge( $prepare_args, $having_args ) )
-		);
+			$total     = (int) $wpdb->get_var(
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query contains generated WHERE/HAVING fragments with separately prepared values.
+				$wpdb->prepare( $count_sql, ...array_merge( $prepare_args, $having_args ) )
+			);
 
 		// Page of rows.
 		$list_sql = "SELECT s.id, s.domain, s.context, s.source, s.source_language,
@@ -154,24 +155,26 @@ final class StringsPage {
 			ORDER BY translated_count ASC, s.id DESC
 			LIMIT %d OFFSET %d";
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				$list_sql,
-				...array_merge( $prepare_args, $having_args, array( self::PER_PAGE, $offset ) )
-			)
-		);
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query contains generated WHERE/HAVING fragments with separately prepared values.
+					$list_sql,
+					...array_merge( $prepare_args, $having_args, array( self::PER_PAGE, $offset ) )
+				)
+			);
 
 		// Batch-fetch translations for visible strings.
 		$translations_map = array();
 		if ( ! empty( $rows ) ) {
 			$ids          = array_map( static fn( $r ): int => (int) $r->id, $rows );
 			$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-			$trans_rows   = $wpdb->get_results(
-				$wpdb->prepare(
-					"SELECT string_id, language, translation FROM {$wpdb->prefix}cml_string_translations WHERE string_id IN ({$placeholders})",
-					...$ids
-				)
-			);
+				$trans_rows   = $wpdb->get_results(
+					$wpdb->prepare(
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Placeholder list is generated from integer IDs and values are prepared below.
+						"SELECT string_id, language, translation FROM {$wpdb->prefix}cml_string_translations WHERE string_id IN ({$placeholders})",
+						...$ids
+					)
+				);
 			foreach ( $trans_rows as $t ) {
 				$translations_map[ (int) $t->string_id ][ (string) $t->language ] = (string) $t->translation;
 			}
@@ -259,12 +262,13 @@ final class StringsPage {
 				<tbody>
 					<?php if ( empty( $rows ) ) : ?>
 						<tr>
-							<td colspan="<?php echo 4 + $active_count; ?>">
+								<td colspan="<?php echo esc_attr( (string) ( 4 + $active_count ) ); ?>">
 								<?php esc_html_e( 'No strings match the current filters.', 'codeon-multilingual' ); ?>
 							</td>
 						</tr>
 					<?php else : ?>
-						<?php foreach ( $rows as $row ) :
+						<?php
+						foreach ( $rows as $row ) :
 							$id            = (int) $row->id;
 							$preview       = mb_strimwidth( (string) $row->source, 0, 200, '…' );
 							$source_lang   = isset( $row->source_language ) ? (string) $row->source_language : 'en';
@@ -297,7 +301,8 @@ final class StringsPage {
 										<?php echo esc_html( strtoupper( $source_lang ) ); ?>
 									</span>
 								</td>
-								<?php foreach ( $all_languages as $code => $lang ) :
+								<?php
+								foreach ( $all_languages as $code => $lang ) :
 									if ( $code === $source_lang ) :
 										?>
 										<td class="cml-col-flag-cell cml-col-source-cell">
@@ -339,23 +344,25 @@ final class StringsPage {
 							array_filter(
 								array(
 									'page'   => self::PAGE_SLUG,
-									's'      => '' !== $search        ? $search        : null,
+									's'      => '' !== $search ? $search : null,
 									'domain' => '' !== $domain_filter ? $domain_filter : null,
 									'status' => '' !== $status_filter ? $status_filter : null,
 								)
 							),
 							admin_url( 'admin.php' )
 						);
-						echo paginate_links(
-							array(
-								'base'      => $base . '%_%',
-								'format'    => '&paged=%#%',
-								'total'     => $total_pages,
-								'current'   => $paged,
-								'prev_text' => '&laquo;',
-								'next_text' => '&raquo;',
-							)
-						);
+							echo wp_kses_post(
+								paginate_links(
+									array(
+										'base'      => $base . '%_%',
+										'format'    => '&paged=%#%',
+										'total'     => $total_pages,
+										'current'   => $paged,
+										'prev_text' => '&laquo;',
+										'next_text' => '&raquo;',
+									)
+								)
+							);
 						?>
 					</div>
 				</div>
@@ -380,14 +387,14 @@ final class StringsPage {
 			<div class="notice notice-info inline">
 				<p>
 					<?php
-					printf(
-						/* translators: %s: admin URL for the Languages page */
-						wp_kses(
-							__( 'Add a non-default language on the <a href="%s">Languages page</a> to enable string translation.', 'codeon-multilingual' ),
-							array( 'a' => array( 'href' => array() ) )
-						),
-						esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
-					);
+							printf(
+								wp_kses(
+									/* translators: %s: admin URL for the Languages page. */
+									__( 'Add a non-default language on the <a href="%s">Languages page</a> to enable string translation.', 'codeon-multilingual' ),
+									array( 'a' => array( 'href' => array() ) )
+								),
+								esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
+							);
 					?>
 				</p>
 			</div>
@@ -409,7 +416,10 @@ final class StringsPage {
 
 		wp_safe_redirect(
 			add_query_arg(
-				array( 'page' => self::PAGE_SLUG, 'purged' => '1' ),
+				array(
+					'page'   => self::PAGE_SLUG,
+					'purged' => '1',
+				),
 				admin_url( 'admin.php' )
 			)
 		);

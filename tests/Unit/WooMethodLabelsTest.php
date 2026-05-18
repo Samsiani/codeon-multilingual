@@ -79,6 +79,44 @@ final class WooMethodLabelsTest extends TestCase {
 		);
 	}
 
+	public function test_translates_payment_gateway_title_from_gateway_object(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-payment-title', 'stripe', 'Credit card' ) => 'Card',
+			)
+		);
+
+		$gateway = new class {
+			public string $id = 'stripe';
+		};
+
+		$this->assertSame(
+			'Card',
+			MethodLabels::translate_payment_title( 'Credit card', $gateway )
+		);
+	}
+
+	public function test_translates_stored_order_payment_title(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-payment-title', 'cod', 'Cash on delivery' ) => 'Cash',
+			)
+		);
+
+		$order = new class {
+			public function get_payment_method(): string {
+				return 'cod';
+			}
+		};
+
+		$this->assertSame(
+			'Cash',
+			MethodLabels::translate_order_payment_method_title( 'Cash on delivery', $order )
+		);
+	}
+
 	public function test_translates_shipping_rate_label_by_method_and_instance(): void {
 		$this->set_compiled_map(
 			'en',
@@ -100,6 +138,183 @@ final class WooMethodLabelsTest extends TestCase {
 		$this->assertSame(
 			'Courier',
 			MethodLabels::translate_shipping_label( 'Flat rate', $rate )
+		);
+	}
+
+	public function test_translates_shipping_rate_label_from_method_fallback(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-shipping-label', 'flat_rate', 'Flat rate' ) => 'Courier',
+			)
+		);
+
+		$rate = new class {
+			public function get_method_id(): string {
+				return 'flat_rate';
+			}
+
+			public function get_instance_id(): int {
+				return 7;
+			}
+		};
+
+		$this->assertSame(
+			'Courier',
+			MethodLabels::translate_shipping_label( 'Flat rate', $rate )
+		);
+	}
+
+	public function test_translates_stored_order_shipping_method_title(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-shipping-label', 'local_pickup:3', 'Local pickup' ) => 'Pickup',
+			)
+		);
+
+		$item = new class {
+			public function get_type(): string {
+				return 'shipping';
+			}
+
+			public function get_method_id(): string {
+				return 'local_pickup';
+			}
+
+			public function get_instance_id(): int {
+				return 3;
+			}
+		};
+
+		$this->assertSame(
+			'Pickup',
+			MethodLabels::translate_order_shipping_method_title( 'Local pickup', $item )
+		);
+	}
+
+	public function test_translates_checkout_and_cart_notice_message(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-notice', 'error', 'Billing first name is required.' ) => 'First name is required.',
+			)
+		);
+
+		$this->assertSame(
+			'First name is required.',
+			MethodLabels::translate_error_notice( 'Billing first name is required.' )
+		);
+	}
+
+	public function test_translates_coupon_label_and_description(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-coupon-label', 'code:SUMMER', 'Coupon: SUMMER' )        => 'Promo: SUMMER',
+				StringTranslator::hash( 'wc-coupon-description', 'code:SUMMER', 'Summer discount' ) => 'Seasonal discount',
+			)
+		);
+
+		$coupon = new class {
+			public function get_code(): string {
+				return 'SUMMER';
+			}
+		};
+
+		$this->assertSame(
+			'Promo: SUMMER',
+			MethodLabels::translate_coupon_label( 'Coupon: SUMMER', $coupon )
+		);
+		$this->assertSame(
+			'Seasonal discount',
+			MethodLabels::translate_coupon_description( 'Summer discount', $coupon )
+		);
+	}
+
+	public function test_translates_order_status_labels(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-order-status', 'wc-awaiting-shipment', 'Awaiting shipment' ) => 'Waiting to ship',
+			)
+		);
+
+		$this->assertSame(
+			array( 'wc-awaiting-shipment' => 'Waiting to ship' ),
+			MethodLabels::translate_order_statuses( array( 'wc-awaiting-shipment' => 'Awaiting shipment' ) )
+		);
+	}
+
+	public function test_translates_product_download_names_without_mutating_original_object(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-download-name', '99:manual', 'Manual PDF' ) => 'Guide PDF',
+			)
+		);
+
+		$product = new class {
+			public function get_id(): int {
+				return 99;
+			}
+		};
+		$download = new class {
+			private string $name = 'Manual PDF';
+
+			public function get_id(): string {
+				return 'manual';
+			}
+
+			public function get_name(): string {
+				return $this->name;
+			}
+
+			public function set_name( string $name ): void {
+				$this->name = $name;
+			}
+		};
+
+		$translated = MethodLabels::translate_product_downloads( array( 'manual' => $download ), $product );
+
+		$this->assertSame( 'Manual PDF', $download->get_name() );
+		$this->assertSame( 'Guide PDF', $translated['manual']->get_name() );
+	}
+
+	public function test_translates_order_downloadable_item_names_and_file_names(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-download-name', '99:manual', 'Manual PDF' ) => 'Guide PDF',
+			)
+		);
+
+		$downloads = MethodLabels::translate_order_downloadable_items(
+			array(
+				array(
+					'download_id'   => 'manual',
+					'download_name' => 'Manual PDF',
+					'product_id'    => 99,
+					'file'          => array( 'name' => 'Manual PDF', 'file' => '/tmp/manual.pdf' ),
+				),
+			)
+		);
+
+		$this->assertSame( 'Guide PDF', $downloads[0]['download_name'] );
+		$this->assertSame( 'Guide PDF', $downloads[0]['file']['name'] );
+	}
+
+	public function test_translates_download_response_filename(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-download-filename', '99', 'manual.pdf' ) => 'guide.pdf',
+			)
+		);
+
+		$this->assertSame(
+			'guide.pdf',
+			MethodLabels::translate_download_filename( 'manual.pdf', 99 )
 		);
 	}
 

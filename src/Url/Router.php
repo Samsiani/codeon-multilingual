@@ -160,6 +160,7 @@ final class Router {
 		if ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
 			return true;
 		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- REQUEST_URI is inspected only to skip REST requests.
 		$uri = (string) ( $_SERVER['REQUEST_URI'] ?? '' );
 		if ( str_contains( $uri, '/wp-json/' ) || str_contains( $uri, 'rest_route=' ) ) {
 			return true;

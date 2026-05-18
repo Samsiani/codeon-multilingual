@@ -11,6 +11,19 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -21,6 +34,11 @@ jobs:
           php-version: '8.1'
           tools: composer:v2
           coverage: none
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client subversion unzip
 
       - name: Derive version from tag
         id: version
@@ -79,11 +97,24 @@ jobs:
           php -l codeon-multilingual.php > /dev/null
           php -l uninstall.php > /dev/null
 
+      - name: PHPCS
+        run: composer lint
+
       - name: PHPStan
         run: composer analyse -- --no-progress --error-format=github
 
       - name: PHPUnit (Unit suite)
         run: composer test
+
+      - name: Install WordPress test suite and WooCommerce
+        run: bash scripts/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest latest
+
+      - name: PHPUnit (Integration suite)
+        run: composer test:integration
+        env:
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WC_PLUGIN_FILE: /tmp/wordpress/wp-content/plugins/woocommerce/woocommerce.php
+          CML_REQUIRE_WOOCOMMERCE: '1'
 
       - name: Install production dependencies
         run: composer install --no-dev --no-interaction --optimize-autoloader --prefer-dist

@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.8.0** — live-tested on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache** (each request can serve any number of languages without cross-contamination), a hardened **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart/order language handling, payment/shipping label translation, translated product terms/variation attribute slugs, cart items follow current language with fallback to original, WC attribute label translation), a dedicated **menu translation flow** (Multilingual → Menus with per-language Sync actions; missing items copy from source), **per-language columns** on every posts/taxonomy admin list (one narrow column per active language with ✓/+ icons — at-a-glance translation status across all WP and WC content types including attributes and tags).
+**v0.9.0** — live-tested on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI/benchmark workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache**, a hardened **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart/order/email language handling, payment/shipping/coupon/status/notice/download label translation, translated product terms/variation attribute slugs, cart items follow current language with fallback to original, WC attribute label translation), a dedicated **menu translation flow**, **per-language columns** on posts/taxonomy admin lists, **WPML rollback snapshots**, a production **Health** screen, PHPCS/PHPStan/unit/package gates, and real WordPress+WooCommerce integration CI scaffolding.
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -102,8 +102,12 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml strings scan [--theme=<slug>] [--plugin=<slug>] [--all]`
 - `wp cml strings export --lang=<code> [--format=po|json] [--domain=<d>] [--output=<file>]`
 - `wp cml strings import <file> [--format=auto|po|json] [--lang=<code>]`
-- `wp cml migrate wpml [--dry-run]`
+- `wp cml migrate wpml [--dry-run] [--snapshot=<file>]`
+- `wp cml migrate export --output=<file>`
+- `wp cml migrate rollback <file> [--dry-run|--confirm-rollback]`
 - `wp cml backfill run [--all]` / `status` / `reset`
+- `wp cml health summary` / `report [--failed-only]`
+- `wp cml benchmark report` / `seed --yes`
 
 ## Requirements
 

@@ -2,6 +2,24 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.9.0] — 2026-05-18
+
+### Added
+- Real WordPress + MySQL + WooCommerce integration CI scaffold with tests for activation/schema, `/en/` routing, REST `?lang`, WooCommerce product/variation paths, and uninstall data-retention policy.
+- Admin **Multilingual → Health** report for language rows, default language state, duplicate codes/locales, mapping gaps, stale cache indicators, and safe cache-flush/debug-logging actions.
+- WP-CLI health reporting: `wp cml health summary` and `wp cml health report --failed-only`.
+- WP-CLI performance tooling: `wp cml benchmark report` and guarded fixture seeding for strings/products/variations.
+- WPML migration rollback snapshots: admin export/restore, CLI export/rollback dry-run, destructive confirmation, site/prefix guards, and snapshot validation.
+- Broader WooCommerce runtime translation for notices, coupon labels/descriptions, order statuses, email subjects/headings/additional content, stored order payment/shipping titles, shipping fallback contexts, and downloadable file names.
+
+### Changed
+- PHPCS is now a real Composer gate (`composer lint`) instead of an aspirational check; CI keeps syntax, PHPStan, unit, and integration jobs separate.
+- Integration bootstrap now fails locally with a clear setup command when `WP_TESTS_DIR` is missing.
+
+### Verified
+- Local gates: Composer validation, PHP syntax, PHPCS, PHPUnit unit suite (`112 tests, 854 assertions`), PHPStan, and package smoke test.
+- Artcase dev site: homepage, translated product URL, REST `?lang`, health report, benchmark report, WPML snapshot export, and rollback dry-run.
+
 ## [0.8.0] — 2026-05-18
 
 ### Added

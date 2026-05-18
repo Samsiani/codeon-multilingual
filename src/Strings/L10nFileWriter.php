@@ -29,7 +29,7 @@ final class L10nFileWriter {
 	private const SUBDIR        = 'cml-translations';
 	private const OPTION_HEALTH = 'cml_l10n_health';
 
-	private static bool $registered = false;
+	private static bool $registered        = false;
 	private static ?string $base_dir_cache = null;
 
 	public static function register(): void {
@@ -118,9 +118,9 @@ final class L10nFileWriter {
 		$messages = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $r ) {
-				$source = (string) $r->source;
-				$ctx    = (string) $r->context;
-				$key    = '' !== $ctx ? ( $ctx . "\x04" . $source ) : $source;
+				$source           = (string) $r->source;
+				$ctx              = (string) $r->context;
+				$key              = '' !== $ctx ? ( $ctx . "\x04" . $source ) : $source;
 				$messages[ $key ] = (string) $r->translation;
 			}
 		}
@@ -159,7 +159,10 @@ final class L10nFileWriter {
 			delete_option( self::OPTION_HEALTH );
 		}
 
-		return array( 'count' => $count, 'errors' => $errors );
+		return array(
+			'count'  => $count,
+			'errors' => $errors,
+		);
 	}
 
 	public static function delete_for( string $domain, string $language_code ): bool {
@@ -260,8 +263,8 @@ final class L10nFileWriter {
 		if ( null !== self::$base_dir_cache ) {
 			return self::$base_dir_cache;
 		}
-		$uploads = wp_upload_dir( null, false );
-		$base    = isset( $uploads['basedir'] ) && '' !== $uploads['basedir']
+		$uploads              = wp_upload_dir( null, false );
+		$base                 = isset( $uploads['basedir'] ) && '' !== $uploads['basedir']
 			? rtrim( (string) $uploads['basedir'], '/' )
 			: rtrim( WP_CONTENT_DIR, '/' ) . '/uploads';
 		self::$base_dir_cache = $base . '/' . self::SUBDIR;

@@ -136,13 +136,26 @@ Brain Monkey stubs WP functions; Mockery is available for object mocking.
 
 ### Integration tests
 
-The `tests/Integration/` suite uses the WordPress PHPUnit test scaffold and is kept separate from the default unit gate.
+The `tests/Integration/` suite uses the WordPress PHPUnit test scaffold and is kept separate from the default unit gate. It boots a real WordPress install, loads WooCommerce when present, then loads CodeOn Multilingual from this working tree.
 
 ```bash
-WP_TESTS_DIR=/path/to/wordpress-develop/tests/phpunit composer test:integration
+composer test:integration:setup
+WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test:integration
 ```
 
-Current coverage starts with schema activation. Expand this suite for routing, post/term duplication, WPML migration, WooCommerce product sync, cart/page mapping, and REST `?lang=` before v1.0.
+The setup script accepts explicit versions and paths:
+
+```bash
+WP_CORE_DIR=/tmp/wordpress \
+WP_TESTS_DIR=/tmp/wordpress-tests-lib \
+bash scripts/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest latest
+```
+
+Arguments are `DB_NAME DB_USER DB_PASS DB_HOST WP_VERSION WC_VERSION`. Use `WC_VERSION=none` to skip WooCommerce locally; WooCommerce-specific tests will skip. CI sets `CML_REQUIRE_WOOCOMMERCE=1`, so a missing WooCommerce install fails the integration job instead of silently skipping product coverage.
+
+Current integration coverage includes activation/schema creation, frontend `/en/` subdirectory routing behavior, REST `?lang` parameter registration and detection, WooCommerce variable-product variation duplication, and the uninstall data-retention policy.
+
+If `WP_TESTS_DIR` is unset or points to a directory without `includes/bootstrap.php`, the integration bootstrap exits with a clear setup message. This is intentional so the local unit suite remains unaffected by WordPress/WooCommerce test dependencies.
 
 ### Static analysis
 
@@ -247,6 +260,7 @@ Always update the changelog with the same commit that bumps the version — or i
 
 - **lint job**: PHP syntax check and PHPStan
 - **unit-tests job**: matrix on PHP 8.1, 8.2, 8.3 — `composer test`
+- **integration-tests job**: PHP 8.3, MySQL 8 service, WordPress PHPUnit scaffold, WooCommerce installed from WordPress.org, then `composer test:integration`
 
 Both must be green for a clean release.
 

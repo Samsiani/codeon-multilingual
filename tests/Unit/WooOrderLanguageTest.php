@@ -8,6 +8,7 @@ use Brain\Monkey\Functions;
 use PHPUnit\Framework\TestCase;
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 use Samsiani\CodeonMultilingual\Woo\OrderLanguage;
 
 /**
@@ -26,6 +27,18 @@ final class WooOrderLanguageTest extends TestCase {
 		global $wpdb;
 		$wpdb = new class {
 			public string $prefix = 'wp_';
+			public int $rows_affected = 0;
+
+			/** @param mixed ...$args */
+			public function prepare( string $sql, ...$args ): string {
+				unset( $args );
+				return $sql;
+			}
+
+			public function query( string $sql ): int {
+				unset( $sql );
+				return 0;
+			}
 
 			/** @return array<int, object> */
 			public function get_results( string $sql ): array {
@@ -41,9 +54,11 @@ final class WooOrderLanguageTest extends TestCase {
 		};
 
 		Languages::flush_cache();
+		$this->set_compiled_map( 'en', array() );
 	}
 
 	protected function tearDown(): void {
+		$this->set_compiled_map( 'en', array() );
 		CurrentLanguage::reset();
 		Languages::flush_cache();
 		Monkey\tearDown();
@@ -84,5 +99,89 @@ final class WooOrderLanguageTest extends TestCase {
 
 		OrderLanguage::end_order_language( $order );
 		$this->assertSame( 'ru', CurrentLanguage::code() );
+	}
+
+	public function test_nested_order_language_scope_restores_previous_request_language(): void {
+		CurrentLanguage::set( 'ru' );
+		$order = new class {
+			public function get_id(): int {
+				return 456;
+			}
+
+			public function get_meta( string $key, bool $single = false ): string {
+				unset( $single );
+				return OrderLanguage::META_LANGUAGE === $key ? 'en' : '';
+			}
+		};
+
+		OrderLanguage::begin_order_language( $order );
+		OrderLanguage::begin_order_language( $order );
+		$this->assertSame( 'en', CurrentLanguage::code() );
+
+		OrderLanguage::end_order_language( $order );
+		$this->assertSame( 'en', CurrentLanguage::code() );
+
+		OrderLanguage::end_order_language( $order );
+		$this->assertSame( 'ru', CurrentLanguage::code() );
+	}
+
+	public function test_transactional_email_language_can_resolve_order_from_id(): void {
+		CurrentLanguage::set( 'ru' );
+		$order = new class {
+			public function get_id(): int {
+				return 789;
+			}
+
+			public function get_meta( string $key, bool $single = false ): string {
+				unset( $single );
+				return OrderLanguage::META_LANGUAGE === $key ? 'en' : '';
+			}
+		};
+		Functions\when( 'wc_get_order' )->justReturn( $order );
+
+		OrderLanguage::begin_transactional_email_language( 789 );
+		$this->assertSame( 'en', CurrentLanguage::code() );
+
+		OrderLanguage::end_transactional_email_language( 789 );
+		$this->assertSame( 'ru', CurrentLanguage::code() );
+	}
+
+	public function test_email_subject_translation_uses_order_language_and_restores_request_language(): void {
+		CurrentLanguage::set( 'ru' );
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-email-subject', 'customer_processing_order', 'Your order is ready' ) => 'Your order is confirmed',
+			)
+		);
+
+		$order = new class {
+			public function get_meta( string $key, bool $single = false ): string {
+				unset( $single );
+				return OrderLanguage::META_LANGUAGE === $key ? 'en' : '';
+			}
+		};
+		$email = new class {
+			public string $id = 'customer_processing_order';
+		};
+
+		$this->assertSame(
+			'Your order is confirmed',
+			OrderLanguage::translate_email_subject( 'Your order is ready', $order, $email )
+		);
+		$this->assertSame( 'ru', CurrentLanguage::code() );
+	}
+
+	/**
+	 * @param array<string, string> $map
+	 */
+	private function set_compiled_map( string $language, array $map ): void {
+		$ref      = new \ReflectionProperty( StringTranslator::class, 'compiled' );
+		$compiled = $ref->getValue();
+		if ( ! is_array( $compiled ) ) {
+			$compiled = array();
+		}
+		$compiled[ $language ] = $map;
+		$ref->setValue( null, $compiled );
 	}
 }

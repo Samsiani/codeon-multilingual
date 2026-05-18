@@ -31,7 +31,7 @@ final class LocaleOverride {
 		self::$registered = true;
 
 		add_filter( 'determine_locale', array( self::class, 'filter' ) );
-		add_filter( 'locale',           array( self::class, 'filter' ) );
+		add_filter( 'locale', array( self::class, 'filter' ) );
 	}
 
 	/**

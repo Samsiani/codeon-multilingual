@@ -26,10 +26,10 @@ use WP_Query;
  */
 final class PostsListLanguage {
 
-	public const QUERY_VAR      = 'cml_admin_lang';
-	private const COOKIE_NAME   = 'cml_admin_lang';
-	private const COOKIE_DAYS   = 30;
-	private const ALL_VALUE     = 'all';
+	public const QUERY_VAR    = 'cml_admin_lang';
+	private const COOKIE_NAME = 'cml_admin_lang';
+	private const COOKIE_DAYS = 30;
+	private const ALL_VALUE   = 'all';
 
 	private static bool $registered = false;
 
@@ -42,17 +42,17 @@ final class PostsListLanguage {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_init',                  array( self::class, 'maybe_persist_choice' ) );
-		add_action( 'admin_menu',                  array( self::class, 'register_per_post_type' ), 99 );
-		add_action( 'pre_get_posts',               array( self::class, 'filter_admin_query' ) );
-		add_filter( 'the_posts',                   array( self::class, 'preload_translations' ), 10, 2 );
+		add_action( 'admin_init', array( self::class, 'maybe_persist_choice' ) );
+		add_action( 'admin_menu', array( self::class, 'register_per_post_type' ), 99 );
+		add_action( 'pre_get_posts', array( self::class, 'filter_admin_query' ) );
+		add_filter( 'the_posts', array( self::class, 'preload_translations' ), 10, 2 );
 		add_action( 'admin_print_styles-edit.php', array( self::class, 'render_styles' ) );
 	}
 
 	public static function register_per_post_type(): void {
 		foreach ( PostTranslator::translatable_post_types() as $post_type ) {
-			add_filter( "views_edit-{$post_type}",                 array( self::class, 'inject_views' ) );
-			add_filter( "manage_{$post_type}_posts_columns",       array( self::class, 'add_column' ) );
+			add_filter( "views_edit-{$post_type}", array( self::class, 'inject_views' ) );
+			add_filter( "manage_{$post_type}_posts_columns", array( self::class, 'add_column' ) );
 			add_action( "manage_{$post_type}_posts_custom_column", array( self::class, 'render_column' ), 10, 2 );
 		}
 	}
@@ -244,7 +244,7 @@ final class PostsListLanguage {
 				'<span class="cml-lang-source" title="%s" aria-label="%s">%s</span>',
 				esc_attr( $title ),
 				esc_attr( $title ),
-				$flag // already HTML
+				$flag // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped inside helper.
 			);
 			return;
 		}

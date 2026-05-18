@@ -110,7 +110,7 @@ final class LanguagesPage {
 						<?php foreach ( $languages as $lang ) : ?>
 							<tr>
 								<td class="cml-row-flag-cell">
-									<span class="cml-row-flag"><?php echo self::flag_html( (string) $lang->flag, (string) $lang->name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — already escaped inside helper ?></span>
+									<span class="cml-row-flag"><?php echo self::flag_html( (string) $lang->flag, (string) $lang->name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped inside helper. ?></span>
 								</td>
 								<td>
 									<strong><code><?php echo esc_html( $lang->code ); ?></code></strong>

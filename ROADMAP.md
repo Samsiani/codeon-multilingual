@@ -1,12 +1,12 @@
 # Roadmap & gap analysis
 
-Current version: **v0.8.0** (released 2026-05-18)
+Current version: **v0.9.0** (released 2026-05-18)
 
 This file is the single source of truth for "what's done vs what's planned." Every release updates the relevant rows.
 
 ## Where we are
 
-The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the WPML compatibility shim, the WP-CLI command surface, the first-run setup wizard, the bundled SVG flag library, the per-language compiled-map cache, the menu translation flow (Multilingual → Menus + per-language Sync), the per-language column UI on every translatable posts/taxonomy admin list, and the hardened WooCommerce translation stack (product field locking, shop-page mapping per language, cart/order language handling, payment/shipping labels, translated product terms and variation attribute slugs, attribute label translation via the strings catalog, attribute term translation via the categories model). 86 passing unit tests, live-tested on artcase.ge.
+The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the WPML compatibility shim, the WP-CLI command surface, the first-run setup wizard, the bundled SVG flag library, the per-language compiled-map cache, the menu translation flow (Multilingual → Menus + per-language Sync), the per-language column UI on every translatable posts/taxonomy admin list, the hardened WooCommerce translation stack, WPML rollback snapshots, production health diagnostics, benchmark tooling, a real PHPCS gate, and WordPress+WooCommerce integration CI scaffolding. 112 passing unit tests, live-tested on artcase.ge.
 
 ## Status vs v0.1.0 MVP commitments
 
@@ -29,10 +29,10 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | WC duplicate-SKU validator silenced for siblings | ✅ done | `Woo/TranslationLock::allow_sibling_sku_duplicate`, v0.7.19 |
 | **WC attribute labels** | ✅ done | `Woo/AttributeLabels.php`, v0.7.37. Auto-syncs to strings catalog; `woocommerce_attribute_label` swaps per language. |
 | **WC attribute terms** | ✅ done | `pa_*` taxonomies routed through `TermTranslator`; same per-language column UI as categories (v0.7.36). |
-| **WC shipping-zone strings (curated)** | ✅ partial | Shipping rate labels via `Woo/MethodLabels.php`; broader zone/admin labels remain follow-up |
+| **WC shipping-zone strings (curated)** | ✅ partial | Shipping rate labels and stored order shipping titles via `Woo/MethodLabels.php`; broader zone/admin labels remain follow-up |
 | **WC payment-method titles (curated)** | ✅ done | Gateway titles/descriptions via `Woo/MethodLabels.php` |
-| **WC email subjects/bodies (curated)** | ❌ **missing** | Same |
-| **WC cart/checkout strings (curated)** | ❌ **missing** | Same |
+| **WC email subjects/bodies (curated)** | ✅ partial | Subjects/headings/additional content translate through `Woo/OrderLanguage.php`; template-specific body fragments still rely on gettext/string catalog |
+| **WC cart/checkout strings (curated)** | ✅ partial | Notices, coupon labels/descriptions, statuses, downloads, gateway/shipping labels covered; long-tail third-party checkout fragments remain follow-up |
 | **Variation attribute slug routing** | ✅ partial | Variation translation remaps `attribute_pa_*` meta to translated term slugs when sibling terms exist |
 | Language switcher — shortcode | ✅ done | `[cml_language_switcher]` |
 | Language switcher — classic widget | ✅ done | `Frontend/LanguageSwitcherWidget.php` |
@@ -47,7 +47,7 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | Slug uniqueness scoped per language | ✅ done | both `wp_unique_post_slug` and `wp_unique_term_slug` |
 | Backfill on activation | ✅ done | `Core/Backfill.php` + Activator |
 | **Admin per-user UI language** | ❌ **missing** | No `user_meta` for admin locale; admin always follows site locale |
-| **WP-CLI commands** | ✅ done | `src/Cli/` — 5 command groups (language, translate, strings, migrate, backfill), v0.7.1 |
+| **WP-CLI commands** | ✅ done | `src/Cli/` — language, translate, strings, migrate, backfill, health, benchmark |
 | Activator opcache flush + BUILD_ID | ✅ done | per CodeOn convention |
 
 ## Bonus features shipped beyond v0.1.0
@@ -92,11 +92,17 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 ## What's missing — ranked by impact for production sites
 
-### 1. WC curated string registration ◐ (partial in v0.8.0)
+### 1. Full integration CI proof ◐ (partial in v0.9.0)
+
+**Why it matters:** Unit tests do not prove WordPress/WooCommerce database behavior. v0.9.0 adds the CI scaffold and DB-bound tests, but the next PR should prove it in GitHub Actions and extend coverage over checkout/emails/coupons.
+
+**Status:** Scaffold and tests are in place. Local integration run requires `WP_TESTS_DIR` and MySQL; Artcase live checks passed for health, benchmark, REST, routing, and migration snapshot dry-run.
+
+### 2. WC curated string registration ◐ (partial in v0.9.0)
 
 **Why it matters:** WC ships hundreds of strings — shipping zone titles, payment method titles, email subjects, cart/checkout notices — that need to render translated on `/en/checkout/`, in customer emails, etc. The strings catalog can already hold them; v0.7.37's `StringTranslator::register_source()` is the integration API. We just need to enumerate and call it.
 
-**Status:** v0.8.0 ships runtime registration/translation for gateway titles/descriptions and shipping rate labels via `Woo/MethodLabels.php`. Email subjects/headings and broad notice coverage still need curated registration.
+**Status:** v0.9.0 ships runtime registration/translation for gateway titles/descriptions, shipping rate/order labels, coupon labels/descriptions, order statuses, notices, email subjects/headings/additional content, and downloadable file names. Third-party checkout fragments and admin zone labels remain compatibility-matrix work.
 
 **Categories:**
 - Shipping zone titles
@@ -104,33 +110,41 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 - Email subjects + headings
 - Cart/checkout notices and labels
 
-### 2. Variation attribute slug routing ◐ (partial in v0.8.0)
+### 3. Variation attribute slug routing ◐ (partial in v0.8.0)
 
 **Why it matters:** A Georgian product with variation `attribute_pa_color=წითელი` doesn't yet swap to `attribute_pa_color=red` on `/en/product/...`. The `pa_*` terms are translatable; the URL rewriter just doesn't know to remap them yet.
 
 **Status:** v0.8.0 remaps `attribute_pa_*` variation meta when a variation is duplicated and translated attribute terms exist. Runtime URL/add-to-cart attribute remapping still needs broader integration coverage.
 
-### 3. WC email rendering in customer's language ◐ (partial in v0.8.0)
+### 4. Compatibility matrix ❌
+
+**Why it matters:** Production readiness means running the plugin against the actual store stack: Elementor, ACF, Yoast/Rank Math, WoodMart/Flatsome/Astra, caching/object cache, gateways, WP-CLI, and multisite if supported.
+
+**Status:** Artcase covers a real WooCommerce/WoodMart-like environment, but the full matrix is not automated yet.
+
+### 5. WC email rendering in customer's language ◐ (partial in v0.9.0)
 
 **Why it matters:** Order emails currently render in the site's locale, not the customer's. We need to switch `CurrentLanguage` to the order's stored language before WC builds the email body.
 
-**Status:** v0.8.0 stores `_cml_language`, switches order tables/emails to the stored language during render, and stores translated order item names at checkout. Full email subject/heading registration remains follow-up.
+**Status:** v0.9.0 stores `_cml_language`, switches order tables/emails to the stored language during render, stores translated order item names at checkout, and translates configured email subject/heading/additional content when registered.
 
-### 4. Polylang compat shim ❌
+### 6. Polylang compat shim ❌
 
 **Why it matters:** Some plugins are written against Polylang's `pll_*` API instead of WPML's. Implementing this widens our migration funnel.
 
 **Scope:** ~300 LOC, single file `Compat/PolylangFunctions.php`.
 
-### 5. Admin per-user UI language ❌
+### 7. Admin per-user UI language ❌
 
 **Why it matters:** Small but expected. Each admin user picks their own locale for the wp-admin interface.
 
 **Scope:** ~80 LOC. `user_meta cml_admin_locale` + a profile page field + the `locale` filter respecting it in admin.
 
-### 6. Performance pass ❌ (pre-v1.0)
+### 8. Performance pass ◐ (pre-v1.0)
 
 **Why it matters:** Per the durable directive: "every code change must respect the constant performance constraint." Before v1.0 we do a dedicated multi-pass review — per-request DB load, cache hit rates, hot-path overhead. Likely candidates: tighter `TranslationGroups` cache priming on admin lists, opt-in compiled-blob persistence, profiler-driven trimming of redundant filter callbacks.
+
+**Status:** v0.9.0 adds `wp cml benchmark report` and guarded fixture seeding. The next step is recording comparable WPML/Polylang benchmark results on 1k/10k/100k strings and large Woo catalogs.
 
 ## Forward versioning plan
 
@@ -153,9 +167,9 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 | ~~v0.7.36~~ | Per-language columns | Replaced single "Languages" column with one column per active language; flag + ✓/+ icons on posts AND taxonomies | ✅ shipped |
 | ~~v0.7.37~~ | WC attribute label translation | `Woo/AttributeLabels.php` + reusable `StringTranslator::register_source()` / `lookup_translation()` API | ✅ shipped |
 | ~~v0.8.0~~ | Production hardening + WC depth | Safer WPML migration, full-path page routing, canonical fix, uninstall retention, payment/shipping labels, order language, term/variation remapping, release/package gates | ✅ shipped |
-| **v0.8.1** | Polylang | Polylang compat shim + import path | planned |
-| **v0.9.0** | Integration tests | wp-phpunit test scaffold + MySQL CI service; cover DB-bound paths | planned |
-| **v0.9.1** | Polish | Admin per-user UI language, Gutenberg block, performance instrumentation page | planned |
+| ~~v0.9.0~~ | Production readiness | WP/Woo integration CI scaffold, PHPCS gate, WPML rollback snapshots, Health screen, benchmark command, broader Woo strings | ✅ shipped |
+| **v0.9.1** | CI proof + compatibility | Prove integration job in GitHub Actions PR, expand checkout/email/coupon tests, compatibility matrix pass | planned |
+| **v0.9.2** | Polylang + admin polish | Polylang compat shim + import path, admin per-user UI language | planned |
 | **v1.0.0** | Production-grade | Battle-tested on 3+ live sites, full migration path from WPML in one click | planned |
 
 ## Out of scope (deliberately)

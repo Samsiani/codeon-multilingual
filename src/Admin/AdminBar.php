@@ -37,7 +37,7 @@ final class AdminBar {
 			return;
 		}
 
-		$post_id = self::current_post_id();
+		$post_id  = self::current_post_id();
 		$group_id = $post_id > 0 ? ( TranslationGroups::get_group_id( $post_id ) ?? $post_id ) : 0;
 
 		// On a post/term edit screen the "context language" is the POST's

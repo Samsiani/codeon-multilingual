@@ -72,15 +72,18 @@ final class SetupWizard {
 		}
 
 		$step = isset( $_GET['step'] ) ? max( 1, min( 4, (int) $_GET['step'] ) ) : 1;
-		self::render_chrome( $step, function () use ( $step ): void {
-			match ( $step ) {
-				1       => self::render_welcome(),
-				2       => self::render_default_language(),
-				3       => self::render_secondary_languages(),
-				4       => self::render_done(),
-				default => self::render_welcome(),
-			};
-		} );
+		self::render_chrome(
+			$step,
+			function () use ( $step ): void {
+				match ( $step ) {
+					1       => self::render_welcome(),
+					2       => self::render_default_language(),
+					3       => self::render_secondary_languages(),
+					4       => self::render_done(),
+					default => self::render_welcome(),
+				};
+			}
+		);
 	}
 
 	// ---- Step renderers --------------------------------------------------
@@ -120,7 +123,7 @@ final class SetupWizard {
 				.cml-done-summary { background: #f0f6fc; border-left: 4px solid #2271b1; padding: 12px 16px; margin: 14px 0; }
 			</style>
 			<h1><?php esc_html_e( 'Setup CodeOn Multilingual', 'codeon-multilingual' ); ?></h1>
-			<p class="description"><?php esc_html_e( "Three quick steps and your site is multilingual.", 'codeon-multilingual' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Three quick steps and your site is multilingual.', 'codeon-multilingual' ); ?></p>
 
 			<ul class="cml-setup-steps">
 				<?php foreach ( $labels as $n => $label ) : ?>
@@ -336,8 +339,10 @@ final class SetupWizard {
 		}
 
 		if ( 3 === $step ) {
-			$raw      = isset( $_POST['secondary_codes'] ) && is_array( $_POST['secondary_codes'] ) ? wp_unslash( $_POST['secondary_codes'] ) : array();
-			$codes    = array_filter( array_map( 'sanitize_key', $raw ) );
+			$raw      = isset( $_POST['secondary_codes'] ) && is_array( $_POST['secondary_codes'] )
+				? array_map( 'sanitize_key', wp_unslash( $_POST['secondary_codes'] ) )
+				: array();
+			$codes    = array_filter( $raw );
 			$default  = Languages::default_code();
 			$position = 10;
 			foreach ( $codes as $code ) {
@@ -485,7 +490,15 @@ final class SetupWizard {
 			)
 		);
 
-		$render_group = static function ( array $entries ) use ( $field_name, $preselected_set, $input_type, $exclude_code ): void {
+		$allowed_flag_html = array(
+			'img' => array(
+				'alt'     => true,
+				'class'   => true,
+				'loading' => true,
+				'src'     => true,
+			),
+		);
+		$render_group      = static function ( array $entries ) use ( $field_name, $preselected_set, $input_type, $exclude_code, $allowed_flag_html ): void {
 			foreach ( $entries as $entry ) {
 				if ( $entry['code'] === $exclude_code ) {
 					continue;
@@ -495,8 +508,8 @@ final class SetupWizard {
 				$flag_html  = null !== $svg_url
 					? '<img class="cml-lang-flag-svg" src="' . esc_url( $svg_url ) . '" alt="" loading="lazy">'
 					: esc_html( LanguageCatalog::flag_emoji( $entry['flag'] ) );
-				printf(
-					'<label class="cml-lang-item" data-haystack="%1$s">
+					printf(
+						'<label class="cml-lang-item" data-haystack="%1$s">
 						<input type="%2$s" name="%3$s" value="%4$s"%5$s>
 						<span class="cml-lang-flag">%6$s</span>
 						<span class="cml-lang-meta">
@@ -504,16 +517,16 @@ final class SetupWizard {
 							<span class="cml-lang-native">%8$s · %9$s</span>
 						</span>
 					</label>',
-					esc_attr( strtolower( $entry['code'] . '|' . $entry['name'] . '|' . $entry['native'] ) ),
-					esc_attr( $input_type ),
-					esc_attr( $field_name ),
-					esc_attr( $entry['code'] ),
-					$is_checked ? ' checked' : '',
-					$flag_html,
-					esc_html( $entry['name'] ),
-					esc_html( $entry['native'] ),
-					esc_html( $entry['code'] )
-				);
+						esc_attr( strtolower( $entry['code'] . '|' . $entry['name'] . '|' . $entry['native'] ) ),
+						esc_attr( $input_type ),
+						esc_attr( $field_name ),
+						esc_attr( $entry['code'] ),
+						$is_checked ? ' checked' : '',
+						wp_kses( $flag_html, $allowed_flag_html ),
+						esc_html( $entry['name'] ),
+						esc_html( $entry['native'] ),
+						esc_html( $entry['code'] )
+					);
 			}
 		};
 

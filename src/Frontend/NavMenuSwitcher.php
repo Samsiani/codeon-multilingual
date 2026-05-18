@@ -214,10 +214,10 @@ final class NavMenuSwitcher {
 		}
 
 		// Stamp the placeholder flag for items that:
-		//   - have the marker URL (#cml-languages), OR
-		//   - already had the flag (idempotent re-save)
-		$url           = isset( $args['menu-item-url'] ) ? (string) $args['menu-item-url'] : (string) get_post_meta( $id, '_menu_item_url', true );
-		$already_flag  = '1' === (string) get_post_meta( $id, self::META_FLAG, true );
+		// - have the marker URL (#cml-languages), OR
+		// - already had the flag (idempotent re-save)
+		$url            = isset( $args['menu-item-url'] ) ? (string) $args['menu-item-url'] : (string) get_post_meta( $id, '_menu_item_url', true );
+		$already_flag   = '1' === (string) get_post_meta( $id, self::META_FLAG, true );
 		$is_placeholder = $already_flag || self::PLACEHOLDER_URL === $url;
 		if ( $is_placeholder && ! $already_flag ) {
 			update_post_meta( $id, self::META_FLAG, '1' );
@@ -230,7 +230,7 @@ final class NavMenuSwitcher {
 		// actually submitted. Without this guard, partial-AJAX saves and
 		// first-time inserts (where the per-item panel wasn't expanded) would
 		// clobber the admin's previous choice with the default.
-		// phpcs:disable WordPress.Security.NonceVerification.Missing — menu save is nonced upstream by wp-admin/nav-menus.php.
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- menu save is nonced upstream by wp-admin/nav-menus.php.
 		if ( isset( $_POST['menu-item-cml-display'][ $id ] ) ) {
 			$raw     = sanitize_key( (string) $_POST['menu-item-cml-display'][ $id ] );
 			$display = in_array( $raw, self::DISPLAY_MODES, true ) ? $raw : self::DEFAULT_DISPLAY;
@@ -282,9 +282,9 @@ final class NavMenuSwitcher {
 	// ---- Frontend: placeholder expansion ------------------------------------
 
 	/**
-	 * @param array<int, WP_Post>   $items
-	 * @param object                $menu
-	 * @param array<string, mixed>  $args
+	 * @param array<int, WP_Post>  $items
+	 * @param object               $menu
+	 * @param array<string, mixed> $args
 	 * @return array<int, WP_Post>
 	 */
 	public static function expand_placeholder( $items, $menu = null, $args = array() ) {
@@ -332,9 +332,9 @@ final class NavMenuSwitcher {
 			if ( 'dropdown' === $layout ) {
 				// Keep the placeholder as a visible parent showing the current
 				// language; nest the other languages as children.
-				$parent = self::synthesize_dropdown_parent( $item, $current_code, $active_languages, $display, $position );
-				$expanded[]        = $parent;
-				$parent_id         = (int) $parent->db_id;
+				$parent     = self::synthesize_dropdown_parent( $item, $current_code, $active_languages, $display, $position );
+				$expanded[] = $parent;
+				$parent_id  = (int) $parent->db_id;
 
 				foreach ( $active_languages as $code => $lang ) {
 					++$position;
@@ -359,28 +359,28 @@ final class NavMenuSwitcher {
 	/**
 	 * Wrapper item for dropdown layout — labelled with the current language.
 	 *
-	 * @param WP_Post|object                  $template
-	 * @param array<string, object>           $active_languages keyed by code
+	 * @param WP_Post|object        $template
+	 * @param array<string, object> $active_languages keyed by code
 	 */
 	private static function synthesize_dropdown_parent( $template, string $current_code, array $active_languages, string $display, int $position ): object {
 		$current_lang = $active_languages[ $current_code ] ?? reset( $active_languages );
 		$item         = clone $template;
 		// Synthetic ID — unique per request, used so children can declare
 		// menu_item_parent against this wrapper.
-		$item->ID            = 90000000 + (int) crc32( 'cml-parent-' . spl_object_hash( $template ) ) % 1000000;
-		$item->db_id         = $item->ID;
+		$item->ID               = 90000000 + (int) crc32( 'cml-parent-' . spl_object_hash( $template ) ) % 1000000;
+		$item->db_id            = $item->ID;
 		$item->menu_item_parent = 0;
-		$item->object_id     = 0;
-		$item->object        = 'cml_language_switcher_parent';
-		$item->type          = 'custom';
-		$item->title         = self::build_label( $current_code, $current_lang, $display );
-		$item->url           = '#cml-languages';
-		$item->target        = '';
-		$item->attr_title    = '';
-		$item->description   = '';
-		$item->xfn           = '';
-		$item->menu_order    = $position;
-		$item->classes       = array( 'menu-item', 'menu-item-type-custom', 'menu-item-has-children', 'cml-language-switcher', 'cml-style-dropdown' );
+		$item->object_id        = 0;
+		$item->object           = 'cml_language_switcher_parent';
+		$item->type             = 'custom';
+		$item->title            = self::build_label( $current_code, $current_lang, $display );
+		$item->url              = '#cml-languages';
+		$item->target           = '';
+		$item->attr_title       = '';
+		$item->description      = '';
+		$item->xfn              = '';
+		$item->menu_order       = $position;
+		$item->classes          = array( 'menu-item', 'menu-item-type-custom', 'menu-item-has-children', 'cml-language-switcher', 'cml-style-dropdown' );
 
 		return $item;
 	}
@@ -392,26 +392,26 @@ final class NavMenuSwitcher {
 	 * @param object         $lang     row from cml_languages
 	 */
 	private static function synthesize_language_item( $template, string $code, object $lang, string $current_code, string $display, int $position, int $parent_id ): object {
-		$item                = clone $template;
-		$item->ID            = 0;
-		$item->db_id         = 0;
+		$item                   = clone $template;
+		$item->ID               = 0;
+		$item->db_id            = 0;
 		$item->menu_item_parent = $parent_id;
-		$item->object_id     = 0;
-		$item->object        = 'cml_language_switcher_item';
-		$item->type          = 'custom';
-		$item->type_label    = __( 'Language switcher', 'codeon-multilingual' );
-		$item->title         = self::build_label( $code, $lang, $display );
-		$item->url           = self::url_for_language( $code );
-		$item->target        = '';
-		$item->attr_title    = sprintf(
+		$item->object_id        = 0;
+		$item->object           = 'cml_language_switcher_item';
+		$item->type             = 'custom';
+		$item->type_label       = __( 'Language switcher', 'codeon-multilingual' );
+		$item->title            = self::build_label( $code, $lang, $display );
+		$item->url              = self::url_for_language( $code );
+		$item->target           = '';
+		$item->attr_title       = sprintf(
 			/* translators: %s: language native name */
 			__( 'Switch to %s', 'codeon-multilingual' ),
 			(string) $lang->native
 		);
-		$item->description   = '';
-		$item->xfn           = 'alternate';
-		$item->menu_order    = $position;
-		$item->classes       = self::class_list( $code, $current_code, $lang );
+		$item->description = '';
+		$item->xfn         = 'alternate';
+		$item->menu_order  = $position;
+		$item->classes     = self::class_list( $code, $current_code, $lang );
 
 		$item->cml_language_code   = $code;
 		$item->cml_language_native = (string) $lang->native;

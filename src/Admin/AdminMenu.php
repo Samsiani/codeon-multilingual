@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Samsiani\CodeonMultilingual\Admin;
 
 use Samsiani\CodeonMultilingual\Admin\Pages\LanguagesPage;
+use Samsiani\CodeonMultilingual\Admin\Pages\HealthPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MenusPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\MigrationPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\ScanPage;
@@ -27,6 +28,8 @@ final class AdminMenu {
 			return;
 		}
 		self::$registered = true;
+
+		HealthPage::register();
 
 		add_action( 'admin_menu', array( self::class, 'on_admin_menu' ) );
 	}
@@ -85,6 +88,15 @@ final class AdminMenu {
 			self::CAPABILITY,
 			MigrationPage::PAGE_SLUG,
 			array( MigrationPage::class, 'render' )
+		);
+
+		add_submenu_page(
+			self::PARENT_SLUG,
+			__( 'Health', 'codeon-multilingual' ),
+			__( 'Health', 'codeon-multilingual' ),
+			self::CAPABILITY,
+			HealthPage::PAGE_SLUG,
+			array( HealthPage::class, 'render' )
 		);
 
 		add_submenu_page(

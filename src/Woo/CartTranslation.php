@@ -45,9 +45,9 @@ final class CartTranslation {
 	}
 
 	/**
-	 * @param mixed              $product_obj
+	 * @param mixed               $product_obj
 	 * @param array<string,mixed> $cart_item
-	 * @param string             $cart_item_key
+	 * @param string              $cart_item_key
 	 * @return mixed
 	 */
 	public static function translate_product( $product_obj, $cart_item, $cart_item_key ) {
@@ -66,9 +66,9 @@ final class CartTranslation {
 	}
 
 	/**
-	 * @param string             $permalink
+	 * @param string              $permalink
 	 * @param array<string,mixed> $cart_item
-	 * @param string             $cart_item_key
+	 * @param string              $cart_item_key
 	 */
 	public static function translate_permalink( $permalink, $cart_item, $cart_item_key ): string {
 		$product_id = isset( $cart_item['product_id'] ) ? (int) $cart_item['product_id'] : 0;

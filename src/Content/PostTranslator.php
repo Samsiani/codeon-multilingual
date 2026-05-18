@@ -101,14 +101,14 @@ final class PostTranslator {
 			<?php if ( count( $languages ) <= 1 ) : ?>
 				<p class="description">
 					<?php
-					printf(
-						/* translators: %s: admin URL for the Languages page */
-						wp_kses(
-							__( 'Only one language is configured. <a href="%s">Add more languages</a> to enable translations.', 'codeon-multilingual' ),
-							array( 'a' => array( 'href' => array() ) )
-						),
-						esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
-					);
+						printf(
+							wp_kses(
+								/* translators: %s: admin URL for the Languages page. */
+								__( 'Only one language is configured. <a href="%s">Add more languages</a> to enable translations.', 'codeon-multilingual' ),
+								array( 'a' => array( 'href' => array() ) )
+							),
+							esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
+						);
 					?>
 				</p>
 			<?php else : ?>
@@ -410,6 +410,7 @@ final class PostTranslator {
 		}
 
 		$sql = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES " . implode( ',', $placeholders );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
 	}
 

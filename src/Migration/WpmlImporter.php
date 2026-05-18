@@ -114,7 +114,7 @@ final class WpmlImporter {
 
 		$language_settings = 0;
 		if ( self::table_exists( $prefix . 'icl_languages' ) ) {
-			$native_select = self::wpml_native_name_select();
+			$native_select     = self::wpml_native_name_select();
 			$language_settings = (int) $wpdb->get_var(
 				"SELECT COUNT(*)
 				 FROM {$prefix}icl_languages l
@@ -210,10 +210,10 @@ final class WpmlImporter {
 		try {
 			$result['languages'] = self::import_languages();
 			Languages::flush_cache();
-			$result['default_set'] = self::set_default_language();
-			$result['posts'] = self::import_post_translations();
-			$result['terms'] = self::import_term_translations();
-			$result['strings'] = self::import_string_sources();
+			$result['default_set']        = self::set_default_language();
+			$result['posts']              = self::import_post_translations();
+			$result['terms']              = self::import_term_translations();
+			$result['strings']            = self::import_string_sources();
 			$result['translated_strings'] = self::import_string_translations();
 			self::commit_transaction();
 		} catch ( \Throwable $e ) {
@@ -449,8 +449,10 @@ final class WpmlImporter {
 
 	private static function query_or_throw( string $sql, string $label ): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared or fixed internally by the import method before reaching this guard.
 		$result = $wpdb->query( $sql );
 		if ( false === $result ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception text is not rendered directly; callers escape admin output.
 			throw new \RuntimeException( $label . ': ' . ( $wpdb->last_error ?: 'database query failed' ) );
 		}
 	}

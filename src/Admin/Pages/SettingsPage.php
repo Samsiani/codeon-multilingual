@@ -109,14 +109,14 @@ final class SettingsPage {
 							</label>
 							<p class="description">
 								<?php
-								printf(
-									/* translators: %s: link to the Scan admin page */
-									wp_kses(
-										__( 'Off by default — populate the catalog explicitly via the <a href="%s">Scan page</a>. Turning this on captures every string that runs through gettext, which can grow the catalog very quickly on a busy site.', 'codeon-multilingual' ),
-										array( 'a' => array( 'href' => array() ) )
-									),
-									esc_url( admin_url( 'admin.php?page=' . ScanPage::PAGE_SLUG ) )
-								);
+									printf(
+										wp_kses(
+											/* translators: %s: link to the Scan admin page. */
+											__( 'Off by default — populate the catalog explicitly via the <a href="%s">Scan page</a>. Turning this on captures every string that runs through gettext, which can grow the catalog very quickly on a busy site.', 'codeon-multilingual' ),
+											array( 'a' => array( 'href' => array() ) )
+										),
+										esc_url( admin_url( 'admin.php?page=' . ScanPage::PAGE_SLUG ) )
+									);
 								?>
 							</p>
 						</td>
@@ -240,11 +240,14 @@ final class SettingsPage {
 
 		// Toggle handling: bulk-regenerate on enable, full cleanup on disable,
 		// explicit "regenerate now" button.
-		$regen   = ! empty( $_POST['cml_regenerate_l10n'] );
-		$args    = array( 'page' => self::PAGE_SLUG, 'saved' => '1' );
+		$regen = ! empty( $_POST['cml_regenerate_l10n'] );
+		$args  = array(
+			'page'  => self::PAGE_SLUG,
+			'saved' => '1',
+		);
 
 		if ( ! $previous_l10n && $new_l10n ) {
-			$result = L10nFileWriter::regenerate_all();
+			$result              = L10nFileWriter::regenerate_all();
 			$args['regenerated'] = (int) $result['count'];
 			if ( ! empty( $result['errors'] ) ) {
 				$args['regen_errors'] = count( $result['errors'] );
@@ -253,7 +256,7 @@ final class SettingsPage {
 			L10nFileWriter::delete_all();
 			$args['l10n_disabled'] = '1';
 		} elseif ( $new_l10n && $regen ) {
-			$result = L10nFileWriter::regenerate_all();
+			$result              = L10nFileWriter::regenerate_all();
 			$args['regenerated'] = (int) $result['count'];
 			if ( ! empty( $result['errors'] ) ) {
 				$args['regen_errors'] = count( $result['errors'] );
