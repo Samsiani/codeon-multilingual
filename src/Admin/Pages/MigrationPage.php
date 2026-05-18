@@ -250,7 +250,7 @@ final class MigrationPage {
 		<?php else : ?>
 
 		<p class="description">
-			<?php esc_html_e( 'CodeOn found Polylang taxonomy data. The importer copies Polylang languages plus post and term translation relationships into CodeOn. Polylang source data is left untouched.', 'codeon-multilingual' ); ?>
+			<?php esc_html_e( 'CodeOn found Polylang taxonomy data. The importer copies Polylang languages, post and term translation relationships, and supported dynamic string translations into CodeOn. Polylang source data is left untouched.', 'codeon-multilingual' ); ?>
 		</p>
 
 		<table class="form-table" role="presentation">
@@ -271,8 +271,12 @@ final class MigrationPage {
 				<td><?php echo (int) $summary['terms']; ?></td>
 			</tr>
 			<tr>
-				<th scope="row"><?php esc_html_e( 'Polylang string stores', 'codeon-multilingual' ); ?></th>
+				<th scope="row"><?php esc_html_e( 'String sources', 'codeon-multilingual' ); ?></th>
 				<td><?php echo (int) $summary['strings']; ?></td>
+			</tr>
+			<tr>
+				<th scope="row"><?php esc_html_e( 'Translated strings', 'codeon-multilingual' ); ?></th>
+				<td><?php echo (int) $summary['translated_strings']; ?></td>
 			</tr>
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Conflicts', 'codeon-multilingual' ); ?></th>
@@ -286,6 +290,7 @@ final class MigrationPage {
 						<li><?php esc_html_e( 'Language settings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['language_settings']; ?></li>
 						<li><?php esc_html_e( 'Post mappings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['post_mappings']; ?></li>
 						<li><?php esc_html_e( 'Term mappings:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['term_mappings']; ?></li>
+						<li><?php esc_html_e( 'String translations:', 'codeon-multilingual' ); ?> <?php echo (int) $conflicts['string_translations']; ?></li>
 					</ul>
 				</td>
 			</tr>
@@ -376,9 +381,11 @@ final class MigrationPage {
 				'pposts'            => (int) $result['posts'],
 				'pterms'            => (int) $result['terms'],
 				'pstrings'          => (int) $result['strings'],
+				'ptstrings'         => (int) $result['translated_strings'],
 				'plconflicts'       => (int) $result['conflicts']['language_settings'],
 				'ppconflicts'       => (int) $result['conflicts']['post_mappings'],
 				'ptconflicts'       => (int) $result['conflicts']['term_mappings'],
+				'psconflicts'       => (int) $result['conflicts']['string_translations'],
 				'perrors'           => empty( $result['errors'] ) ? '' : implode( '||', $result['errors'] ),
 				'pwarnings'         => empty( $result['warnings'] ) ? '' : implode( '||', $result['warnings'] ),
 			)
@@ -527,12 +534,13 @@ final class MigrationPage {
 		}
 		if ( isset( $_GET['polylang_imported'] ) ) {
 			$summary = sprintf(
-				/* translators: 1: languages, 2: posts, 3: terms, 4: string stores */
-				esc_html__( 'Polylang import complete — languages: %1$d, post translations: %2$d, term translations: %3$d, string stores reported: %4$d.', 'codeon-multilingual' ),
+				/* translators: 1: languages, 2: posts, 3: terms, 4: source strings, 5: translated strings */
+				esc_html__( 'Polylang import complete — languages: %1$d, post translations: %2$d, term translations: %3$d, string sources: %4$d, translated strings: %5$d.', 'codeon-multilingual' ),
 				self::get_int_arg( 'planguages' ),
 				self::get_int_arg( 'pposts' ),
 				self::get_int_arg( 'pterms' ),
-				self::get_int_arg( 'pstrings' )
+				self::get_int_arg( 'pstrings' ),
+				self::get_int_arg( 'ptstrings' )
 			);
 			echo '<div class="notice notice-success is-dismissible"><p>' . wp_kses_post( $summary ) . '</p></div>';
 

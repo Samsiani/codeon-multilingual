@@ -85,7 +85,7 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - Translation meta box distinguishes the **source** ("Edit X (original)") from translations ("Edit X translation")
 - Cookie-persisted language selection
 - WPML data migration tool (5-statement SQL importer)
-- Polylang object migration tool for languages, post mappings, and term mappings
+- Polylang migration tool for languages, post mappings, term mappings, and dynamic strings
 
 **REST**
 - `?lang=` parameter on every `show_in_rest` endpoint

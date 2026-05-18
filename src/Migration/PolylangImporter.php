@@ -5,15 +5,16 @@ namespace Samsiani\CodeonMultilingual\Migration;
 
 use Samsiani\CodeonMultilingual\Core\Languages;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
+use Samsiani\CodeonMultilingual\Strings\L10nFileWriter;
 use Samsiani\CodeonMultilingual\Strings\StringTranslator;
 
 /**
  * Imports Polylang's taxonomy-backed language relationships into CodeOn.
  *
  * Polylang stores language assignment and translation groups through normal
- * WordPress taxonomy tables. That maps cleanly to CodeOn's post/term companion
- * tables, but its registered string store is a separate MO-like system and is
- * intentionally reported instead of silently guessed.
+ * WordPress taxonomy tables. Current Polylang stores dynamic string
+ * translations as `_pll_strings_translations` term meta on language terms;
+ * legacy installs may still have the old `polylang_mo` post store.
  */
 final class PolylangImporter {
 
@@ -21,6 +22,7 @@ final class PolylangImporter {
 	private const TAX_TERM_LANGUAGE     = 'term_language';
 	private const TAX_POST_TRANSLATIONS = 'post_translations';
 	private const TAX_TERM_TRANSLATIONS = 'term_translations';
+	private const STRING_DOMAIN         = 'pll_string';
 
 	/**
 	 * @return array{language_settings:int,post_mappings:int,term_mappings:int,string_translations:int}
@@ -64,8 +66,8 @@ final class PolylangImporter {
 			'languages'          => count( self::language_rows() ),
 			'posts'              => self::count_source_rows( self::post_mapping_select_sql() ),
 			'terms'              => self::count_source_rows( self::term_mapping_select_sql() ),
-			'strings'            => self::polylang_string_posts_count(),
-			'translated_strings' => 0,
+			'strings'            => self::polylang_string_sources_count(),
+			'translated_strings' => self::polylang_string_translations_count(),
 			'default_language'   => self::default_language(),
 			'conflicts'          => self::conflict_summary(),
 			'warnings'           => self::warnings(),
@@ -92,7 +94,7 @@ final class PolylangImporter {
 				'cml_term_language',
 				'term_id'
 			),
-			'string_translations' => 0,
+			'string_translations' => self::string_conflicts_count(),
 		);
 	}
 
@@ -129,8 +131,10 @@ final class PolylangImporter {
 			if ( ! $allow_conflicts || 0 === $result['conflicts']['language_settings'] ) {
 				$result['default_set'] = self::set_default_language();
 			}
-			$result['posts'] = self::import_post_translations();
-			$result['terms'] = self::import_term_translations();
+			$result['posts']              = self::import_post_translations();
+			$result['terms']              = self::import_term_translations();
+			$result['strings']            = self::import_string_sources();
+			$result['translated_strings'] = self::import_string_translations();
 			self::commit_transaction();
 		} catch ( \Throwable $e ) {
 			self::rollback_transaction();
@@ -141,6 +145,9 @@ final class PolylangImporter {
 			Languages::flush_cache();
 			StringTranslator::flush_cache();
 			TranslationGroups::flush();
+			if ( L10nFileWriter::is_enabled() ) {
+				L10nFileWriter::regenerate_all();
+			}
 			self::notify_imported( $result );
 		}
 
@@ -242,6 +249,85 @@ final class PolylangImporter {
 		self::query_or_throw( $sql, 'term translations' );
 
 		return $count + (int) $wpdb->rows_affected;
+	}
+
+	public static function import_string_sources(): int {
+		global $wpdb;
+
+		$rows = self::polylang_string_rows();
+		if ( array() === $rows ) {
+			return 0;
+		}
+
+		$seen         = array();
+		$values       = array();
+		$placeholders = array();
+		$now          = time();
+
+		foreach ( $rows as $row ) {
+			$key = $row['domain'] . '|' . $row['context'] . '|' . $row['source'];
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			$seen[ $key ] = true;
+
+			$values[]       = StringTranslator::hash( $row['domain'], $row['context'], $row['source'] );
+			$values[]       = $row['domain'];
+			$values[]       = $row['context'];
+			$values[]       = $row['source'];
+			$values[]       = StringTranslator::detect_source_language( $row['source'] );
+			$values[]       = $now;
+			$placeholders[] = '(UNHEX(%s), %s, %s, %s, %s, %d)';
+		}
+
+		if ( array() === $placeholders ) {
+			return 0;
+		}
+
+		$sql = "INSERT IGNORE INTO {$wpdb->prefix}cml_strings (hash, domain, context, source, source_language, created_at) VALUES "
+			. implode( ',', $placeholders );
+
+		self::query_or_throw(
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
+			$wpdb->prepare( $sql, ...$values ),
+			'string sources'
+		);
+
+		return (int) $wpdb->rows_affected;
+	}
+
+	public static function import_string_translations(): int {
+		global $wpdb;
+
+		$rows = self::polylang_string_rows();
+		if ( array() === $rows ) {
+			return 0;
+		}
+
+		$count = 0;
+		foreach ( $rows as $row ) {
+			$string_id = self::codeon_string_id( $row );
+			if ( $string_id <= 0 ) {
+				continue;
+			}
+
+			$result = $wpdb->query(
+				$wpdb->prepare(
+					"INSERT IGNORE INTO {$wpdb->prefix}cml_string_translations (string_id, language, translation, updated_at) VALUES (%d, %s, %s, %d)",
+					$string_id,
+					$row['language'],
+					$row['translation'],
+					time()
+				)
+			);
+			if ( false === $result ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception text is returned to escaped admin/CLI callers.
+				throw new \RuntimeException( 'string translations: ' . ( $wpdb->last_error ?: 'database query failed' ) );
+			}
+			$count += (int) $wpdb->rows_affected;
+		}
+
+		return $count;
 	}
 
 	/**
@@ -430,6 +516,177 @@ final class PolylangImporter {
 		);
 	}
 
+	private static function polylang_string_sources_count(): int {
+		$seen = array();
+		foreach ( self::polylang_string_rows() as $row ) {
+			$seen[ $row['domain'] . '|' . $row['context'] . '|' . $row['source'] ] = true;
+		}
+
+		return count( $seen );
+	}
+
+	private static function polylang_string_translations_count(): int {
+		return count( self::polylang_string_rows() );
+	}
+
+	private static function string_conflicts_count(): int {
+		global $wpdb;
+
+		$count = 0;
+		foreach ( self::polylang_string_rows() as $row ) {
+			$string_id = self::codeon_string_id( $row );
+			if ( $string_id <= 0 ) {
+				continue;
+			}
+
+			$existing = $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT translation FROM {$wpdb->prefix}cml_string_translations WHERE string_id = %d AND language = %s",
+					$string_id,
+					$row['language']
+				)
+			);
+			if ( is_string( $existing ) && '' !== $existing && $existing !== $row['translation'] ) {
+				++$count;
+			}
+		}
+
+		return $count;
+	}
+
+	/**
+	 * @param array{domain:string,context:string,source:string,language:string,translation:string} $row
+	 */
+	private static function codeon_string_id( array $row ): int {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}cml_strings WHERE hash = UNHEX(%s)",
+				StringTranslator::hash( $row['domain'], $row['context'], $row['source'] )
+			)
+		);
+	}
+
+	/**
+	 * @return array<int,array{domain:string,context:string,source:string,language:string,translation:string}>
+	 */
+	private static function polylang_string_rows(): array {
+		$rows      = array_merge( self::polylang_term_string_rows(), self::legacy_polylang_post_string_rows() );
+		$languages = array_fill_keys( self::language_rows_without_default_lookup(), true );
+		$result    = array();
+		$seen      = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! isset( $languages[ $row['language'] ] ) ) {
+				continue;
+			}
+
+			$key = $row['language'] . '|' . $row['domain'] . '|' . $row['context'] . '|' . $row['source'];
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+			$seen[ $key ] = true;
+			$result[]     = $row;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @return array<int,array{domain:string,context:string,source:string,language:string,translation:string}>
+	 */
+	private static function polylang_term_string_rows(): array {
+		global $wpdb;
+
+		$termmeta = $wpdb->prefix . 'termmeta';
+
+		$rows = $wpdb->get_results(
+			"SELECT lang.slug AS language, tm.meta_value AS payload
+			 FROM {$termmeta} tm
+			 INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'language'
+			 INNER JOIN {$wpdb->terms} lang ON lang.term_id = tt.term_id
+			 WHERE tm.meta_key = '_pll_strings_translations'"
+		);
+
+		return self::parse_polylang_string_payload_rows( $rows );
+	}
+
+	/**
+	 * @return array<int,array{domain:string,context:string,source:string,language:string,translation:string}>
+	 */
+	private static function legacy_polylang_post_string_rows(): array {
+		global $wpdb;
+
+		$postmeta = $wpdb->prefix . 'postmeta';
+
+		$rows = $wpdb->get_results(
+			"SELECT COALESCE(lang.slug, NULLIF(p.post_name, ''), NULLIF(p.post_title, '')) AS language,
+				p.post_content,
+				pm.meta_value AS payload
+			 FROM {$wpdb->posts} p
+			 LEFT JOIN {$postmeta} pm ON pm.post_id = p.ID AND pm.meta_key = '_pll_strings_translations'
+			 LEFT JOIN {$wpdb->term_taxonomy} tt
+				ON tt.taxonomy = 'language'
+				AND tt.term_id = CAST(SUBSTRING(p.post_title, CHAR_LENGTH('polylang_mo_') + 1) AS UNSIGNED)
+			 LEFT JOIN {$wpdb->terms} lang ON lang.term_id = tt.term_id
+			 WHERE p.post_type = 'polylang_mo'"
+		);
+
+		$normalized = array();
+		foreach ( $rows as $row ) {
+			if ( '' === (string) ( $row->payload ?? '' ) && '' !== (string) ( $row->post_content ?? '' ) ) {
+				$row->payload = $row->post_content;
+			}
+			if ( '' === (string) ( $row->language ?? '' ) ) {
+				$row->language = (string) ( $row->post_title ?? '' );
+			}
+			$normalized[] = $row;
+		}
+
+		return self::parse_polylang_string_payload_rows( $normalized );
+	}
+
+	/**
+	 * @param array<int,object> $rows
+	 * @return array<int,array{domain:string,context:string,source:string,language:string,translation:string}>
+	 */
+	private static function parse_polylang_string_payload_rows( array $rows ): array {
+		$result = array();
+		foreach ( $rows as $row ) {
+			$language = self::normalize_code( (string) ( $row->language ?? '' ) );
+			if ( '' === $language ) {
+				continue;
+			}
+
+			$payload = self::maybe_unserialize_array( (string) ( $row->payload ?? '' ) );
+			foreach ( $payload as $entry ) {
+				if ( ! is_array( $entry ) || ! isset( $entry[0], $entry[1] ) ) {
+					continue;
+				}
+				if ( ! is_scalar( $entry[0] ) || ! is_scalar( $entry[1] ) ) {
+					continue;
+				}
+
+				$source      = (string) $entry[0];
+				$translation = (string) $entry[1];
+				if ( '' === $source || '' === $translation ) {
+					continue;
+				}
+
+				$result[] = array(
+					'domain'      => self::STRING_DOMAIN,
+					'context'     => '',
+					'source'      => $source,
+					'language'    => $language,
+					'translation' => $translation,
+				);
+			}
+		}
+
+		return $result;
+	}
+
 	/**
 	 * @return array<int,string>
 	 */
@@ -437,7 +694,7 @@ final class PolylangImporter {
 		$warnings = array();
 
 		if ( self::polylang_string_posts_count() > 0 ) {
-			$warnings[] = 'Polylang string translations are stored as polylang_mo data. Object relationships can be imported now; string import needs a dedicated MO adapter or PO export/import.';
+			$warnings[] = 'Legacy Polylang polylang_mo string stores were detected. CodeOn will import supported singular string pairs; malformed or plural entries are skipped.';
 		}
 
 		return $warnings;

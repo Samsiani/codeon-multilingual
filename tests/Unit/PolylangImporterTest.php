@@ -42,7 +42,8 @@ final class PolylangImporterTest extends TestCase {
 		$this->assertSame( 2, $summary['languages'] );
 		$this->assertSame( 3, $summary['posts'] );
 		$this->assertSame( 4, $summary['terms'] );
-		$this->assertSame( 2, $summary['strings'] );
+		$this->assertSame( 4, $summary['strings'] );
+		$this->assertSame( 5, $summary['translated_strings'] );
 		$this->assertSame( 'en', $summary['default_language'] );
 		$this->assertSame( 0, array_sum( $summary['conflicts'] ) );
 		$this->assertNotEmpty( $summary['warnings'] );
@@ -82,6 +83,37 @@ final class PolylangImporterTest extends TestCase {
 		$this->assertStringContainsString( 'cml.group_id = cml.term_id', $sql );
 		$this->assertStringContainsString( "tt_lang.taxonomy = 'term_language'", $sql );
 		$this->assertStringContainsString( "tt_group.taxonomy = 'term_translations'", $sql );
+	}
+
+	public function test_import_strings_uses_polylang_term_meta_and_insert_ignore(): void {
+		global $wpdb;
+		$wpdb = new PolylangImporterWpdbStub();
+
+		$this->assertSame( 7, PolylangImporter::import_string_sources() );
+		$wpdb->has_existing_strings = true;
+		$this->assertSame( 35, PolylangImporter::import_string_translations() );
+
+		$sql = implode( "\n\n", $wpdb->queries );
+
+		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_strings', $sql );
+		$this->assertStringContainsString( 'INSERT IGNORE INTO wp_cml_string_translations', $sql );
+		$this->assertStringContainsString( "'pll_string'", $sql );
+		$this->assertStringContainsString( "'  Padded  '", $sql );
+		$this->assertStringContainsString( "'  თარგმანი  '", $sql );
+		$this->assertStringContainsString( "'ქართული წყარო'", $sql );
+		$this->assertStringNotContainsString( 'REPLACE INTO wp_cml_string_translations', $sql );
+		$this->assertStringNotContainsString( 'ON DUPLICATE KEY UPDATE', $sql );
+	}
+
+	public function test_string_conflicts_count_existing_different_codeon_translations(): void {
+		global $wpdb;
+		$wpdb = new PolylangImporterWpdbStub();
+		$wpdb->has_existing_strings = true;
+		$wpdb->existing_string_translation = 'Different';
+
+		$conflicts = PolylangImporter::conflict_summary();
+
+		$this->assertSame( 5, $conflicts['string_translations'] );
 	}
 
 	public function test_import_all_flushes_language_cache_before_setting_imported_default(): void {
@@ -166,7 +198,9 @@ final class PolylangImporterWpdbStub {
 
 	public string $prefix             = 'wp_';
 	public string $posts              = 'wp_posts';
+	public string $postmeta           = 'wp_postmeta';
 	public string $terms              = 'wp_terms';
+	public string $termmeta           = 'wp_termmeta';
 	public string $term_taxonomy      = 'wp_term_taxonomy';
 	public string $term_relationships = 'wp_term_relationships';
 	public string $last_error         = '';
@@ -188,11 +222,17 @@ final class PolylangImporterWpdbStub {
 	);
 
 	public bool $has_language_conflict = false;
+	public bool $has_existing_strings  = false;
 	public int $language_updates       = 0;
+	public string $existing_string_translation = '';
 
 	public function prepare( string $sql, ...$args ): string {
 		foreach ( $args as $arg ) {
-			$sql = preg_replace( '/%s/', "'" . (string) $arg . "'", $sql, 1 ) ?? $sql;
+			if ( is_int( $arg ) ) {
+				$sql = preg_replace( '/%d/', (string) $arg, $sql, 1 ) ?? $sql;
+			} else {
+				$sql = preg_replace( '/%s/', "'" . (string) $arg . "'", $sql, 1 ) ?? $sql;
+			}
 		}
 
 		return $sql;
@@ -211,6 +251,18 @@ final class PolylangImporterWpdbStub {
 		}
 		if ( str_contains( $sql, 'cml_post_language' ) || str_contains( $sql, 'cml_term_language' ) ) {
 			return 0;
+		}
+		if ( str_contains( $sql, 'SELECT id FROM wp_cml_strings WHERE hash = UNHEX' ) ) {
+			if ( ! $this->has_existing_strings ) {
+				return 0;
+			}
+			return 101;
+		}
+		if ( str_contains( $sql, 'SELECT source_language FROM wp_cml_strings WHERE id = 101' ) ) {
+			return 'en';
+		}
+		if ( str_contains( $sql, 'SELECT translation FROM wp_cml_string_translations' ) ) {
+			return $this->existing_string_translation;
 		}
 		if ( str_contains( $sql, 'cml_languages WHERE code' ) ) {
 			foreach ( array_keys( $this->languages ) as $code ) {
@@ -250,6 +302,36 @@ final class PolylangImporterWpdbStub {
 	public function get_results( string $sql ): array {
 		if ( str_contains( $sql, 'SELECT * FROM wp_cml_languages' ) ) {
 			return array_values( $this->languages );
+		}
+
+		if ( str_contains( $sql, 'FROM wp_termmeta tm' ) ) {
+			return array(
+				(object) array(
+					'language' => 'en',
+					'payload'  => serialize(
+						array(
+							array( 'Site title', 'Site title' ),
+							array( 'Skip empty', '' ),
+						)
+					),
+				),
+				(object) array(
+					'language' => 'ka',
+					'payload'  => serialize(
+						array(
+							array( 'Site title', 'საიტი' ),
+							array( 'Checkout label', 'გადახდა' ),
+							array( '  Padded  ', '  თარგმანი  ' ),
+							array( 'ქართული წყარო', 'თარგმანი' ),
+							array( array( 'plural' ), 'ignored' ),
+						)
+					),
+				),
+			);
+		}
+
+		if ( str_contains( $sql, "FROM wp_posts p" ) && str_contains( $sql, "post_type = 'polylang_mo'" ) ) {
+			return array();
 		}
 
 		if ( str_contains( $sql, "tt.taxonomy = 'language'" ) ) {

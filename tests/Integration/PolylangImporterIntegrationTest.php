@@ -11,7 +11,7 @@ use Samsiani\CodeonMultilingual\Migration\PolylangImporter;
  */
 final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 
-	public function test_import_all_imports_polylang_languages_posts_terms_and_reports_string_warning(): void {
+	public function test_import_all_imports_polylang_languages_posts_terms_and_strings(): void {
 		global $wpdb;
 
 		$this->register_polylang_taxonomies();
@@ -32,14 +32,22 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 		$this->assign_polylang_taxonomies( $source_term, $language_taxonomies['term_en'], $term_group );
 		$this->assign_polylang_taxonomies( $ka_term, $language_taxonomies['term_ka'], $term_group );
 
-		self::factory()->post->create( array( 'post_type' => 'polylang_mo', 'post_status' => 'publish' ) );
+		update_term_meta(
+			$this->term_id_for_tt_id( $language_taxonomies['ka'] ),
+			'_pll_strings_translations',
+			array(
+				array( 'Site title', 'საიტი' ),
+				array( 'Checkout label', 'გადახდა' ),
+			)
+		);
 
 		$summary = PolylangImporter::summary();
 		$this->assertSame( 2, $summary['languages'] );
 		$this->assertSame( 2, $summary['posts'] );
 		$this->assertSame( 2, $summary['terms'] );
-		$this->assertSame( 1, $summary['strings'] );
-		$this->assertNotEmpty( $summary['warnings'] );
+		$this->assertSame( 2, $summary['strings'] );
+		$this->assertSame( 2, $summary['translated_strings'] );
+		$this->assertSame( array(), $summary['warnings'] );
 
 		$result = PolylangImporter::import_all();
 
@@ -47,6 +55,8 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 		$this->assertSame( 1, $result['languages'] );
 		$this->assertSame( 2, $result['posts'] );
 		$this->assertSame( 2, $result['terms'] );
+		$this->assertSame( 2, $result['strings'] );
+		$this->assertSame( 2, $result['translated_strings'] );
 		$this->assertSame( 'en', TranslationGroups::get_language( $source_post ) );
 		$this->assertSame( 'ka', TranslationGroups::get_language( $ka_post ) );
 		$this->assertSame( 'en', TranslationGroups::get_term_language( $source_term ) );
@@ -58,6 +68,91 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 				$wpdb->prepare(
 					"SELECT code FROM {$wpdb->prefix}cml_languages WHERE code = %s",
 					'ka'
+				)
+			)
+		);
+
+		$this->assertSame(
+			'საიტი',
+			(string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT st.translation
+					 FROM {$wpdb->prefix}cml_string_translations st
+					 INNER JOIN {$wpdb->prefix}cml_strings s ON s.id = st.string_id
+					 WHERE s.source = %s AND st.language = %s",
+					'Site title',
+					'ka'
+				)
+			)
+		);
+		$this->assertSame(
+			'pll_string',
+			(string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT domain FROM {$wpdb->prefix}cml_strings WHERE source = %s",
+					'Site title'
+				)
+			)
+		);
+	}
+
+	public function test_import_all_imports_legacy_polylang_mo_strings_by_language_term_id(): void {
+		global $wpdb;
+
+		$this->register_polylang_taxonomies();
+		$language_taxonomies = $this->seed_polylang_languages();
+		update_option( 'polylang', array( 'default_lang' => 'en' ) );
+
+		$ka_language_term_id = $this->term_id_for_tt_id( $language_taxonomies['ka'] );
+		$legacy_post_id     = self::factory()->post->create(
+			array(
+				'post_type'   => 'polylang_mo',
+				'post_status' => 'publish',
+				'post_title'  => 'polylang_mo_' . $ka_language_term_id,
+				'post_name'   => 'legacy-string-store',
+			)
+		);
+		update_post_meta(
+			$legacy_post_id,
+			'_pll_strings_translations',
+			array(
+				array( ' Legacy key ', ' მემკვიდრე ' ),
+				array( 'ქართული წყარო', 'თარგმანი' ),
+				array( 'Skip empty', '' ),
+			)
+		);
+
+		$summary = PolylangImporter::summary();
+		$this->assertSame( 2, $summary['strings'] );
+		$this->assertSame( 2, $summary['translated_strings'] );
+		$this->assertNotEmpty( $summary['warnings'] );
+
+		$result = PolylangImporter::import_all();
+
+		$this->assertSame( array(), $result['errors'] );
+		$this->assertSame( 2, $result['strings'] );
+		$this->assertSame( 2, $result['translated_strings'] );
+		$this->assertSame(
+			' მემკვიდრე ',
+			(string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT st.translation
+					 FROM {$wpdb->prefix}cml_string_translations st
+					 INNER JOIN {$wpdb->prefix}cml_strings s ON s.id = st.string_id
+					 WHERE s.domain = %s AND s.source = %s AND st.language = %s",
+					'pll_string',
+					' Legacy key ',
+					'ka'
+				)
+			)
+		);
+		$this->assertSame(
+			'ka',
+			(string) $wpdb->get_var(
+				$wpdb->prepare(
+					"SELECT source_language FROM {$wpdb->prefix}cml_strings WHERE domain = %s AND source = %s",
+					'pll_string',
+					'ქართული წყარო'
 				)
 			)
 		);
@@ -177,6 +272,17 @@ final class PolylangImporterIntegrationTest extends IntegrationTestCase {
 				array( '%d', '%d', '%d' )
 			);
 		}
+	}
+
+	private function term_id_for_tt_id( int $term_taxonomy_id ): int {
+		global $wpdb;
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT term_id FROM {$wpdb->term_taxonomy} WHERE term_taxonomy_id = %d",
+				$term_taxonomy_id
+			)
+		);
 	}
 
 }

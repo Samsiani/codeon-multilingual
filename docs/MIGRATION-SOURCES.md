@@ -22,7 +22,7 @@ import, snapshot rollback, tests, and post-import health checks.
 | Source | Model | v1.0 target | Current support | Remaining work |
 |---|---|---:|---|---|
 | WPML | Separate translated posts/terms plus `icl_*` tables | Full import | Languages, posts, terms, strings, dry run, conflicts, snapshots, rollback | String packages, workflow/status metadata, multicurrency |
-| Polylang | WordPress taxonomy relationships | Full object import | Taxonomy-backed languages, post mappings, term mappings, dry run, conflicts, admin + WP-CLI import | Real-export validation for terms/products and `polylang_mo` string adapter |
+| Polylang | WordPress taxonomy relationships plus term-meta dynamic strings | Full object import | Taxonomy-backed languages, post mappings, term mappings, dynamic strings from `_pll_strings_translations` into `pll_string`, legacy `polylang_mo` fallback, dry run, conflicts, admin + WP-CLI import | Real-export validation for products/attributes, SEO/plugin metadata |
 | TranslatePress | Rendered-string/dictionary overlay | String import plus explicit content-split policy | Detection planned | Dictionary/gettext/slug tables, SEO data, content duplication policy |
 | Weglot | Remote/API/proxy translation layer | Export/API/crawl adapter | Planned | API/export reader, URL crawl fallback, source-string matching |
 | GTranslate / ConveyThis | Proxy/automatic translation layer | Export/API/crawl adapter | Planned | Same as Weglot; may not expose complete local data |
@@ -64,9 +64,9 @@ wp cml migrate rollback /path/codeon-snapshot.json --dry-run
 - WPML import works on at least one real WooCommerce store with products,
   variations, terms, menus, strings, and SEO metadata.
 - Polylang import works on at least one real WooCommerce store with products,
-  variations, product categories, product tags, and attributes. The current
-  importer writes only when Polylang taxonomy rows are present; API-only
-  detection is reported but is not importable yet.
+  variations, product categories, product tags, attributes, and registered
+  dynamic strings. The current importer writes only when Polylang taxonomy rows
+  are present; API-only detection is reported but is not importable yet.
 - TranslatePress migration has a documented safe path. If object splitting is
   not implemented, the importer must clearly report it as string/dictionary
   migration only.

@@ -154,12 +154,14 @@ final class MigrateCommand extends WP_CLI_Command {
 		WP_CLI::log( sprintf( '  languages:           %d', (int) $summary['languages'] ) );
 		WP_CLI::log( sprintf( '  posts:               %d', (int) $summary['posts'] ) );
 		WP_CLI::log( sprintf( '  terms:               %d', (int) $summary['terms'] ) );
-		WP_CLI::log( sprintf( '  string stores:       %d', (int) $summary['strings'] ) );
+		WP_CLI::log( sprintf( '  string sources:      %d', (int) $summary['strings'] ) );
+		WP_CLI::log( sprintf( '  translated strings:  %d', (int) $summary['translated_strings'] ) );
 		WP_CLI::log( sprintf( '  default language:    %s', (string) ( $summary['default_language'] ?? '—' ) ) );
 		WP_CLI::log( 'Conflicts:' );
 		WP_CLI::log( sprintf( '  language settings:   %d', (int) $summary['conflicts']['language_settings'] ) );
 		WP_CLI::log( sprintf( '  post mappings:       %d', (int) $summary['conflicts']['post_mappings'] ) );
 		WP_CLI::log( sprintf( '  term mappings:       %d', (int) $summary['conflicts']['term_mappings'] ) );
+		WP_CLI::log( sprintf( '  string translations: %d', (int) $summary['conflicts']['string_translations'] ) );
 		foreach ( $summary['warnings'] as $warning ) {
 			WP_CLI::warning( $warning );
 		}
@@ -183,7 +185,8 @@ final class MigrateCommand extends WP_CLI_Command {
 		WP_CLI::log( sprintf( '  languages:           %d', $result['languages'] ) );
 		WP_CLI::log( sprintf( '  posts:               %d', $result['posts'] ) );
 		WP_CLI::log( sprintf( '  terms:               %d', $result['terms'] ) );
-		WP_CLI::log( sprintf( '  strings:             %d', $result['strings'] ) );
+		WP_CLI::log( sprintf( '  string sources:      %d', $result['strings'] ) );
+		WP_CLI::log( sprintf( '  translated strings:  %d', $result['translated_strings'] ) );
 		WP_CLI::log( sprintf( '  default set:         %s', $result['default_set'] ? 'yes' : 'no' ) );
 		WP_CLI::log( sprintf( '  conflicts:           %d', array_sum( $result['conflicts'] ) ) );
 		foreach ( $result['warnings'] as $warning ) {

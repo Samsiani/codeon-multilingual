@@ -5,7 +5,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 ## Unreleased
 
 ### Added
-- Polylang object migration: languages, post translation mappings, term translation mappings, conflict preflight, admin import, and WP-CLI `wp cml migrate polylang`.
+- Polylang migration: languages, post translation mappings, term translation mappings, dynamic strings from current `_pll_strings_translations` term meta into the `pll_string` domain with legacy `polylang_mo` fallback, conflict preflight, admin import, and WP-CLI `wp cml migrate polylang`.
 - WP-CLI `wp cml migrate sources` to report current support for WPML, Polylang, TranslatePress, Weglot/GTranslate, MultilingualPress, qTranslate-X/WPGlobus, and related migration families.
 - Health repair tooling: admin repair action plus `wp cml health repair` for orphaned rows, missing public post/term rows, orphaned string rows, and unknown source-language normalization.
 - Compatibility base layer: shared value-localization helper, Yoast/Rank Math breadcrumb/schema localization, and cache purge integration for CodeOn caches, LiteSpeed Cache hooks, and WP Rocket purge functions.
