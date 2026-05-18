@@ -66,6 +66,7 @@ jobs:
             printf '%s\n' ' *'
             printf '%s\n' ' * @package Samsiani\CodeonMultilingual'
             printf '%s\n' ' */'
+            printf '%s\n' ''
             printf '%s\n' "defined( 'ABSPATH' ) || exit;"
             printf '%s\n' "if ( ! defined( 'CML_BUILD_ID' ) ) {"
             printf '%s\n' "	define( 'CML_BUILD_ID', '${BUILD_ID}' );"
