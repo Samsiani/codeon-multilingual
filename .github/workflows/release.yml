@@ -62,7 +62,9 @@ jobs:
           {
             printf '%s\n' '<?php'
             printf '%s\n' '/**'
-            printf '%s\n' ' * CML_BUILD_ID — stamped at release build time.'
+            printf '%s\n' ' * CML_BUILD_ID - stamped at release build time.'
+            printf '%s\n' ' *'
+            printf '%s\n' ' * @package Samsiani\CodeonMultilingual'
             printf '%s\n' ' */'
             printf '%s\n' "defined( 'ABSPATH' ) || exit;"
             printf '%s\n' "if ( ! defined( 'CML_BUILD_ID' ) ) {"
