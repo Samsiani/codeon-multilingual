@@ -29,7 +29,7 @@ final class L10nFileWriter {
 	private const SUBDIR        = 'cml-translations';
 	private const OPTION_HEALTH = 'cml_l10n_health';
 
-	private static bool $registered = false;
+	private static bool $registered        = false;
 	private static ?string $base_dir_cache = null;
 
 	public static function register(): void {
@@ -98,6 +98,7 @@ final class L10nFileWriter {
 			return false;
 		}
 		$locale = trim( (string) $lang->locale );
+		$locale = self::sanitize_locale( $locale );
 		if ( '' === $locale ) {
 			return false;
 		}
@@ -117,9 +118,9 @@ final class L10nFileWriter {
 		$messages = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $r ) {
-				$source = (string) $r->source;
-				$ctx    = (string) $r->context;
-				$key    = '' !== $ctx ? ( $ctx . "\x04" . $source ) : $source;
+				$source           = (string) $r->source;
+				$ctx              = (string) $r->context;
+				$key              = '' !== $ctx ? ( $ctx . "\x04" . $source ) : $source;
 				$messages[ $key ] = (string) $r->translation;
 			}
 		}
@@ -158,7 +159,10 @@ final class L10nFileWriter {
 			delete_option( self::OPTION_HEALTH );
 		}
 
-		return array( 'count' => $count, 'errors' => $errors );
+		return array(
+			'count'  => $count,
+			'errors' => $errors,
+		);
 	}
 
 	public static function delete_for( string $domain, string $language_code ): bool {
@@ -166,7 +170,11 @@ final class L10nFileWriter {
 		if ( ! $lang ) {
 			return false;
 		}
-		$path = self::file_path( $domain, (string) $lang->locale );
+		$locale = self::sanitize_locale( (string) $lang->locale );
+		if ( '' === $locale ) {
+			return false;
+		}
+		$path = self::file_path( $domain, $locale );
 		if ( ! file_exists( $path ) ) {
 			return true;
 		}
@@ -244,15 +252,19 @@ final class L10nFileWriter {
 	// ---- Paths -----------------------------------------------------------
 
 	public static function file_path( string $domain, string $locale ): string {
-		return self::base_dir() . '/' . self::sanitize_domain( $domain ) . '-' . $locale . '.l10n.php';
+		$safe_locale = self::sanitize_locale( $locale );
+		if ( '' === $safe_locale ) {
+			$safe_locale = 'unknown';
+		}
+		return self::base_dir() . '/' . self::sanitize_domain( $domain ) . '-' . $safe_locale . '.l10n.php';
 	}
 
 	public static function base_dir(): string {
 		if ( null !== self::$base_dir_cache ) {
 			return self::$base_dir_cache;
 		}
-		$uploads = wp_upload_dir( null, false );
-		$base    = isset( $uploads['basedir'] ) && '' !== $uploads['basedir']
+		$uploads              = wp_upload_dir( null, false );
+		$base                 = isset( $uploads['basedir'] ) && '' !== $uploads['basedir']
 			? rtrim( (string) $uploads['basedir'], '/' )
 			: rtrim( WP_CONTENT_DIR, '/' ) . '/uploads';
 		self::$base_dir_cache = $base . '/' . self::SUBDIR;
@@ -263,6 +275,17 @@ final class L10nFileWriter {
 		$clean = preg_replace( '/[^a-z0-9_-]/i', '-', $domain );
 		$clean = is_string( $clean ) ? trim( $clean, '-' ) : '';
 		return '' !== $clean ? strtolower( $clean ) : 'default';
+	}
+
+	private static function sanitize_locale( string $locale ): string {
+		$locale = trim( $locale );
+		if ( 1 !== preg_match( '/^[A-Za-z0-9_@.-]{2,32}$/', $locale ) ) {
+			return '';
+		}
+		if ( str_contains( $locale, '..' ) ) {
+			return '';
+		}
+		return $locale;
 	}
 
 	// ---- Internal --------------------------------------------------------

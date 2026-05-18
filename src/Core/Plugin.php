@@ -38,6 +38,8 @@ use Samsiani\CodeonMultilingual\Url\Router;
 use Samsiani\CodeonMultilingual\Url\TermLinkFilter;
 use Samsiani\CodeonMultilingual\Woo\AttributeLabels;
 use Samsiani\CodeonMultilingual\Woo\CartTranslation;
+use Samsiani\CodeonMultilingual\Woo\MethodLabels;
+use Samsiani\CodeonMultilingual\Woo\OrderLanguage;
 use Samsiani\CodeonMultilingual\Woo\PageMapping;
 use Samsiani\CodeonMultilingual\Woo\ProductSync;
 use Samsiani\CodeonMultilingual\Woo\TranslationLock;
@@ -95,6 +97,8 @@ final class Plugin {
 		PageMapping::register();
 		CartTranslation::register();
 		AttributeLabels::register();
+		MethodLabels::register();
+		OrderLanguage::register();
 
 		// Strings.
 		StringTranslator::register();

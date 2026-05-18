@@ -25,9 +25,9 @@ final class SitemapFilter {
 		}
 		self::$registered = true;
 
-		add_filter( 'wp_sitemaps_posts_query_args',      array( self::class, 'skip_lang_filter' ) );
+		add_filter( 'wp_sitemaps_posts_query_args', array( self::class, 'skip_lang_filter' ) );
 		add_filter( 'wp_sitemaps_taxonomies_query_args', array( self::class, 'skip_lang_filter' ) );
-		add_filter( 'wp_sitemaps_users_query_args',      array( self::class, 'skip_lang_filter' ) );
+		add_filter( 'wp_sitemaps_users_query_args', array( self::class, 'skip_lang_filter' ) );
 	}
 
 	/**

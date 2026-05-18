@@ -46,17 +46,17 @@ final class TermsListLanguage {
 		}
 		self::$registered = true;
 
-		add_action( 'admin_init',                       array( self::class, 'maybe_persist_choice' ) );
-		add_action( 'admin_init',                       array( self::class, 'register_per_taxonomy' ), 99 );
-		add_action( 'pre_get_terms',                    array( self::class, 'filter_admin_terms_query' ) );
+		add_action( 'admin_init', array( self::class, 'maybe_persist_choice' ) );
+		add_action( 'admin_init', array( self::class, 'register_per_taxonomy' ), 99 );
+		add_action( 'pre_get_terms', array( self::class, 'filter_admin_terms_query' ) );
 		add_action( 'admin_print_styles-edit-tags.php', array( self::class, 'render_styles' ) );
 	}
 
 	public static function register_per_taxonomy(): void {
 		foreach ( TermTranslator::translatable_taxonomies() as $taxonomy ) {
-			add_filter( "views_edit-{$taxonomy}",            array( self::class, 'inject_views' ) );
-			add_filter( "manage_edit-{$taxonomy}_columns",   array( self::class, 'add_column' ) );
-			add_filter( "manage_{$taxonomy}_custom_column",  array( self::class, 'render_column' ), 10, 3 );
+			add_filter( "views_edit-{$taxonomy}", array( self::class, 'inject_views' ) );
+			add_filter( "manage_edit-{$taxonomy}_columns", array( self::class, 'add_column' ) );
+			add_filter( "manage_{$taxonomy}_custom_column", array( self::class, 'render_column' ), 10, 3 );
 		}
 	}
 
@@ -248,7 +248,7 @@ final class TermsListLanguage {
 
 		// Source language for this row — render the flag itself.
 		if ( $col_lang === $term_lang ) {
-			$flag = self::flag_html( $lang );
+			$flag  = self::flag_html( $lang );
 			$title = sprintf(
 				/* translators: %s: language native name */
 				__( 'Source language: %s', 'codeon-multilingual' ),

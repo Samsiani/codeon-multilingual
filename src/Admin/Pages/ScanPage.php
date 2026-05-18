@@ -19,9 +19,9 @@ use Samsiani\CodeonMultilingual\Strings\Scanner;
  */
 final class ScanPage {
 
-	public const PAGE_SLUG     = 'cml-scan';
-	private const ACTION_SCAN  = 'cml_run_scan';
-	private const NONCE_SCAN   = 'cml_run_scan';
+	public const PAGE_SLUG    = 'cml-scan';
+	private const ACTION_SCAN = 'cml_run_scan';
+	private const NONCE_SCAN  = 'cml_run_scan';
 
 	private static bool $registered = false;
 
@@ -43,8 +43,8 @@ final class ScanPage {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
-		$themes  = wp_get_themes();
-		$plugins = get_plugins();
+		$themes            = wp_get_themes();
+		$plugins           = get_plugins();
 		$active_stylesheet = get_stylesheet();
 		$active_plugins    = (array) get_option( 'active_plugins', array() );
 		?>
@@ -71,7 +71,8 @@ final class ScanPage {
 						</tr>
 					</thead>
 					<tbody>
-						<?php foreach ( $themes as $slug => $theme ) :
+						<?php
+						foreach ( $themes as $slug => $theme ) :
 							$is_active = ( $active_stylesheet === $slug );
 							?>
 							<tr>
@@ -95,7 +96,8 @@ final class ScanPage {
 						</tr>
 					</thead>
 					<tbody>
-						<?php foreach ( $plugins as $file => $data ) :
+						<?php
+						foreach ( $plugins as $file => $data ) :
 							$slug = dirname( (string) $file );
 							if ( '.' === $slug ) {
 								// Single-file plugins; scan by parent file path instead.
@@ -141,8 +143,12 @@ final class ScanPage {
 		}
 		check_admin_referer( self::NONCE_SCAN );
 
-		$themes  = isset( $_POST['themes'] )  && is_array( $_POST['themes'] )  ? wp_unslash( (array) $_POST['themes'] )  : array();
-		$plugins = isset( $_POST['plugins'] ) && is_array( $_POST['plugins'] ) ? wp_unslash( (array) $_POST['plugins'] ) : array();
+		$themes  = isset( $_POST['themes'] ) && is_array( $_POST['themes'] )
+			? array_map( 'sanitize_text_field', wp_unslash( (array) $_POST['themes'] ) )
+			: array();
+		$plugins = isset( $_POST['plugins'] ) && is_array( $_POST['plugins'] )
+			? array_map( 'sanitize_text_field', wp_unslash( (array) $_POST['plugins'] ) )
+			: array();
 
 		$started = microtime( true );
 		$count   = 0;
@@ -180,8 +186,8 @@ final class ScanPage {
 		if ( ! isset( $_GET['scanned'] ) ) {
 			return;
 		}
-		$count   = (int) ( $_GET['count'] ?? 0 );
-		$elapsed = (int) ( $_GET['ms']    ?? 0 );
+		$count   = isset( $_GET['count'] ) ? absint( wp_unslash( $_GET['count'] ) ) : 0;
+		$elapsed = isset( $_GET['ms'] ) ? absint( wp_unslash( $_GET['ms'] ) ) : 0;
 		printf(
 			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 			esc_html(

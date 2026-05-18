@@ -95,7 +95,10 @@ final class StringsApi {
 		if ( '' === trim( $translation ) ) {
 			$wpdb->delete(
 				$wpdb->prefix . 'cml_string_translations',
-				array( 'string_id' => $id, 'language' => $language ),
+				array(
+					'string_id' => $id,
+					'language'  => $language,
+				),
 				array( '%d', '%s' )
 			);
 			$action = 'deleted';

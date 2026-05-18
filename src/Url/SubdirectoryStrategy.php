@@ -21,6 +21,7 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 	private static ?string $home_path_cache = null;
 
 	public function detect(): ?string {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- REQUEST_URI is parsed only; no output or filesystem use.
 		$path = (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
 		$path = $this->strip_install_path( $path );
 
@@ -41,6 +42,7 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 	}
 
 	public function strip_from_request(): void {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- REQUEST_URI is rewritten internally for WP routing.
 		$uri       = (string) ( $_SERVER['REQUEST_URI'] ?? '/' );
 		$home_path = $this->home_path();
 

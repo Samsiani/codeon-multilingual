@@ -28,11 +28,11 @@ final class LanguageSwitcherWidget extends WP_Widget {
 	 * @param array<string, mixed> $instance
 	 */
 	public function widget( $args, $instance ): void {
-		$title        = isset( $instance['title'] )        ? (string) $instance['title']        : '';
-		$style        = isset( $instance['style'] )        ? (string) $instance['style']        : 'list';
+		$title        = isset( $instance['title'] ) ? (string) $instance['title'] : '';
+		$style        = isset( $instance['style'] ) ? (string) $instance['style'] : 'list';
 		$show_flag    = ! empty( $instance['show_flag'] );
 		$show_current = ! isset( $instance['show_current'] ) || (bool) $instance['show_current'];
-		$show_native  = ! isset( $instance['show_native'] )  || (bool) $instance['show_native'];
+		$show_native  = ! isset( $instance['show_native'] ) || (bool) $instance['show_native'];
 		$show_code    = ! empty( $instance['show_code'] );
 
 		$markup = LanguageSwitcher::render( $style, $show_flag, $show_current, $show_native, $show_code );
@@ -59,11 +59,11 @@ final class LanguageSwitcherWidget extends WP_Widget {
 	 * @param array<string, mixed> $instance
 	 */
 	public function form( $instance ): string {
-		$title        = isset( $instance['title'] )        ? (string) $instance['title']        : '';
-		$style        = isset( $instance['style'] )        ? (string) $instance['style']        : 'list';
+		$title        = isset( $instance['title'] ) ? (string) $instance['title'] : '';
+		$style        = isset( $instance['style'] ) ? (string) $instance['style'] : 'list';
 		$show_flag    = ! empty( $instance['show_flag'] );
 		$show_current = ! isset( $instance['show_current'] ) || (bool) $instance['show_current'];
-		$show_native  = ! isset( $instance['show_native'] )  || (bool) $instance['show_native'];
+		$show_native  = ! isset( $instance['show_native'] ) || (bool) $instance['show_native'];
 		$show_code    = ! empty( $instance['show_code'] );
 		?>
 		<p>
@@ -78,9 +78,9 @@ final class LanguageSwitcherWidget extends WP_Widget {
 			<select class="widefat"
 				id="<?php echo esc_attr( $this->get_field_id( 'style' ) ); ?>"
 				name="<?php echo esc_attr( $this->get_field_name( 'style' ) ); ?>">
-				<option value="list"     <?php selected( $style, 'list' ); ?>><?php esc_html_e( 'List',     'codeon-multilingual' ); ?></option>
+				<option value="list"     <?php selected( $style, 'list' ); ?>><?php esc_html_e( 'List', 'codeon-multilingual' ); ?></option>
 				<option value="dropdown" <?php selected( $style, 'dropdown' ); ?>><?php esc_html_e( 'Dropdown', 'codeon-multilingual' ); ?></option>
-				<option value="flags"    <?php selected( $style, 'flags' ); ?>><?php esc_html_e( 'Flags',    'codeon-multilingual' ); ?></option>
+				<option value="flags"    <?php selected( $style, 'flags' ); ?>><?php esc_html_e( 'Flags', 'codeon-multilingual' ); ?></option>
 			</select>
 		</p>
 		<p>

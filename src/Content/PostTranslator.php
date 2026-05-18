@@ -101,14 +101,14 @@ final class PostTranslator {
 			<?php if ( count( $languages ) <= 1 ) : ?>
 				<p class="description">
 					<?php
-					printf(
-						/* translators: %s: admin URL for the Languages page */
-						wp_kses(
-							__( 'Only one language is configured. <a href="%s">Add more languages</a> to enable translations.', 'codeon-multilingual' ),
-							array( 'a' => array( 'href' => array() ) )
-						),
-						esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
-					);
+						printf(
+							wp_kses(
+								/* translators: %s: admin URL for the Languages page. */
+								__( 'Only one language is configured. <a href="%s">Add more languages</a> to enable translations.', 'codeon-multilingual' ),
+								array( 'a' => array( 'href' => array() ) )
+							),
+							esc_url( admin_url( 'admin.php?page=' . AdminMenu::PARENT_SLUG ) )
+						);
 					?>
 				</p>
 			<?php else : ?>
@@ -183,6 +183,20 @@ final class PostTranslator {
 		}
 		if ( ! current_user_can( 'edit_post', $source ) ) {
 			wp_die( esc_html__( 'You cannot translate this post.', 'codeon-multilingual' ) );
+		}
+		$source_post = get_post( $source );
+		if ( ! $source_post instanceof WP_Post ) {
+			wp_die( esc_html__( 'Invalid source post.', 'codeon-multilingual' ) );
+		}
+		if ( ! in_array( $source_post->post_type, self::translatable_post_types(), true ) ) {
+			wp_die( esc_html__( 'This post type is not translatable.', 'codeon-multilingual' ) );
+		}
+		$post_type_object = get_post_type_object( $source_post->post_type );
+		$create_cap       = $post_type_object && isset( $post_type_object->cap->create_posts )
+			? (string) $post_type_object->cap->create_posts
+			: 'edit_posts';
+		if ( ! current_user_can( $create_cap ) ) {
+			wp_die( esc_html__( 'You cannot create translations for this post type.', 'codeon-multilingual' ) );
 		}
 		if ( ! Languages::exists_and_active( $target ) ) {
 			wp_die( esc_html__( 'Target language is not active.', 'codeon-multilingual' ) );
@@ -306,7 +320,7 @@ final class PostTranslator {
 		);
 
 		self::clone_postmeta( (int) $source->ID, $new_id );
-		self::clone_term_relationships( (int) $source->ID, $new_id, $source->post_type );
+		self::clone_term_relationships( (int) $source->ID, $new_id, $source->post_type, $target_lang );
 
 		$wpdb->insert(
 			$wpdb->prefix . 'cml_post_language',
@@ -396,10 +410,11 @@ final class PostTranslator {
 		}
 
 		$sql = "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES " . implode( ',', $placeholders );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Placeholder list is generated internally and values are prepared here.
 		$wpdb->query( $wpdb->prepare( $sql, ...$values ) );
 	}
 
-	private static function clone_term_relationships( int $source_id, int $new_id, string $post_type ): void {
+	private static function clone_term_relationships( int $source_id, int $new_id, string $post_type, string $target_lang ): void {
 		$taxonomies = get_object_taxonomies( $post_type, 'names' );
 		if ( empty( $taxonomies ) ) {
 			return;
@@ -409,8 +424,22 @@ final class PostTranslator {
 			if ( is_wp_error( $term_ids ) || empty( $term_ids ) ) {
 				continue;
 			}
-			wp_set_object_terms( $new_id, array_map( 'intval', $term_ids ), $tax, false );
+			$target_terms = array_map(
+				static fn( $term_id ): int => self::translated_term_id( (int) $term_id, $target_lang ),
+				$term_ids
+			);
+			wp_set_object_terms( $new_id, array_values( array_unique( $target_terms ) ), $tax, false );
 		}
+	}
+
+	private static function translated_term_id( int $term_id, string $target_lang ): int {
+		$group_id = TranslationGroups::get_term_group_id( $term_id );
+		if ( null === $group_id ) {
+			return $term_id;
+		}
+		$siblings   = TranslationGroups::get_term_siblings( $group_id );
+		$translated = (int) ( array_search( $target_lang, $siblings, true ) ?: 0 );
+		return $translated > 0 ? $translated : $term_id;
 	}
 
 	/**

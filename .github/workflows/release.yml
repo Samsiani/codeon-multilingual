@@ -11,6 +11,19 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -22,6 +35,11 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client subversion unzip
+
       - name: Derive version from tag
         id: version
         env:
@@ -32,23 +50,27 @@ jobs:
           echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
       - name: Stamp build id
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           SHA="$(git rev-parse --short HEAD)"
           BUILD_ID="${VERSION}+${SHA}"
-          cat > src/Core/BuildId.php <<PHP
-          <?php
-          /**
-           * CML_BUILD_ID — stamped at release build time.
-           */
-          defined( 'ABSPATH' ) || exit;
-          if ( ! defined( 'CML_BUILD_ID' ) ) {
-              define( 'CML_BUILD_ID', '${BUILD_ID}' );
-          }
-          PHP
+          {
+            printf '%s\n' '<?php'
+            printf '%s\n' '/**'
+            printf '%s\n' ' * CML_BUILD_ID — stamped at release build time.'
+            printf '%s\n' ' */'
+            printf '%s\n' "defined( 'ABSPATH' ) || exit;"
+            printf '%s\n' "if ( ! defined( 'CML_BUILD_ID' ) ) {"
+            printf '%s\n' "	define( 'CML_BUILD_ID', '${BUILD_ID}' );"
+            printf '%s\n' "}"
+          } > src/Core/BuildId.php
           echo "Stamped CML_BUILD_ID = ${BUILD_ID}"
+          test "$(head -c 5 src/Core/BuildId.php)" = "<?php"
           grep "CML_BUILD_ID" src/Core/BuildId.php
 
       - name: Verify plugin header version matches tag
@@ -62,6 +84,40 @@ jobs:
             echo "::error::Plugin header Version ($HEADER_VERSION) != tag ($VERSION). Bump the header before tagging."
             exit 1
           fi
+          CONSTANT_VERSION=$(grep -m1 -E "define\\( 'CML_VERSION'," codeon-multilingual.php | sed -E "s/.*'CML_VERSION',[[:space:]]*'([^']+)'.*/\\1/")
+          echo "Constant version: $CONSTANT_VERSION"
+          if [ "$CONSTANT_VERSION" != "$VERSION" ]; then
+            echo "::error::CML_VERSION ($CONSTANT_VERSION) != tag ($VERSION). Bump the runtime constant before tagging."
+            exit 1
+          fi
+
+      - name: PHP syntax check
+        run: |
+          find src -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+          php -l codeon-multilingual.php > /dev/null
+          php -l uninstall.php > /dev/null
+
+      - name: PHPCS
+        run: composer lint
+
+      - name: PHPStan
+        run: composer analyse -- --no-progress --error-format=github
+
+      - name: PHPUnit (Unit suite)
+        run: composer test
+
+      - name: Install WordPress-compatible PHPUnit
+        run: composer require --dev phpunit/phpunit:^9.6 --with-all-dependencies --no-interaction --no-audit
+
+      - name: Install WordPress test suite and WooCommerce
+        run: bash scripts/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest latest
+
+      - name: PHPUnit (Integration suite)
+        run: composer test:integration
+        env:
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WC_PLUGIN_FILE: /tmp/wordpress/wp-content/plugins/woocommerce/woocommerce.php
+          CML_REQUIRE_WOOCOMMERCE: '1'
 
       - name: Install production dependencies
         run: composer install --no-dev --no-interaction --optimize-autoloader --prefer-dist
@@ -81,11 +137,15 @@ jobs:
             --exclude='phpcs.xml.dist' \
             --exclude='phpstan.neon.dist' \
             --exclude='phpunit.xml.dist' \
+            --exclude='phpunit.integration.xml.dist' \
             --exclude='.gitignore' \
             ./ "$PKG/"
           (cd "$STAGE" && zip -rq codeon-multilingual.zip codeon-multilingual)
           mv "$STAGE/codeon-multilingual.zip" .
           ls -lh codeon-multilingual.zip
+
+      - name: Smoke-test release ZIP
+        run: bash scripts/package-test.sh codeon-multilingual.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -50,7 +50,7 @@ final class MenuTranslator {
 		// Admin: side meta-box on nav-menus.php + handler.
 		add_action( 'admin_init', array( self::class, 'register_meta_box' ) );
 		add_action( 'admin_post_' . self::ACTION_TRANSLATE, array( self::class, 'handle_translate' ) );
-		add_action( 'admin_post_' . self::ACTION_SYNC,      array( self::class, 'handle_sync' ) );
+		add_action( 'admin_post_' . self::ACTION_SYNC, array( self::class, 'handle_sync' ) );
 
 		// Clean up the cml_term_language row when a nav_menu is deleted via
 		// any path (Appearance → Menus delete, wp_delete_nav_menu(), etc.).
@@ -319,13 +319,13 @@ final class MenuTranslator {
 		// page title (e.g. "მთავარი") into the translated menu.
 		//
 		// Strategy:
-		//   1. Read menu_item.post_title from the DB. Empty → admin used the
-		//      linked post's title automatically → pass empty so the
-		//      translated post's title renders in the new menu.
-		//   2. Non-empty BUT identical to the source page's current title
-		//      → almost certainly auto-filled (older WP behaviour) → also
-		//      pass empty so the translated title shows.
-		//   3. Non-empty AND different → admin override → preserve verbatim.
+		// 1. Read menu_item.post_title from the DB. Empty → admin used the
+		// linked post's title automatically → pass empty so the
+		// translated post's title renders in the new menu.
+		// 2. Non-empty BUT identical to the source page's current title
+		// → almost certainly auto-filled (older WP behaviour) → also
+		// pass empty so the translated title shows.
+		// 3. Non-empty AND different → admin override → preserve verbatim.
 		$source_post = get_post( (int) $source->db_id );
 		$raw_title   = $source_post instanceof \WP_Post ? (string) $source_post->post_title : '';
 
@@ -466,7 +466,7 @@ final class MenuTranslator {
 			}
 			$translated = self::translated_menu_id( $menu_id, $lang );
 			if ( $translated > 0 && $translated !== $menu_id ) {
-				$out[ $location ] = $translated;
+				$out[ $location ]                   = $translated;
 				self::$location_cache[ $cache_key ] = $translated;
 			} else {
 				self::$location_cache[ $cache_key ] = $menu_id;
@@ -522,7 +522,7 @@ final class MenuTranslator {
 				if ( $code === $source_lang ) {
 					continue;
 				}
-				$sibling   = (int) ( array_search( $code, $siblings, true ) ?: 0 );
+				$sibling    = (int) ( array_search( $code, $siblings, true ) ?: 0 );
 				$code_upper = strtoupper( (string) $code );
 				?>
 				<li style="margin-bottom:6px">
@@ -630,7 +630,10 @@ final class MenuTranslator {
 
 	public static function menu_edit_url( int $menu_id ): string {
 		return add_query_arg(
-			array( 'action' => 'edit', 'menu' => $menu_id ),
+			array(
+				'action' => 'edit',
+				'menu'   => $menu_id,
+			),
 			admin_url( 'nav-menus.php' )
 		);
 	}

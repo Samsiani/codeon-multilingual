@@ -72,16 +72,16 @@ final class WpmlFunctions {
 	}
 
 	private static function register_filters_and_actions(): void {
-		add_filter( 'wpml_object_id',                array( self::class, 'filter_wpml_object_id' ),                10, 4 );
-		add_filter( 'wpml_current_language',         array( self::class, 'filter_wpml_current_language' ),         10, 1 );
-		add_filter( 'wpml_default_language',         array( self::class, 'filter_wpml_default_language' ),         10, 1 );
-		add_filter( 'wpml_active_languages',         array( self::class, 'filter_wpml_active_languages' ),         10, 2 );
-		add_filter( 'wpml_post_language_details',    array( self::class, 'filter_wpml_post_language_details' ),    10, 2 );
+		add_filter( 'wpml_object_id', array( self::class, 'filter_wpml_object_id' ), 10, 4 );
+		add_filter( 'wpml_current_language', array( self::class, 'filter_wpml_current_language' ), 10, 1 );
+		add_filter( 'wpml_default_language', array( self::class, 'filter_wpml_default_language' ), 10, 1 );
+		add_filter( 'wpml_active_languages', array( self::class, 'filter_wpml_active_languages' ), 10, 2 );
+		add_filter( 'wpml_post_language_details', array( self::class, 'filter_wpml_post_language_details' ), 10, 2 );
 		add_filter( 'wpml_element_has_translations', array( self::class, 'filter_wpml_element_has_translations' ), 10, 4 );
-		add_filter( 'wpml_translate_single_string',  array( self::class, 'filter_wpml_translate_single_string' ),  10, 4 );
+		add_filter( 'wpml_translate_single_string', array( self::class, 'filter_wpml_translate_single_string' ), 10, 4 );
 
-		add_action( 'wpml_register_single_string',   array( self::class, 'action_wpml_register_single_string' ),   10, 4 );
-		add_action( 'wpml_switch_language',          array( self::class, 'action_wpml_switch_language' ),          10, 1 );
+		add_action( 'wpml_register_single_string', array( self::class, 'action_wpml_register_single_string' ), 10, 4 );
+		add_action( 'wpml_switch_language', array( self::class, 'action_wpml_switch_language' ), 10, 1 );
 	}
 
 	// ---- Core element-ID resolver (icl_object_id / wpml_object_id) -----
@@ -89,9 +89,9 @@ final class WpmlFunctions {
 	/**
 	 * Resolve the ID of an element in the requested language.
 	 *
-	 * @param int       $element_id              Source element ID.
-	 * @param string    $element_type            'post', 'page', 'category', 'post_<cpt>', 'tax_<tax>', etc.
-	 * @param bool      $return_original_if_missing Return $element_id when no translation exists.
+	 * @param int         $element_id              Source element ID.
+	 * @param string      $element_type            'post', 'page', 'category', 'post_<cpt>', 'tax_<tax>', etc.
+	 * @param bool        $return_original_if_missing Return $element_id when no translation exists.
 	 * @param string|null $target_language       Defaults to CurrentLanguage::code().
 	 */
 	public static function resolve_object_id( int $element_id, string $element_type, bool $return_original_if_missing, ?string $target_language ): ?int {
@@ -168,10 +168,10 @@ final class WpmlFunctions {
 	// ---- Filter callbacks -----------------------------------------------
 
 	/**
-	 * @param mixed       $original_id
-	 * @param mixed       $element_type
-	 * @param mixed       $return_original
-	 * @param mixed       $language
+	 * @param mixed $original_id
+	 * @param mixed $element_type
+	 * @param mixed $return_original
+	 * @param mixed $language
 	 * @return int|null
 	 */
 	public static function filter_wpml_object_id( $original_id, $element_type = 'post', $return_original = false, $language = null ): ?int {
@@ -213,17 +213,17 @@ final class WpmlFunctions {
 
 		foreach ( Languages::active() as $code => $lang ) {
 			$out[ $code ] = array(
-				'id'                  => $index++,
-				'active'              => 1,
-				'native_name'         => (string) $lang->native,
-				'major'               => $code === $default_code ? 1 : 0,
-				'default_locale'      => (string) $lang->locale,
-				'encode_url'          => 0,
-				'tag'                 => (string) $code,
-				'translated_name'     => (string) $lang->name,
-				'language_code'       => (string) $code,
-				'country_flag_url'    => '',
-				'url'                 => LanguageSwitcher::url_for_language( $code ),
+				'id'               => $index++,
+				'active'           => 1,
+				'native_name'      => (string) $lang->native,
+				'major'            => $code === $default_code ? 1 : 0,
+				'default_locale'   => (string) $lang->locale,
+				'encode_url'       => 0,
+				'tag'              => (string) $code,
+				'translated_name'  => (string) $lang->name,
+				'language_code'    => (string) $code,
+				'country_flag_url' => '',
+				'url'              => LanguageSwitcher::url_for_language( $code ),
 			);
 		}
 
@@ -251,7 +251,7 @@ final class WpmlFunctions {
 
 		return array(
 			'language_code'      => (string) $lang_code,
-			'display_name'       => $lang_obj ? (string) $lang_obj->name   : strtoupper( $lang_code ),
+			'display_name'       => $lang_obj ? (string) $lang_obj->name : strtoupper( $lang_code ),
 			'native_name'        => $lang_obj ? (string) $lang_obj->native : strtoupper( $lang_code ),
 			'different_language' => $lang_code !== $current,
 			'locale'             => $lang_obj ? (string) $lang_obj->locale : $lang_code,

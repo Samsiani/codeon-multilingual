@@ -55,10 +55,10 @@ final class SwitcherBlock {
 	 * @param array<string, mixed> $attributes
 	 */
 	public static function render( array $attributes ): string {
-		$style      = isset( $attributes['style'] ) ? (string) $attributes['style'] : 'dropdown';
-		$show_flag  = ! empty( $attributes['showFlag'] );
-		$show_nat   = ! empty( $attributes['showNative'] );
-		$show_code  = ! empty( $attributes['showCode'] );
+		$style     = isset( $attributes['style'] ) ? (string) $attributes['style'] : 'dropdown';
+		$show_flag = ! empty( $attributes['showFlag'] );
+		$show_nat  = ! empty( $attributes['showNative'] );
+		$show_code = ! empty( $attributes['showCode'] );
 
 		// Sanitise style to a known value so a hand-edited block doesn't pass
 		// arbitrary strings through to LanguageSwitcher.

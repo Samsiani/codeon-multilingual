@@ -109,14 +109,14 @@ final class SettingsPage {
 							</label>
 							<p class="description">
 								<?php
-								printf(
-									/* translators: %s: link to the Scan admin page */
-									wp_kses(
-										__( 'Off by default — populate the catalog explicitly via the <a href="%s">Scan page</a>. Turning this on captures every string that runs through gettext, which can grow the catalog very quickly on a busy site.', 'codeon-multilingual' ),
-										array( 'a' => array( 'href' => array() ) )
-									),
-									esc_url( admin_url( 'admin.php?page=' . ScanPage::PAGE_SLUG ) )
-								);
+									printf(
+										wp_kses(
+											/* translators: %s: link to the Scan admin page. */
+											__( 'Off by default — populate the catalog explicitly via the <a href="%s">Scan page</a>. Turning this on captures every string that runs through gettext, which can grow the catalog very quickly on a busy site.', 'codeon-multilingual' ),
+											array( 'a' => array( 'href' => array() ) )
+										),
+										esc_url( admin_url( 'admin.php?page=' . ScanPage::PAGE_SLUG ) )
+									);
 								?>
 							</p>
 						</td>
@@ -134,6 +134,22 @@ final class SettingsPage {
 							</label>
 							<p class="description">
 								<?php esc_html_e( 'On by default. Turn off only if you actually have WPML installed alongside (we replace it; you shouldn\'t need both), or if a specific plugin conflicts with the shim.', 'codeon-multilingual' ); ?>
+							</p>
+						</td>
+					</tr>
+				</table>
+
+				<h2><?php esc_html_e( 'Data retention', 'codeon-multilingual' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Plugin deletion', 'codeon-multilingual' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="delete_data_on_uninstall" value="1" <?php checked( (bool) $settings['delete_data_on_uninstall'] ); ?>>
+								<?php esc_html_e( 'Remove all CodeOn Multilingual data when this plugin is deleted.', 'codeon-multilingual' ); ?>
+							</label>
+							<p class="description">
+								<?php esc_html_e( 'Off by default for production safety. When enabled, uninstall drops CodeOn language, mapping, and string tables, removes plugin options, and deletes generated .l10n.php files.', 'codeon-multilingual' ); ?>
 							</p>
 						</td>
 					</tr>
@@ -218,16 +234,20 @@ final class SettingsPage {
 				'auto_discover_strings'       => ! empty( $_POST['auto_discover_strings'] ),
 				'use_native_l10n_files'       => $new_l10n,
 				'wpml_compat_enabled'         => ! empty( $_POST['wpml_compat_enabled'] ),
+				'delete_data_on_uninstall'    => ! empty( $_POST['delete_data_on_uninstall'] ),
 			)
 		);
 
 		// Toggle handling: bulk-regenerate on enable, full cleanup on disable,
 		// explicit "regenerate now" button.
-		$regen   = ! empty( $_POST['cml_regenerate_l10n'] );
-		$args    = array( 'page' => self::PAGE_SLUG, 'saved' => '1' );
+		$regen = ! empty( $_POST['cml_regenerate_l10n'] );
+		$args  = array(
+			'page'  => self::PAGE_SLUG,
+			'saved' => '1',
+		);
 
 		if ( ! $previous_l10n && $new_l10n ) {
-			$result = L10nFileWriter::regenerate_all();
+			$result              = L10nFileWriter::regenerate_all();
 			$args['regenerated'] = (int) $result['count'];
 			if ( ! empty( $result['errors'] ) ) {
 				$args['regen_errors'] = count( $result['errors'] );
@@ -236,7 +256,7 @@ final class SettingsPage {
 			L10nFileWriter::delete_all();
 			$args['l10n_disabled'] = '1';
 		} elseif ( $new_l10n && $regen ) {
-			$result = L10nFileWriter::regenerate_all();
+			$result              = L10nFileWriter::regenerate_all();
 			$args['regenerated'] = (int) $result['count'];
 			if ( ! empty( $result['errors'] ) ) {
 				$args['regen_errors'] = count( $result['errors'] );

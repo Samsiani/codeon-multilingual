@@ -27,7 +27,7 @@ final class FloatingSwitcher {
 		self::$registered = true;
 
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_styles' ) );
-		add_action( 'wp_footer',          array( self::class, 'render' ) );
+		add_action( 'wp_footer', array( self::class, 'render' ) );
 	}
 
 	public static function enqueue_styles(): void {

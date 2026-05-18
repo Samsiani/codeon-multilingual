@@ -28,5 +28,7 @@ final class CommandLoader {
 		WP_CLI::add_command( 'cml strings', StringsCommand::class );
 		WP_CLI::add_command( 'cml migrate', MigrateCommand::class );
 		WP_CLI::add_command( 'cml backfill', BackfillCommand::class );
+		WP_CLI::add_command( 'cml health', HealthCommand::class );
+		WP_CLI::add_command( 'cml benchmark', BenchmarkCommand::class );
 	}
 }

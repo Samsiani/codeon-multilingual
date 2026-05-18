@@ -2,6 +2,48 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [0.9.0] — 2026-05-18
+
+### Added
+- Real WordPress + MySQL + WooCommerce integration CI scaffold with tests for activation/schema, `/en/` routing, REST `?lang`, WooCommerce product/variation paths, and uninstall data-retention policy.
+- Admin **Multilingual → Health** report for language rows, default language state, duplicate codes/locales, mapping gaps, stale cache indicators, and safe cache-flush/debug-logging actions.
+- WP-CLI health reporting: `wp cml health summary` and `wp cml health report --failed-only`.
+- WP-CLI performance tooling: `wp cml benchmark report` and guarded fixture seeding for strings/products/variations.
+- WPML migration rollback snapshots: admin export/restore, CLI export/rollback dry-run, destructive confirmation, site/prefix guards, and snapshot validation.
+- Broader WooCommerce runtime translation for notices, coupon labels/descriptions, order statuses, email subjects/headings/additional content, stored order payment/shipping titles, shipping fallback contexts, and downloadable file names.
+
+### Changed
+- PHPCS is now a real Composer gate (`composer lint`) instead of an aspirational check; CI keeps syntax, PHPStan, unit, and integration jobs separate.
+- Integration bootstrap now fails locally with a clear setup command when `WP_TESTS_DIR` is missing.
+
+### Verified
+- Local gates: Composer validation, PHP syntax, PHPCS, PHPUnit unit suite (`112 tests, 854 assertions`), PHPStan, and package smoke test.
+- GitHub Actions CI: lint, PHPStan, PHPCS, PHP 8.1/8.2/8.3 unit matrix, and WordPress/MySQL/WooCommerce integration suite (`10 tests, 29 assertions`) pass on the release branch.
+- Artcase dev site: homepage, translated product URL, REST `?lang`, health report, benchmark report, WPML snapshot export, and rollback dry-run.
+
+## [0.8.0] — 2026-05-18
+
+### Added
+- WooCommerce payment gateway titles/descriptions and shipping rate labels now register into the strings catalog and translate at checkout.
+- WooCommerce orders now persist `_cml_language`; customer order tables and emails switch to the checkout language while rendering.
+- Product duplication now remaps translated product/category/tag/attribute term relationships where translated terms exist.
+- Variable product translation now remaps `attribute_pa_*` variation meta to translated attribute term slugs.
+- Integration-test scaffold for WordPress PHPUnit plus a package smoke-test script for release ZIPs.
+
+### Changed
+- WPML migration now has conflict preflight for language settings, post mappings, term mappings, and string translations. Admin import is blocked on conflicts and requires backup confirmation; CLI can explicitly `--allow-conflicts` to import only missing rows.
+- Uninstall preserves plugin data by default. Full table/option/file removal now requires the admin setting or `CML_DELETE_DATA_ON_UNINSTALL`.
+- Release workflow now validates `CML_VERSION`, checks stamped `BuildId.php` starts with `<?php`, runs syntax/PHPStan/unit tests before packaging, and smoke-tests the ZIP.
+- Plugin bootstrap always loads Composer's autoloader for root PSR-4 classes; Jetpack package autoloader remains optional for shared vendor packages.
+
+### Fixed
+- Nested page routing now resolves the full parent path instead of only the leaf slug, preventing duplicate child slugs under different parents from resolving the wrong page.
+- Language-prefixed canonical redirects now preserve `/en`/`/ru` while still blocking the original redirect loop.
+- Post and term query JOIN fragments are whitespace-safe when Woo/theme filters append later JOINs.
+- Native `.l10n.php` file paths now validate/sanitize locales before writing or deleting generated files.
+- Term translation admin actions now use taxonomy-specific capabilities and validate the source term belongs to the requested taxonomy.
+- Post translation creation now checks the source post type and its create capability before inserting translations.
+
 ## [0.7.37] — 2026-05-14
 
 ### Added

@@ -48,11 +48,11 @@ final class AttributeLabels {
 		self::$registered = true;
 
 		add_filter( 'woocommerce_attribute_label', array( self::class, 'translate_label' ), 10, 3 );
-		add_action( 'woocommerce_attribute_added',   array( self::class, 'on_attribute_changed' ) );
+		add_action( 'woocommerce_attribute_added', array( self::class, 'on_attribute_changed' ) );
 		add_action( 'woocommerce_attribute_updated', array( self::class, 'on_attribute_changed' ) );
-		add_action( 'cml_activated',                 array( self::class, 'sync_all_labels' ) );
-		add_action( 'cml_upgraded',                  array( self::class, 'sync_all_labels' ) );
-		add_action( 'admin_init',                    array( self::class, 'sync_all_labels_once_per_session' ) );
+		add_action( 'cml_activated', array( self::class, 'sync_all_labels' ) );
+		add_action( 'cml_upgraded', array( self::class, 'sync_all_labels' ) );
+		add_action( 'admin_init', array( self::class, 'sync_all_labels_once_per_session' ) );
 	}
 
 	/**

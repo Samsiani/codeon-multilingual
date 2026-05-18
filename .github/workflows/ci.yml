@@ -21,13 +21,14 @@ jobs:
       - name: PHP syntax check
         run: |
           find src -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+          find tests -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
           php -l codeon-multilingual.php > /dev/null
           php -l uninstall.php > /dev/null
-      - name: PHPStan
-        run: vendor/bin/phpstan analyse --no-progress --memory-limit=2G --error-format=github
+          bash -n scripts/install-wp-tests.sh
       - name: PHPCS
-        run: vendor/bin/phpcs -n --report=summary
-        continue-on-error: true
+        run: composer lint
+      - name: PHPStan
+        run: composer analyse -- --no-progress --error-format=github
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -44,4 +45,43 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
       - name: PHPUnit (Unit suite)
-        run: vendor/bin/phpunit --testsuite=Unit
+        run: composer test
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: wordpress_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client subversion unzip
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Install WordPress-compatible PHPUnit
+        run: composer require --dev phpunit/phpunit:^9.6 --with-all-dependencies --no-interaction --no-audit
+      - name: Install WordPress test suite and WooCommerce
+        run: bash scripts/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 latest latest
+      - name: PHPUnit (Integration suite)
+        run: composer test:integration
+        env:
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WC_PLUGIN_FILE: /tmp/wordpress/wp-content/plugins/woocommerce/woocommerce.php
+          CML_REQUIRE_WOOCOMMERCE: '1'

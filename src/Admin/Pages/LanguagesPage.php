@@ -110,7 +110,7 @@ final class LanguagesPage {
 						<?php foreach ( $languages as $lang ) : ?>
 							<tr>
 								<td class="cml-row-flag-cell">
-									<span class="cml-row-flag"><?php echo self::flag_html( (string) $lang->flag, (string) $lang->name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped — already escaped inside helper ?></span>
+									<span class="cml-row-flag"><?php echo self::flag_html( (string) $lang->flag, (string) $lang->name ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- already escaped inside helper. ?></span>
 								</td>
 								<td>
 									<strong><code><?php echo esc_html( $lang->code ); ?></code></strong>
@@ -452,6 +452,7 @@ final class LanguagesPage {
 				'missing_fields'        => __( 'Required fields are missing.', 'codeon-multilingual' ),
 				'cannot_delete_default' => __( 'Cannot delete the default language. Set another as default first.', 'codeon-multilingual' ),
 				'not_found'             => __( 'Language not found.', 'codeon-multilingual' ),
+				'invalid_locale'        => __( 'Invalid locale. Use a WordPress locale such as en_US, ka_GE, or sr_RS@latin.', 'codeon-multilingual' ),
 				default                 => __( 'Unknown error.', 'codeon-multilingual' ),
 			};
 			self::notice( 'error', $msg );
@@ -490,6 +491,9 @@ final class LanguagesPage {
 		}
 		if ( '' === $locale || '' === $name || '' === $native ) {
 			self::redirect_with( array( 'error' => 'missing_fields' ) );
+		}
+		if ( ! self::is_valid_locale( $locale ) ) {
+			self::redirect_with( array( 'error' => 'invalid_locale' ) );
 		}
 		if ( ! $is_edit && Languages::exists( $code ) ) {
 			self::redirect_with( array( 'error' => 'duplicate_code' ) );
@@ -587,5 +591,10 @@ final class LanguagesPage {
 	private static function redirect_with( array $args ): void {
 		wp_safe_redirect( self::admin_page_url( $args ) );
 		exit;
+	}
+
+	private static function is_valid_locale( string $locale ): bool {
+		return 1 === preg_match( '/^[A-Za-z0-9_@.-]{2,32}$/', $locale )
+			&& ! str_contains( $locale, '..' );
 	}
 }

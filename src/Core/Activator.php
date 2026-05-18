@@ -52,7 +52,6 @@ final class Activator {
 		}
 
 		Schema::install();
-		update_option( 'cml_db_version', Schema::VERSION, true );
 
 		// One-time backfill for the new source_language column on existing rows.
 		self::backfill_source_languages();
@@ -64,6 +63,11 @@ final class Activator {
 
 		// Integration point — same as activation, but for the auto-update path.
 		do_action( 'cml_upgraded' );
+
+		// Mark the schema version only after all upgrade work has completed. If
+		// a backfill fatals mid-upgrade, the next admin request retries instead
+		// of permanently skipping the unfinished migration.
+		update_option( 'cml_db_version', Schema::VERSION, true );
 	}
 
 	/**
