@@ -18,6 +18,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ### Verified
 - Local gates: Composer validation, PHP syntax, PHPCS, PHPUnit unit suite (`112 tests, 854 assertions`), PHPStan, and package smoke test.
+- GitHub Actions CI: lint, PHPStan, PHPCS, PHP 8.1/8.2/8.3 unit matrix, and WordPress/MySQL/WooCommerce integration suite (`10 tests, 29 assertions`) pass on the release branch.
 - Artcase dev site: homepage, translated product URL, REST `?lang`, health report, benchmark report, WPML snapshot export, and rollback dry-run.
 
 ## [0.8.0] — 2026-05-18

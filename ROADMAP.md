@@ -92,11 +92,11 @@ The full v0.1.0 MVP scope is shipped, plus migration tooling, inline string edit
 
 ## What's missing — ranked by impact for production sites
 
-### 1. Full integration CI proof ◐ (partial in v0.9.0)
+### 1. Full integration CI proof ◐ (expanded in v0.9.0)
 
-**Why it matters:** Unit tests do not prove WordPress/WooCommerce database behavior. v0.9.0 adds the CI scaffold and DB-bound tests, but the next PR should prove it in GitHub Actions and extend coverage over checkout/emails/coupons.
+**Why it matters:** Unit tests do not prove WordPress/WooCommerce database behavior. v0.9.0 adds and proves a GitHub Actions integration job with WordPress, MySQL, and WooCommerce; next coverage should go deeper on checkout, emails, coupons, and gateway edge cases.
 
-**Status:** Scaffold and tests are in place. Local integration run requires `WP_TESTS_DIR` and MySQL; Artcase live checks passed for health, benchmark, REST, routing, and migration snapshot dry-run.
+**Status:** GitHub CI passes the integration suite for activation/schema, `/en/` routing, REST `?lang`, WooCommerce variable product/variation duplication, and uninstall retention/drop behavior. Local integration runs require `WP_TESTS_DIR` and MySQL. Artcase live checks passed for health, benchmark, REST, routing, and migration snapshot dry-run.
 
 ### 2. WC curated string registration ◐ (partial in v0.9.0)
 

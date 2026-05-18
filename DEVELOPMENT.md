@@ -181,7 +181,7 @@ WordPress ruleset with the following exclusions (`phpcs.xml.dist`):
 - `Universal.Operators.DisallowShortTernary` (we use `?:` freely)
 - `WordPress.PHP.YodaConditions` (we don't write Yoda)
 
-PHPCS is currently a local debt command, not a CI/release gate. Do not add it back to CI with `continue-on-error`; either fix the existing source violations and make it blocking, or keep it out of the production gate.
+PHPCS is a blocking CI and release gate. Do not weaken it with `continue-on-error`; either fix new violations or intentionally adjust `phpcs.xml.dist` with a narrow documented exclusion.
 
 ### Manual end-to-end testing on artcase.ge
 
@@ -225,7 +225,7 @@ git tag vX.Y.Z -m "Release vX.Y.Z — <summary>"
 git push origin vX.Y.Z
 ```
 
-### 3. Release workflow runs (~15 seconds)
+### 3. Release workflow runs
 
 `.github/workflows/release.yml` triggers on `v*` tag push:
 
@@ -235,11 +235,14 @@ git push origin vX.Y.Z
 4. Install dev dependencies
 5. Stamp `src/Core/BuildId.php` with `version+sha`
 6. Verify plugin-header version matches the tag (fails if not)
-7. Run syntax check, PHPStan, and PHPUnit unit tests
-8. `composer install --no-dev --optimize-autoloader --prefer-dist`
-9. rsync to staging dir excluding `.git`, `.github`, `tests`, `phpcs.xml.dist`, etc.
-10. ZIP the staging dir
-11. Create GitHub Release with the ZIP attached, auto-generated release notes
+7. Run syntax check, PHPCS, PHPStan, and PHPUnit unit tests
+8. Install WordPress PHPUnit scaffold + WooCommerce against MySQL
+9. Run `composer test:integration`
+10. `composer install --no-dev --optimize-autoloader --prefer-dist`
+11. rsync to staging dir excluding `.git`, `.github`, `tests`, `phpcs.xml.dist`, etc.
+12. ZIP the staging dir
+13. Smoke-test the release ZIP
+14. Create GitHub Release with the ZIP attached, auto-generated release notes
 
 ### 4. Update on production
 
@@ -264,7 +267,7 @@ Always update the changelog with the same commit that bumps the version — or i
 - **unit-tests job**: matrix on PHP 8.1, 8.2, 8.3 — `composer test`
 - **integration-tests job**: PHP 8.2, MySQL 8 service, WordPress-compatible PHPUnit 9.6, WordPress PHPUnit scaffold, WooCommerce installed from WordPress.org, then `composer test:integration`
 
-Both must be green for a clean release.
+All three CI jobs must be green for a clean release.
 
 ## Plugin Update Checker (PUC)
 
