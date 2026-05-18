@@ -48,6 +48,7 @@ final class MethodLabels {
 		add_filter( 'woocommerce_add_message', array( self::class, 'translate_success_notice' ), 10, 1 );
 		add_filter( 'woocommerce_add_error', array( self::class, 'translate_error_notice' ), 10, 1 );
 		add_filter( 'woocommerce_add_notice', array( self::class, 'translate_info_notice' ), 10, 1 );
+		add_filter( 'rest_post_dispatch', array( self::class, 'translate_store_api_response_messages' ), 10, 3 );
 
 		add_filter( 'woocommerce_cart_totals_coupon_label', array( self::class, 'translate_coupon_label' ), 10, 2 );
 		add_filter( 'woocommerce_coupon_get_description', array( self::class, 'translate_coupon_description' ), 10, 2 );
@@ -153,6 +154,34 @@ final class MethodLabels {
 			$type,
 			(string) $message
 		);
+	}
+
+	/**
+	 * Store API errors/notices are serialized REST payloads, so they do not
+	 * always pass through Woo's classic `woocommerce_add_*` notice filters.
+	 *
+	 * @param mixed $response WP_REST_Response-like object.
+	 * @param mixed $server
+	 * @param mixed $request  WP_REST_Request-like object.
+	 * @return mixed
+	 */
+	public static function translate_store_api_response_messages( $response, $server, $request ) {
+		unset( $server );
+
+		if ( ! self::is_store_api_request( $request ) ) {
+			return $response;
+		}
+		if ( ! is_object( $response ) || ! method_exists( $response, 'get_data' ) || ! method_exists( $response, 'set_data' ) ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+		if ( ! is_array( $data ) ) {
+			return $response;
+		}
+
+		$response->set_data( self::translate_store_api_payload( $data ) );
+		return $response;
 	}
 
 	/**
@@ -286,6 +315,92 @@ final class MethodLabels {
 
 	private static function translate_configured_string( string $domain, string $context, string $source ): string {
 		return self::translate_configured_string_with_contexts( $domain, array( $context ), $source );
+	}
+
+	/**
+	 * @param array<string,mixed> $payload
+	 * @return array<string,mixed>
+	 */
+	private static function translate_store_api_payload( array $payload ): array {
+		if ( isset( $payload['message'] ) && is_scalar( $payload['message'] ) ) {
+			$payload['message'] = self::translate_notice(
+				(string) $payload['message'],
+				self::store_api_notice_type( $payload, 'error' )
+			);
+		}
+
+		if ( isset( $payload['additional_errors'] ) && is_array( $payload['additional_errors'] ) ) {
+			foreach ( $payload['additional_errors'] as $key => $error ) {
+				if ( ! is_array( $error ) || ! isset( $error['message'] ) || ! is_scalar( $error['message'] ) ) {
+					continue;
+				}
+				$error['message']                         = self::translate_notice( (string) $error['message'], 'error' );
+				$payload['additional_errors'][ $key ] = $error;
+			}
+		}
+
+		if ( isset( $payload['notices'] ) && is_array( $payload['notices'] ) ) {
+			foreach ( $payload['notices'] as $type => $notices ) {
+				$notice_type = is_string( $type ) ? $type : 'notice';
+				if ( is_array( $notices ) ) {
+					$payload['notices'][ $type ] = self::translate_store_api_notice_list( $notices, $notice_type );
+				}
+			}
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * @param array<int|string,mixed> $notices
+	 * @return array<int|string,mixed>
+	 */
+	private static function translate_store_api_notice_list( array $notices, string $default_type ): array {
+		foreach ( $notices as $key => $notice ) {
+			if ( ! is_array( $notice ) ) {
+				continue;
+			}
+
+			$type = self::store_api_notice_type( $notice, $default_type );
+			foreach ( array( 'message', 'notice' ) as $field ) {
+				if ( isset( $notice[ $field ] ) && is_scalar( $notice[ $field ] ) ) {
+					$notice[ $field ] = self::translate_notice( (string) $notice[ $field ], $type );
+				}
+			}
+			$notices[ $key ] = $notice;
+		}
+
+		return $notices;
+	}
+
+	/**
+	 * @param array<string,mixed> $payload
+	 */
+	private static function store_api_notice_type( array $payload, string $default ): string {
+		foreach ( array( 'type', 'notice_type' ) as $key ) {
+			if ( isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) && '' !== (string) $payload[ $key ] ) {
+				return sanitize_key( (string) $payload[ $key ] );
+			}
+		}
+
+		return sanitize_key( $default );
+	}
+
+	/**
+	 * @param mixed $request
+	 */
+	private static function is_store_api_request( $request ): bool {
+		if ( ! is_object( $request ) || ! method_exists( $request, 'get_route' ) ) {
+			return false;
+		}
+
+		$route = $request->get_route();
+		if ( ! is_string( $route ) ) {
+			return false;
+		}
+
+		$route = ltrim( $route, '/' );
+		return 'wc/store' === $route || str_starts_with( $route, 'wc/store/' );
 	}
 
 	/**

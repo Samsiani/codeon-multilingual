@@ -23,6 +23,9 @@ final class WooMethodLabelsTest extends TestCase {
 		Functions\when( 'wp_cache_get' )->justReturn( false );
 		Functions\when( 'wp_cache_set' )->justReturn( true );
 		Functions\when( 'wp_cache_delete' )->justReturn( true );
+		Functions\when( 'sanitize_key' )->alias(
+			static fn( string $key ): string => strtolower( preg_replace( '/[^a-z0-9_\\-]/', '', $key ) ?? '' )
+		);
 
 		global $wpdb;
 		$wpdb = new class {
@@ -207,6 +210,75 @@ final class WooMethodLabelsTest extends TestCase {
 		);
 	}
 
+	public function test_translates_store_api_error_response_messages(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-notice', 'error', 'Billing first name is required.' ) => 'First name is required.',
+				StringTranslator::hash( 'wc-notice', 'error', 'Invalid coupon.' )                  => 'Coupon is invalid.',
+			)
+		);
+
+		$response = $this->response(
+			array(
+				'message'           => 'Billing first name is required.',
+				'additional_errors' => array(
+					array( 'message' => 'Invalid coupon.' ),
+				),
+			)
+		);
+
+		MethodLabels::translate_store_api_response_messages( $response, null, $this->request( '/wc/store/v1/checkout' ) );
+
+		$data = $response->get_data();
+		$this->assertSame( 'First name is required.', $data['message'] );
+		$this->assertSame( 'Coupon is invalid.', $data['additional_errors'][0]['message'] );
+	}
+
+	public function test_translates_store_api_notice_arrays_by_type(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-notice', 'success', 'Coupon applied.' ) => 'Coupon accepted.',
+				StringTranslator::hash( 'wc-notice', 'error', 'Stock is low.' )     => 'Low stock.',
+			)
+		);
+
+		$response = $this->response(
+			array(
+				'notices' => array(
+					'success' => array(
+						array( 'notice' => 'Coupon applied.' ),
+					),
+					'error'   => array(
+						array( 'message' => 'Stock is low.' ),
+					),
+				),
+			)
+		);
+
+		MethodLabels::translate_store_api_response_messages( $response, null, $this->request( '/wc/store/v1/cart' ) );
+
+		$data = $response->get_data();
+		$this->assertSame( 'Coupon accepted.', $data['notices']['success'][0]['notice'] );
+		$this->assertSame( 'Low stock.', $data['notices']['error'][0]['message'] );
+	}
+
+	public function test_leaves_non_store_api_response_messages_unchanged(): void {
+		$this->set_compiled_map(
+			'en',
+			array(
+				StringTranslator::hash( 'wc-notice', 'error', 'Billing first name is required.' ) => 'First name is required.',
+			)
+		);
+
+		$response = $this->response( array( 'message' => 'Billing first name is required.' ) );
+
+		MethodLabels::translate_store_api_response_messages( $response, null, $this->request( '/wc/v3/orders' ) );
+
+		$this->assertSame( 'Billing first name is required.', $response->get_data()['message'] );
+	}
+
 	public function test_translates_coupon_label_and_description(): void {
 		$this->set_compiled_map(
 			'en',
@@ -344,5 +416,35 @@ final class WooMethodLabelsTest extends TestCase {
 		}
 		$compiled[ $language ] = $map;
 		$ref->setValue( null, $compiled );
+	}
+
+	/**
+	 * @param array<string,mixed> $data
+	 */
+	private function response( array $data ): object {
+		return new class( $data ) {
+			/** @param array<string,mixed> $data */
+			public function __construct( private array $data ) {}
+
+			/** @return array<string,mixed> */
+			public function get_data(): array {
+				return $this->data;
+			}
+
+			/** @param array<string,mixed> $data */
+			public function set_data( array $data ): void {
+				$this->data = $data;
+			}
+		};
+	}
+
+	private function request( string $route ): object {
+		return new class( $route ) {
+			public function __construct( private string $route ) {}
+
+			public function get_route(): string {
+				return $this->route;
+			}
+		};
 	}
 }
