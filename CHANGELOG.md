@@ -4,6 +4,8 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ## Unreleased
 
+## [0.9.1] — 2026-05-19
+
 ### Added
 - Polylang migration: languages, post translation mappings, term translation mappings, dynamic strings from current `_pll_strings_translations` term meta into the `pll_string` domain with legacy `polylang_mo` fallback, conflict preflight, admin import, and WP-CLI `wp cml migrate polylang`.
 - WP-CLI `wp cml migrate sources` to report current support for WPML, Polylang, TranslatePress, Weglot/GTranslate, MultilingualPress, qTranslate-X/WPGlobus, and related migration families.

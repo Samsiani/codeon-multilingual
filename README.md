@@ -22,7 +22,7 @@ WPML and Polylang work, but they carry a lot of 2009-era baggage: 17+ DB tables,
 
 ## Status
 
-**v0.9.0** — live-tested on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI/benchmark workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache**, a hardened **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart/order/email language handling, payment/shipping/coupon/status/notice/download label translation, translated product terms/variation attribute slugs, cart items follow current language with fallback to original, WC attribute label translation), a dedicated **menu translation flow**, **per-language columns** on posts/taxonomy admin lists, **WPML rollback snapshots**, a production **Health** screen, and blocking PHPCS/PHPStan/unit/package/WordPress+WooCommerce integration gates.
+**v0.9.1** — live-tested on artcase.ge. The locked v0.1.0 MVP scope is shipped, plus migration tooling, inline string editor, scan-based discovery, WP 6.5+ native `.l10n.php` translation path, the **WPML compatibility shim** (13 API surfaces — themes/plugins written against WPML's public API run unmodified), a full **WP-CLI command surface** for ops/CI/benchmark workflows, a **first-run setup wizard** with a bundled 66-language catalog, **bundled SVG flags** (60 countries — Windows-safe vs emoji-only rendering), **per-language compiled-map cache**, a hardened **WooCommerce translation surface** (product field locking on translations, automatic shop-page mapping per language, cart/order/email language handling, payment/shipping/coupon/status/notice/download label translation, translated product terms/variation attribute slugs, cart items follow current language with fallback to original, WC attribute label translation), a dedicated **menu translation flow**, **per-language columns** on posts/taxonomy admin lists, **WPML rollback snapshots**, a production **Health** screen, and blocking PHPCS/PHPStan/unit/package/WordPress+WooCommerce integration gates.
 
 See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next.
 
@@ -113,7 +113,7 @@ See [`ROADMAP.md`](ROADMAP.md) for what's built, what's missing, and what's next
 - `wp cml health repair [--dry-run|--apply] [--scope=all|orphaned-post-rows|orphaned-term-rows|orphaned-string-rows|missing-post-rows|missing-term-rows|unknown-source-languages]`
 - `wp cml benchmark report` / `seed --yes` / `cleanup --dry-run|--yes` — strings plus real `WP_Query` product/variation collection workloads in the selected language, with guarded fixture cleanup
 
-**v1 hardening branch**
+**v0.9.1 hardening**
 - WPML/Polylang migration preflight is stricter about default-language and source-language conflicts.
 - Admin WPML/Polylang imports create a source-tagged rollback snapshot before writes; WP-CLI imports remain snapshot-gated.
 - WooCommerce product relationship IDs and variation option display labels remap to current-language siblings where possible.
