@@ -4,6 +4,11 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ## Unreleased
 
+## [0.9.2] — 2026-05-19
+
+### Fixed
+- Fixed WooCommerce/Woodmart classic AJAX add-to-cart fatals caused by the Store API cart translation filter requiring an array for the second filter argument. WooCommerce passes the cart item key string on `woocommerce_add_cart_item`, so the callback now accepts the native WooCommerce signatures defensively while keeping Store API cart display translation intact.
+
 ## [0.9.1] — 2026-05-19
 
 ### Added

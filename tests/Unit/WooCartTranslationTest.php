@@ -176,6 +176,22 @@ final class WooCartTranslationTest extends TestCase {
 		$this->assertSame( $source, $cart_item['data'] );
 	}
 
+	public function test_classic_woocommerce_add_cart_item_signature_does_not_throw(): void {
+		$source = $this->product( 101 );
+
+		Functions\expect( 'wc_get_product' )->never();
+
+		$cart_item = CartTranslation::translate_store_api_cart_item_data(
+			array(
+				'data'       => $source,
+				'product_id' => 101,
+			),
+			'cart-item-key'
+		);
+
+		$this->assertSame( $source, $cart_item['data'] );
+	}
+
 	private function mark_store_api_request( string $language ): void {
 		StoreApiLanguage::detect_language(
 			null,

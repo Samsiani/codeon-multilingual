@@ -71,14 +71,17 @@ final class CartTranslation {
 	 * using `woocommerce_cart_item_product`. Swap only for Store API requests
 	 * and keep product_id / variation_id untouched so cart identity persists.
 	 *
-	 * @param array<string,mixed> $cart_item
-	 * @param array<string,mixed> $values
-	 * @param string              $cart_item_key
-	 * @return array<string,mixed>
+	 * @param mixed $cart_item
+	 * @param mixed $values
+	 * @param mixed $cart_item_key
+	 * @return mixed
 	 */
-	public static function translate_store_api_cart_item_data( array $cart_item, array $values = array(), string $cart_item_key = '' ): array {
+	public static function translate_store_api_cart_item_data( $cart_item, $values = array(), $cart_item_key = '' ) {
 		unset( $values, $cart_item_key );
 
+		if ( ! is_array( $cart_item ) ) {
+			return $cart_item;
+		}
 		if ( ! StoreApiLanguage::is_current_request() ) {
 			return $cart_item;
 		}
