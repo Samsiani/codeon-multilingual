@@ -6,6 +6,7 @@ namespace Samsiani\CodeonMultilingual\Frontend;
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\LanguageCatalog;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Core\Settings;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 use Samsiani\CodeonMultilingual\Url\Router;
 use WP_Term;
@@ -123,6 +124,14 @@ final class LanguageSwitcher {
 					}
 				}
 			}
+			// No sibling in the target language. When untranslated content is
+			// shown rather than hidden, the very same URL still resolves under
+			// the other prefix, so stay on the post the visitor is reading
+			// instead of dumping them on the home page. A catalogue that is
+			// deliberately not duplicated per language relies on this.
+			if ( self::keeps_untranslated_content() ) {
+				return self::current_url_in( $code );
+			}
 			return Router::with_lang( home_url( '/' ), $code );
 		}
 
@@ -142,17 +151,38 @@ final class LanguageSwitcher {
 					}
 				}
 			}
+			if ( self::keeps_untranslated_content() ) {
+				return self::current_url_in( $code );
+			}
 			return Router::with_lang( home_url( '/' ), $code );
 		}
 
 		// Home / blog / archive / search / 404 — swap the prefix on current URL.
+		return self::current_url_in( $code );
+	}
+
+	/**
+	 * The URL being viewed, re-prefixed for another language.
+	 */
+	private static function current_url_in( string $code ): string {
 		$scheme  = is_ssl() ? 'https' : 'http';
 		$host    = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_HOST'] ) ) : '';
 		$uri     = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( (string) $_SERVER['REQUEST_URI'] ) ) : '/';
 		$current = '' !== $host ? $scheme . '://' . $host . $uri : home_url( $uri );
 
-		$stripped = Router::strip_lang_prefix( $current );
-		return Router::with_lang( $stripped, $code );
+		return Router::with_lang( Router::strip_lang_prefix( $current ), $code );
+	}
+
+	/**
+	 * Whether content without a translation still renders in other languages.
+	 * Mirrors PostsClauses so the switcher never links somewhere the query
+	 * layer would refuse to serve.
+	 */
+	private static function keeps_untranslated_content(): bool {
+		return (bool) apply_filters(
+			'cml_untranslated_content_fallback',
+			(bool) Settings::get( 'untranslated_content_fallback', true )
+		);
 	}
 
 	/**

@@ -11,6 +11,13 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - **In-menu switcher styling** (`assets/nav-switcher.css`) — the nav-menu switcher previously shipped no CSS at all and inherited whatever the theme did with menu items. It now has a globe glyph, a divider separating it from the page links, and a self-painted dropdown panel. Colours inherit `currentColor` where possible; a small Divi compatibility block clears Divi's `color:#fff !important` sub-menu rule, which rendered the panel white-on-white.
 - **Untranslated-content fallback** (`PostsClauses`, `TermsClauses`) — posts and terms with no sibling in the current language now stay visible in their original language instead of disappearing. Without it a catalogue that is deliberately not duplicated per language returns an empty shop and 404s under every non-default prefix. Disable via `untranslated_content_fallback` or `cml_untranslated_content_fallback`.
 
+- **Divi Theme Builder layouts per language** (`Compat\DiviThemeBuilder`) — header/body/footer layouts are separate posts fetched by id, so every language rendered the default language's header and footer. Mapped via `et_theme_builder_template_layouts`.
+- **Static front page per language** (`Frontend\FrontPageMapping`) — `page_on_front` / `page_for_posts` now resolve to the current language's sibling. Admin requests keep the real value so Reading Settings cannot be rewritten.
+
+### Fixed
+- Switching language from an untranslated post no longer dumps the visitor on the home page. When untranslated content is served rather than hidden, the switcher keeps the current URL and swaps the prefix — so a catalogue that is deliberately not duplicated per language stays navigable.
+- `NavMenuSwitcher` had its own copy of the language-URL resolver which only understood singular posts; it now delegates to `LanguageSwitcher::url_for_language()`, so menu, block, shortcode and floating switchers all behave identically.
+
 ### Changed
 - Nav-switcher styles are versioned by file mtime rather than the plugin version, so stylesheet edits are not masked by browser caching between releases.
 - Gettext lookups with a context now fall back to the context-less translation for the same `(domain, source)` when no contextual entry exists. TranslatePress and PO catalogs round-tripped through a translation memory do not record gettext context, so without this every `_x()` call in a theme misses a translation that plainly exists. A contextual entry still always wins; disable via the `strings_context_fallback` setting or the `cml_strings_context_fallback` filter.

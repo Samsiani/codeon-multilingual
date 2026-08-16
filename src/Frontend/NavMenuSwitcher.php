@@ -531,32 +531,17 @@ final class NavMenuSwitcher {
 	 * URL of the equivalent of the currently-queried object in the given
 	 * language — falling back to that language's home URL.
 	 */
+	/**
+	 * Delegates to the canonical resolver.
+	 *
+	 * This used to carry its own copy of the lookup, which drifted: it only
+	 * understood singular posts and sent everything else to the home page, so
+	 * switching language from an untranslated product dumped the visitor on the
+	 * front page. `LanguageSwitcher::url_for_language()` additionally handles
+	 * term archives and keeps the visitor on the current URL when untranslated
+	 * content is served rather than hidden. One resolver, one behaviour.
+	 */
 	public static function url_for_language( string $code ): string {
-		$queried_id = self::current_object_id();
-		if ( $queried_id > 0 ) {
-			$group_id = TranslationGroups::get_group_id( $queried_id );
-			if ( null !== $group_id ) {
-				$siblings   = TranslationGroups::get_siblings( $group_id );
-				$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
-				if ( $sibling_id > 0 ) {
-					$link = get_permalink( $sibling_id );
-					if ( $link ) {
-						return (string) $link;
-					}
-				}
-			}
-		}
-		$home = home_url( '/' );
-		if ( Languages::is_default( $code ) ) {
-			return $home;
-		}
-		return Router::with_lang( $home, $code );
-	}
-
-	private static function current_object_id(): int {
-		if ( is_singular() ) {
-			return (int) get_queried_object_id();
-		}
-		return 0;
+		return LanguageSwitcher::url_for_language( $code );
 	}
 }
