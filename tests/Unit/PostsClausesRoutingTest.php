@@ -22,6 +22,9 @@ final class PostsClausesRoutingTest extends TestCase {
 		Functions\when( 'wp_cache_get' )->justReturn( false );
 		Functions\when( 'wp_cache_set' )->justReturn( true );
 		Functions\when( 'wp_cache_delete' )->justReturn( true );
+		// Settings fall back to defaults, so the untranslated-content fallback
+		// is on — the shipped configuration.
+		Functions\when( 'get_option' )->justReturn( array() );
 
 		CurrentLanguage::reset();
 		Languages::flush_cache();
@@ -132,6 +135,60 @@ final class PostsClausesRoutingTest extends TestCase {
 		$join = $fragments[0];
 		$this->assertStringEndsWith( ' ', $join );
 		$this->assertStringNotContainsString( 'IDLEFT', $join . 'LEFT JOIN wp_comments ON wp_posts.ID = wp_comments.comment_post_ID' );
+	}
+
+	public function test_non_default_language_falls_back_to_untranslated_content(): void {
+		global $wpdb;
+		$wpdb = $this->wpdb_with_languages();
+		CurrentLanguage::set( 'en' );
+		$this->reset_posts_clauses_cache();
+
+		$method = new \ReflectionMethod( PostsClauses::class, 'sql_fragments' );
+		$method->setAccessible( true );
+		[ $join, $where ] = $method->invoke( null );
+
+		// A second LEFT JOIN finds a sibling in the requested language...
+		$this->assertStringContainsString( 'cml_pl_tr', $join );
+		// ...and the row survives when no such sibling exists.
+		$this->assertStringContainsString( 'cml_pl_tr.post_id IS NULL', $where );
+	}
+
+	public function test_default_language_needs_no_fallback_join(): void {
+		global $wpdb;
+		$wpdb = $this->wpdb_with_languages();
+		CurrentLanguage::set( 'ka' );
+		$this->reset_posts_clauses_cache();
+
+		$method = new \ReflectionMethod( PostsClauses::class, 'sql_fragments' );
+		$method->setAccessible( true );
+		[ $join, $where ] = $method->invoke( null );
+
+		$this->assertStringNotContainsString( 'cml_pl_tr', $join );
+		$this->assertStringContainsString( 'IS NULL', $where );
+	}
+
+	private function wpdb_with_languages(): object {
+		return new class {
+			public string $prefix = 'wp_';
+			public string $posts  = 'wp_posts';
+
+			/** @param mixed ...$args */
+			public function prepare( string $sql, ...$args ): string {
+				unset( $args );
+				return $sql;
+			}
+
+			/** @return array<int, object> */
+			public function get_results( string $sql ): array {
+				if ( str_contains( $sql, 'cml_languages' ) ) {
+					return array(
+						(object) array( 'code' => 'ka', 'locale' => 'ka_GE', 'name' => 'Georgian', 'native' => 'ქართული', 'flag' => 'ka', 'rtl' => 0, 'active' => 1, 'is_default' => 1, 'position' => 0 ),
+						(object) array( 'code' => 'en', 'locale' => 'en_US', 'name' => 'English',  'native' => 'English',  'flag' => 'en', 'rtl' => 0, 'active' => 1, 'is_default' => 0, 'position' => 1 ),
+					);
+				}
+				return array();
+			}
+		};
 	}
 
 	/**

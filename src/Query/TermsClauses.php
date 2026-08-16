@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Query;
 
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Core\Settings;
 
 /**
  * terms_clauses analog of PostsClauses — single LEFT JOIN on wp_cml_term_language
@@ -80,6 +81,16 @@ final class TermsClauses {
 	}
 
 	/**
+	 * Mirrors PostsClauses: show untranslated terms rather than hiding them.
+	 */
+	private static function fallback_enabled(): bool {
+		return (bool) apply_filters(
+			'cml_untranslated_content_fallback',
+			(bool) Settings::get( 'untranslated_content_fallback', true )
+		);
+	}
+
+	/**
 	 * @return array{0:string,1:string}
 	 */
 	private static function sql_fragments(): array {
@@ -103,6 +114,27 @@ final class TermsClauses {
 		if ( Languages::is_default( $code ) ) {
 			self::$where_sql = $wpdb->prepare(
 				" AND ({$alias}.language = %s OR {$alias}.language IS NULL)",
+				$code
+			);
+		} elseif ( '' === self::$admin_lang_scope && self::fallback_enabled() ) {
+			// Same rule as PostsClauses: a term with no sibling in the current
+			// language stays visible in its original language rather than
+			// vanishing. Without it, categories, attributes and nav menus that
+			// were never translated disappear entirely under /en/ and /ru/.
+			//
+			// Deliberately NOT applied while an admin language scope is set —
+			// the duplicate-slug check must see only true siblings, or it would
+			// treat an untranslated term as a conflict.
+			$tr = $alias . '_tr';
+
+			self::$join_sql .= $wpdb->prepare(
+				" LEFT JOIN {$wpdb->prefix}cml_term_language {$tr}
+				  ON {$tr}.group_id = {$alias}.group_id AND {$tr}.language = %s ",
+				$code
+			);
+
+			self::$where_sql = $wpdb->prepare(
+				" AND ({$alias}.language = %s OR {$alias}.language IS NULL OR {$tr}.term_id IS NULL)",
 				$code
 			);
 		} else {

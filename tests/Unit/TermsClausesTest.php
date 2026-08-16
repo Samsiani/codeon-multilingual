@@ -22,6 +22,8 @@ final class TermsClausesTest extends TestCase {
 		Functions\when( 'wp_cache_get' )->justReturn( false );
 		Functions\when( 'wp_cache_set' )->justReturn( true );
 		Functions\when( 'wp_cache_delete' )->justReturn( true );
+		// Settings fall back to defaults: untranslated-content fallback on.
+		Functions\when( 'get_option' )->justReturn( array() );
 
 		global $wpdb;
 		$wpdb = new class {

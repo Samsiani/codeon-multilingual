@@ -5,6 +5,7 @@ namespace Samsiani\CodeonMultilingual\Query;
 
 use Samsiani\CodeonMultilingual\Core\CurrentLanguage;
 use Samsiani\CodeonMultilingual\Core\Languages;
+use Samsiani\CodeonMultilingual\Core\Settings;
 use Samsiani\CodeonMultilingual\Core\TranslationGroups;
 use WP_Query;
 
@@ -177,6 +178,22 @@ final class PostsClauses {
 	}
 
 	/**
+	 * Whether content with no translation in the current language should still
+	 * be shown (in its original language) instead of disappearing.
+	 *
+	 * On by default: the common case for a shared catalogue is that only the
+	 * UI strings differ per language, not the records themselves. Sites that
+	 * want strict per-language content set `untranslated_content_fallback` to
+	 * false, or filter `cml_untranslated_content_fallback`.
+	 */
+	private static function fallback_enabled(): bool {
+		return (bool) apply_filters(
+			'cml_untranslated_content_fallback',
+			(bool) Settings::get( 'untranslated_content_fallback', true )
+		);
+	}
+
+	/**
 	 * @return array{0:string,1:string}
 	 */
 	private static function sql_fragments(): array {
@@ -197,6 +214,28 @@ final class PostsClauses {
 		if ( Languages::is_default( $code ) ) {
 			self::$where_sql = $wpdb->prepare(
 				" AND ({$alias}.language = %s OR {$alias}.language IS NULL)",
+				$code
+			);
+		} elseif ( self::fallback_enabled() ) {
+			// Show untranslated content in its original language rather than
+			// hiding it. Without this, a catalogue that is deliberately not
+			// duplicated per language — 2,000 products sharing one set of
+			// translated field labels — would return an empty shop and 404 on
+			// every product under /en/ and /ru/.
+			//
+			// An anti-join is used rather than a correlated NOT EXISTS so the
+			// optimizer can resolve it with the existing group_idx index in a
+			// single pass, keeping archive queries off the slow path.
+			$tr = $alias . '_tr';
+
+			self::$join_sql .= $wpdb->prepare(
+				" LEFT JOIN {$wpdb->prefix}cml_post_language {$tr}
+				  ON {$tr}.group_id = {$alias}.group_id AND {$tr}.language = %s ",
+				$code
+			);
+
+			self::$where_sql = $wpdb->prepare(
+				" AND ({$alias}.language = %s OR {$alias}.language IS NULL OR {$tr}.post_id IS NULL)",
 				$code
 			);
 		} else {

@@ -91,6 +91,7 @@ final class NavMenuSwitcher {
 		add_action( 'wp_update_nav_menu_item', array( self::class, 'on_save_menu_item' ), 10, 3 );
 
 		// Frontend expansion.
+		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_styles' ) );
 		add_filter( 'wp_get_nav_menu_items', array( self::class, 'expand_placeholder' ), 10, 3 );
 
 		// Make the placeholder render in the menu editor with a helpful label.
@@ -104,6 +105,35 @@ final class NavMenuSwitcher {
 	 *
 	 * @param object|null $item
 	 */
+	/**
+	 * Styles for the in-menu switcher.
+	 *
+	 * A menu item is rendered deep inside the theme's header markup, long after
+	 * the head has been printed, so the stylesheet cannot be enqueued lazily at
+	 * render time. It is ~1KB, inherits `currentColor`, and is scoped entirely
+	 * to `.cml-language-switcher`, so loading it on the front end is cheaper
+	 * than the machinery required to detect the item earlier.
+	 */
+	public static function enqueue_styles(): void {
+		if ( is_admin() ) {
+			return;
+		}
+		// Version by file mtime, falling back to the plugin version. A static
+		// version string means every stylesheet edit stays invisible to anyone
+		// who already has the file cached — including, painfully, whoever is
+		// iterating on the design.
+		$path = CML_PATH . 'assets/nav-switcher.css';
+		$ver  = defined( 'CML_VERSION' ) ? CML_VERSION : null;
+		if ( file_exists( $path ) ) {
+			$mtime = filemtime( $path );
+			if ( $mtime ) {
+				$ver = (string) $mtime;
+			}
+		}
+
+		wp_enqueue_style( 'cml-nav-switcher', CML_URL . 'assets/nav-switcher.css', array(), $ver );
+	}
+
 	public static function is_placeholder( $item ): bool {
 		if ( ! is_object( $item ) ) {
 			return false;

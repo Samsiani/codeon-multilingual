@@ -114,8 +114,8 @@ final class TranslatePressImporter {
 
 			$where = self::translated_where( $excluded );
 
-			$translated = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` {$where}" );
-			$domains    = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT domain) FROM `{$table}` {$where}" );
+			$translated = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$table}` tp {$where}" );
+			$domains    = (int) $wpdb->get_var( "SELECT COUNT(DISTINCT tp.domain) FROM `{$table}` tp {$where}" );
 
 			// How many already exist as sources in our catalog — i.e. how much
 			// of this import lands on strings the site has actually rendered.
