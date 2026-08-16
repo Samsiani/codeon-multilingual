@@ -2,6 +2,15 @@
 
 All notable changes to CodeOn Multilingual are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semantic versioning applies.
 
+## [Unreleased]
+
+### Added
+- **TranslatePress importer** (`Migration\TranslatePressImporter`) — reads `trp_gettext_{locale}` tables and maps them onto the strings catalog in two `INSERT … SELECT` statements per locale. Read-only with respect to TranslatePress, so both plugins can run side by side during a migration and rolling back is just not activating ours.
+- **Custom (per-product) attributes** (`Woo\CustomAttributes`) — attribute names stored in the `_product_attributes` blob are now translatable strings, so a catalogue where every product shares the same attribute names ("Make", "Year", "Container Number") can be translated once without duplicating a single product. `Woo\AttributeLabels` continues to own global attribute taxonomies. Value translation is supported but off by default (opt in per attribute name via `custom_attribute_value_keys`), with a cardinality ceiling so a high-cardinality attribute can never flood the catalog.
+
+### Changed
+- Gettext lookups with a context now fall back to the context-less translation for the same `(domain, source)` when no contextual entry exists. TranslatePress and PO catalogs round-tripped through a translation memory do not record gettext context, so without this every `_x()` call in a theme misses a translation that plainly exists. A contextual entry still always wins; disable via the `strings_context_fallback` setting or the `cml_strings_context_fallback` filter.
+
 ## [0.9.0] — 2026-05-18
 
 ### Added

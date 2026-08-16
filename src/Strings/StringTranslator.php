@@ -106,7 +106,42 @@ final class StringTranslator {
 		// plugin code ships English sources. Lookup cost is one isset() per
 		// gettext call against a cached request-static map.
 		$compiled = self::compiled_map();
-		return $compiled[ $hash ] ?? $translation;
+		if ( isset( $compiled[ $hash ] ) ) {
+			return $compiled[ $hash ];
+		}
+
+		// Context fallback. TranslatePress — and most PO tooling that has been
+		// round-tripped through a translation memory — never records the
+		// gettext context, so an imported catalog only ever has context-less
+		// entries. Without this, every `_x()` call in a theme would miss a
+		// translation that plainly exists for the same (domain, source).
+		//
+		// A context-specific entry always wins; this only runs after that
+		// missed, so an admin can still disambiguate a string by entering the
+		// contextual variant.
+		if ( '' !== $context && self::context_fallback_enabled() ) {
+			$loose = $compiled[ self::hash( $domain, '', $text ) ] ?? null;
+			if ( null !== $loose ) {
+				return $loose;
+			}
+		}
+
+		return $translation;
+	}
+
+	/**
+	 * Whether a `_x()` miss may fall back to the context-less translation.
+	 * Enabled by default: catalogs imported from other plugins have no context.
+	 */
+	private static function context_fallback_enabled(): bool {
+		static $enabled = null;
+		if ( null === $enabled ) {
+			$enabled = (bool) apply_filters(
+				'cml_strings_context_fallback',
+				(bool) Settings::get( 'strings_context_fallback', true )
+			);
+		}
+		return $enabled;
 	}
 
 	// ---- Discovery -------------------------------------------------------

@@ -37,6 +37,7 @@ use Samsiani\CodeonMultilingual\Url\PostLinkFilter;
 use Samsiani\CodeonMultilingual\Url\Router;
 use Samsiani\CodeonMultilingual\Url\TermLinkFilter;
 use Samsiani\CodeonMultilingual\Woo\AttributeLabels;
+use Samsiani\CodeonMultilingual\Woo\CustomAttributes;
 use Samsiani\CodeonMultilingual\Woo\CartTranslation;
 use Samsiani\CodeonMultilingual\Woo\MethodLabels;
 use Samsiani\CodeonMultilingual\Woo\OrderLanguage;
@@ -97,6 +98,7 @@ final class Plugin {
 		PageMapping::register();
 		CartTranslation::register();
 		AttributeLabels::register();
+		CustomAttributes::register();
 		MethodLabels::register();
 		OrderLanguage::register();
 
