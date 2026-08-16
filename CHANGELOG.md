@@ -15,6 +15,7 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 - **Static front page per language** (`Frontend\FrontPageMapping`) — `page_on_front` / `page_for_posts` now resolve to the current language's sibling. Admin requests keep the real value so Reading Settings cannot be rewritten.
 
 ### Fixed
+- **Slugs shaped like a language code were never prefixed.** `SubdirectoryStrategy` decided a URL was "already prefixed" from shape alone — two or three letters plus an optional `-suffix` — so `/my-account/` parsed as `my` + `-account` and silently kept the default language. WooCommerce's account page, and every dashboard link, endpoint and switcher target built from it, stayed in the default language in every language. The check now validates the segment against the configured, active languages, as `detect()` and `strip_lang_prefix()` already did. `strip_from_request()` was hardened the same way.
 - Switching language from an untranslated post no longer dumps the visitor on the home page. When untranslated content is served rather than hidden, the switcher keeps the current URL and swaps the prefix — so a catalogue that is deliberately not duplicated per language stays navigable.
 - `NavMenuSwitcher` had its own copy of the language-URL resolver which only understood singular posts; it now delegates to `LanguageSwitcher::url_for_language()`, so menu, block, shortcode and floating switchers all behave identically.
 

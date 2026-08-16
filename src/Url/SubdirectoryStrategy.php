@@ -20,6 +20,20 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 
 	private static ?string $home_path_cache = null;
 
+	/**
+	 * Whether a path begins with a segment that is a configured, active
+	 * language — as opposed to merely looking like one.
+	 *
+	 * The shape test alone is not enough: `/my-account/`, `/co-op/` and any
+	 * other two-or-three-letter-plus-hyphen slug matches it.
+	 */
+	private static function is_lang_prefixed( string $path ): bool {
+		if ( ! preg_match( self::LANG_REGEX, $path, $m ) ) {
+			return false;
+		}
+		return Languages::exists_and_active( strtolower( $m[1] ) );
+	}
+
 	public function detect(): ?string {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- REQUEST_URI is parsed only; no output or filesystem use.
 		$path = (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
@@ -47,7 +61,9 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 		$home_path = $this->home_path();
 
 		$rest = $this->strip_install_path( $uri );
-		$rest = (string) preg_replace( self::LANG_REGEX, '', $rest, 1 );
+		if ( self::is_lang_prefixed( $rest ) ) {
+			$rest = (string) preg_replace( self::LANG_REGEX, '', $rest, 1 );
+		}
 
 		if ( '' === $rest ) {
 			$rest = '/';
@@ -71,8 +87,16 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 		$home_path = $this->home_path();
 		$path      = $parts['path'] ?? '/';
 
-		$existing = '#^' . preg_quote( $home_path, '#' ) . '/[a-z]{2,3}(?:-[a-z0-9]+)?(?=/|$)#i';
-		if ( preg_match( $existing, $path ) ) {
+		// Already prefixed? Only a segment that is an actual configured
+		// language counts. Matching the shape alone (two or three letters,
+		// optional -suffix) silently swallows ordinary slugs: `/my-account/`
+		// reads as `my` + `-account`, so WooCommerce's account page — and any
+		// slug of that shape — never got a language prefix at all.
+		$candidate = $path;
+		if ( '' !== $home_path && str_starts_with( $path, $home_path ) ) {
+			$candidate = substr( $path, strlen( $home_path ) ) ?: '/';
+		}
+		if ( self::is_lang_prefixed( $candidate ) ) {
 			return $url;
 		}
 

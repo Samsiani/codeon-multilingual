@@ -146,4 +146,33 @@ final class SubdirectoryStrategyTest extends TestCase {
 		$strategy->strip_from_request();
 		$this->assertSame( '/', $_SERVER['REQUEST_URI'] );
 	}
+	public function test_slug_shaped_like_a_language_code_still_gets_a_prefix(): void {
+		// Regression: `/my-account/` matches the shape of a language prefix
+		// (`my` + `-account`), so a shape-only guard treated it as already
+		// prefixed and WooCommerce's account page was never translated.
+		$strategy = new SubdirectoryStrategy();
+
+		$this->assertSame(
+			'https://example.com/en/my-account/',
+			$strategy->build_url( 'https://example.com/my-account/', 'en' )
+		);
+	}
+
+	public function test_real_language_prefix_is_not_doubled(): void {
+		$strategy = new SubdirectoryStrategy();
+
+		$this->assertSame(
+			'https://example.com/en/my-account/',
+			$strategy->build_url( 'https://example.com/en/my-account/', 'en' )
+		);
+	}
+
+	public function test_slug_shaped_like_a_code_is_not_stripped(): void {
+		$strategy = new SubdirectoryStrategy();
+
+		$this->assertSame(
+			'https://example.com/my-account/',
+			$strategy->strip_lang_prefix( 'https://example.com/my-account/' )
+		);
+	}
 }
