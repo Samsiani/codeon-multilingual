@@ -120,7 +120,23 @@ final class LanguageSwitcher {
 					$siblings   = TranslationGroups::get_siblings( $group );
 					$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
 					if ( $sibling_id > 0 ) {
-						return (string) get_permalink( $sibling_id );
+						$link = (string) get_permalink( $sibling_id );
+
+						// Pin the prefix to the language being switched TO.
+						// `get_permalink()` answers in the language currently
+						// being browsed when the post has no translation of its
+						// own, which is right for links inside a page but wrong
+						// here: this link exists precisely to leave the current
+						// language.
+						$link = Languages::is_default( $code )
+							? Router::strip_lang_prefix( $link )
+							: Router::with_lang( Router::strip_lang_prefix( $link ), $code );
+
+						// A WooCommerce account endpoint (and anything else that
+						// extends a post's URL with extra path) is part of the
+						// view the visitor is on. Switching language should keep
+						// them on it, not drop them at the post's root.
+						return self::carry_trailing_path( $link, $post_id );
 					}
 				}
 			}
@@ -159,6 +175,47 @@ final class LanguageSwitcher {
 
 		// Home / blog / archive / search / 404 — swap the prefix on current URL.
 		return self::current_url_in( $code );
+	}
+
+	/**
+	 * Re-attach any path the request carries beyond the queried post's own
+	 * permalink — WooCommerce account endpoints such as `/car-invoices/`, and
+	 * anything else built the same way.
+	 */
+	private static function carry_trailing_path( string $target, int $queried_id ): string {
+		$request = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		if ( '' === $request ) {
+			return $target;
+		}
+
+		$request_path = (string) wp_parse_url( $request, PHP_URL_PATH );
+		$request_path = Router::strip_lang_prefix( $request_path );
+
+		$base_path = (string) wp_parse_url( Router::strip_lang_prefix( (string) get_permalink( $queried_id ) ), PHP_URL_PATH );
+		if ( '' === $base_path || '' === $request_path ) {
+			return $target;
+		}
+
+		$base_path    = '/' . trim( $base_path, '/' ) . '/';
+		$request_path = '/' . trim( $request_path, '/' ) . '/';
+
+		if ( $request_path === $base_path || ! str_starts_with( $request_path, $base_path ) ) {
+			return $target;
+		}
+
+		$extra = substr( $request_path, strlen( $base_path ) );
+		if ( '' === $extra ) {
+			return $target;
+		}
+
+		$parts = wp_parse_url( $target );
+		if ( ! is_array( $parts ) || empty( $parts['path'] ) ) {
+			return $target;
+		}
+		$parts['path'] = '/' . trim( $parts['path'], '/' ) . '/' . $extra;
+
+		$out = ( $parts['scheme'] ?? 'https' ) . '://' . ( $parts['host'] ?? '' ) . $parts['path'];
+		return (string) preg_replace( '#(?<!:)/{2,}#', '/', $out );
 	}
 
 	/**
