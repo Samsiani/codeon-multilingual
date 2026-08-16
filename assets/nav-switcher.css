@@ -39,6 +39,7 @@
 	align-items: center;
 	gap: .45em;
 	white-space: nowrap;
+	text-transform: none !important;
 }
 
 /* Globe. `mask` lets the icon inherit the menu's text colour, so it works on
@@ -78,16 +79,40 @@
 	}
 }
 
-/* Caret for the dropdown variant. */
-.cml-language-switcher.cml-style-dropdown > a::after {
-	content: "";
-	flex: 0 0 auto;
-	width: .4em;
-	height: .4em;
-	margin-left: .1em;
-	border-right: 2px solid currentColor;
-	border-bottom: 2px solid currentColor;
-	transform: rotate(45deg) translate(-.1em, -.1em);
+/* Dropdown indicator.
+ *
+ * Themes put their own indicator on `.menu-item-has-children > a::after` and
+ * position it absolutely; Divi additionally renders it from an icon font. When
+ * that glyph does not resolve it paints as a small ring floating below the
+ * header. Rather than add a second pseudo-element (there is only one `::after`
+ * to go around), this takes ownership of the theme's: the icon font is
+ * neutralised, absolute positioning is undone, and a caret is drawn from
+ * borders so it needs no font at all and inherits the menu's colour.
+ */
+.cml-language-switcher.cml-language-switcher.cml-style-dropdown > a::after,
+.et_pb_menu .nav li.cml-language-switcher.menu-item-has-children > a::after {
+	content: "" !important;
+	position: static !important;
+	display: inline-block !important;
+	width: 0 !important;
+	height: 0 !important;
+	margin: 0 0 0 3px !important;
+	padding: 0 !important;
+	top: auto !important;
+	right: auto !important;
+	bottom: auto !important;
+	left: auto !important;
+	transform: none !important;
+	font-size: 0 !important;
+	line-height: 0 !important;
+	background: none !important;
+	border-radius: 0 !important;
+	/* px, not em: `font-size:0` above (needed to suppress the theme's icon
+	   glyph) would collapse any em-based border to nothing. */
+	border-left: 5px solid transparent !important;
+	border-right: 5px solid transparent !important;
+	border-top: 5px solid currentColor !important;
+	border-bottom: 0 !important;
 	opacity: .55;
 	transition: opacity .15s ease;
 }
@@ -111,8 +136,8 @@
    even with !important. Repeating the class lifts this rule above it without
    resorting to an id or `html body` prefix. */
 .cml-language-switcher.cml-language-switcher .sub-menu.sub-menu {
-	min-width: 11em;
-	padding: .35em 0;
+	min-width: 12em;
+	padding: .4em;
 	/* `!important` is confined to the two properties the theme gets wrong.
 	   Divi's Theme Builder menu CSS wins on specificity and leaves the panel
 	   transparent with white links, which renders the switcher invisible. */
@@ -124,7 +149,14 @@
 
 .cml-language-switcher.cml-language-switcher .sub-menu.sub-menu .cml-language-item > a {
 	display: block;
-	padding: .55em 1.1em;
+	padding: .6em .85em;
+	border-radius: 7px;
+	/* Menu themes commonly uppercase nav links. Language names are proper
+	   nouns and read as shouting in caps, so the panel opts out. */
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	font-size: .95rem !important;
+	line-height: 1.3 !important;
 	color: #1f2937 !important;
 	font-weight: 500 !important;
 	white-space: nowrap;
@@ -142,6 +174,13 @@
 .cml-language-switcher.cml-language-switcher .sub-menu.sub-menu .cml-language-item.cml-current > a {
 	font-weight: 700 !important;
 	color: #111827 !important;
+}
+
+/* The current language is the button label, not a choice. Offering it again in
+   the panel is redundant, so the dropdown lists only the languages you can
+   switch TO. The inline variant keeps it, where it reads as a selected state. */
+.cml-language-switcher.cml-style-dropdown .sub-menu .cml-language-item.cml-current {
+	display: none !important;
 }
 
 /* Inline variant: pills rather than a list. */
@@ -179,6 +218,14 @@
 .et_pb_menu .et_mobile_menu li.cml-language-item > a {
 	color: #1f2937 !important;
 	opacity: 1 !important;
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	font-size: .95rem !important;
+}
+
+.et_pb_menu .nav li ul.sub-menu li.cml-language-item.cml-current,
+.et_pb_menu .et_mobile_menu li.cml-language-item.cml-current {
+	display: none !important;
 }
 
 .et_pb_menu .nav li ul.sub-menu li.cml-language-item > a:hover,

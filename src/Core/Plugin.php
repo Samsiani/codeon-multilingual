@@ -15,11 +15,13 @@ use Samsiani\CodeonMultilingual\Admin\Pages\SettingsPage;
 use Samsiani\CodeonMultilingual\Admin\Pages\SetupWizard;
 use Samsiani\CodeonMultilingual\Admin\Pages\StringsPage;
 use Samsiani\CodeonMultilingual\Admin\SetupRedirector;
+use Samsiani\CodeonMultilingual\Compat\DiviThemeBuilder;
 use Samsiani\CodeonMultilingual\Compat\WpmlFunctions;
 use Samsiani\CodeonMultilingual\Content\MenuTranslator;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
 use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
+use Samsiani\CodeonMultilingual\Frontend\FrontPageMapping;
 use Samsiani\CodeonMultilingual\Frontend\Hreflang;
 use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
 use Samsiani\CodeonMultilingual\Frontend\LanguageSwitcher;
@@ -107,6 +109,7 @@ final class Plugin {
 		L10nFileWriter::register();
 
 		// Frontend (switcher, hreflang, html lang, locale override, sitemap).
+		FrontPageMapping::register();
 		LanguageSwitcher::register();
 		FloatingSwitcher::register();
 		NavMenuSwitcher::register();
@@ -122,6 +125,7 @@ final class Plugin {
 
 		// Compatibility shims.
 		WpmlFunctions::register();
+		DiviThemeBuilder::register();
 
 		// Admin.
 		AdminMenu::register();
