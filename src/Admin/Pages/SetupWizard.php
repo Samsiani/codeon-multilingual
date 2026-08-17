@@ -406,6 +406,49 @@ final class SetupWizard {
 	// ---- Internals -------------------------------------------------------
 
 	/**
+	 * Whether the wizard may promote $code to site default.
+	 *
+	 * Changing the default after content has been tagged silently orphans every
+	 * post and term recorded in the OLD default: they become translations of a
+	 * language nobody is browsing, disappear from the default pool, and take
+	 * category terms — and therefore product queries — with them.
+	 *
+	 * The wizard is a first-run tool, and it can be re-entered long after setup
+	 * (its redirect fires whenever the completion flag is missing). So it only
+	 * sets the default when that is still an open question: no default yet, or
+	 * nothing tagged in the current one. A deliberate change remains available
+	 * on the Languages screen and via `wp cml language set-default`, which are
+	 * explicit actions rather than a side effect of clicking Next.
+	 */
+	private static function may_change_default( string $code ): bool {
+		$current = Languages::get_default();
+		if ( null === $current || $current->code === $code ) {
+			return true;
+		}
+
+		global $wpdb;
+
+		$tagged = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}cml_post_language WHERE language = %s",
+				$current->code
+			)
+		);
+		if ( $tagged > 0 ) {
+			return false;
+		}
+
+		$tagged_terms = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->prefix}cml_term_language WHERE language = %s",
+				$current->code
+			)
+		);
+
+		return 0 === $tagged_terms;
+	}
+
+	/**
 	 * Insert or update the given catalog entry as the site's default language.
 	 * Existing rows are activated and promoted; new rows are inserted from catalog data.
 	 */
@@ -419,7 +462,9 @@ final class SetupWizard {
 		}
 		if ( Languages::exists( $code ) ) {
 			Languages::update_active( $code, true );
-			Languages::set_default( $code );
+			if ( self::may_change_default( $code ) ) {
+				Languages::set_default( $code );
+			}
 			return;
 		}
 		Languages::create(

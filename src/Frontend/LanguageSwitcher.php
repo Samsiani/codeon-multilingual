@@ -120,6 +120,15 @@ final class LanguageSwitcher {
 					$siblings   = TranslationGroups::get_siblings( $group );
 					$sibling_id = (int) ( array_search( $code, $siblings, true ) ?: 0 );
 					if ( $sibling_id > 0 ) {
+						// The front page of a language is served at the language
+						// root. Linking to its slug instead (/en/home/) works but
+						// costs every switch a 301, and puts a second URL for the
+						// same view into hreflang and the sitemap.
+						$front = self::front_page_url( $sibling_id, $code );
+						if ( null !== $front ) {
+							return $front;
+						}
+
 						$link = (string) get_permalink( $sibling_id );
 
 						// Pin the prefix to the language being switched TO.
@@ -175,6 +184,34 @@ final class LanguageSwitcher {
 
 		// Home / blog / archive / search / 404 — swap the prefix on current URL.
 		return self::current_url_in( $code );
+	}
+
+	/**
+	 * The language root URL when $post_id is that language's front page.
+	 */
+	private static function front_page_url( int $post_id, string $code ): ?string {
+		if ( 'page' !== get_option( 'show_on_front' ) ) {
+			return null;
+		}
+
+		// `page_on_front` is filtered per language, so compare through the
+		// translation group rather than against whatever the current request
+		// resolved it to.
+		$front_id = (int) get_option( 'page_on_front' );
+		if ( $front_id <= 0 ) {
+			return null;
+		}
+		if ( $front_id === $post_id ) {
+			return Languages::is_default( $code ) ? home_url( '/' ) : Router::with_lang( home_url( '/' ), $code );
+		}
+
+		$front_group = TranslationGroups::get_group_id( $front_id );
+		$post_group  = TranslationGroups::get_group_id( $post_id );
+		if ( null === $front_group || $front_group !== $post_group ) {
+			return null;
+		}
+
+		return Languages::is_default( $code ) ? home_url( '/' ) : Router::with_lang( home_url( '/' ), $code );
 	}
 
 	/**
