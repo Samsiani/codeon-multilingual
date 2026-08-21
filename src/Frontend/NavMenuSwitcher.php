@@ -134,6 +134,11 @@ final class NavMenuSwitcher {
 		wp_enqueue_style( 'cml-nav-switcher', CML_URL . 'assets/nav-switcher.css', array(), $ver );
 	}
 
+	/**
+	 * Whether a menu item is the language-switcher placeholder.
+	 *
+	 * @param mixed $item Menu item object, as passed by the nav-menu filters.
+	 */
 	public static function is_placeholder( $item ): bool {
 		if ( ! is_object( $item ) ) {
 			return false;

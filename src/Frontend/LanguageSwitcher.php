@@ -220,7 +220,7 @@ final class LanguageSwitcher {
 	 * anything else built the same way.
 	 */
 	private static function carry_trailing_path( string $target, int $queried_id ): string {
-		$request = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$request = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( (string) $_SERVER['REQUEST_URI'] ) ) : '';
 		if ( '' === $request ) {
 			return $target;
 		}
