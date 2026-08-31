@@ -4,6 +4,13 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ## Unreleased
 
+## [0.9.3] — 2026-08-31
+
+### Fixed
+- Admin screens now report the signed-in user's own language instead of the site default. In wp-admin the router never runs — `/wp-admin/` URLs carry no language segment — so `CurrentLanguage::code()` fell through to the default language on every admin screen. Anything asking the plugin "which language are we in?" therefore got Georgian even for an administrator whose WordPress profile language is English, while WordPress itself rendered the rest of the admin in English; a dashboard driven by our current language stayed in the default language and could not be switched. Admin screens now map the user's `get_user_locale()` onto an active language (exact locale first, then the bare subtag, so `en_GB` still resolves to an `en_US`-configured English), falling back to the default when nothing matches. Delivers the "admin per-user UI language" item tracked for this milestone.
+
+  AJAX and cron are deliberately excluded, mirroring `LocaleOverride`: `admin-ajax.php` also serves the front end, where the request's own language is correct rather than the logged-in user's admin preference. An explicitly set language still wins, so the posts/terms admin language filter is unaffected, as is front-end routing.
+
 ## [0.9.2] — 2026-05-19
 
 ### Fixed
