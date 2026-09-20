@@ -23,6 +23,7 @@ use Samsiani\CodeonMultilingual\Compat\YoastSeo;
 use Samsiani\CodeonMultilingual\Content\MenuTranslator;
 use Samsiani\CodeonMultilingual\Content\PostTranslator;
 use Samsiani\CodeonMultilingual\Content\TermTranslator;
+use Samsiani\CodeonMultilingual\Frontend\AjaxLangParam;
 use Samsiani\CodeonMultilingual\Frontend\FloatingSwitcher;
 use Samsiani\CodeonMultilingual\Frontend\Hreflang;
 use Samsiani\CodeonMultilingual\Frontend\HtmlLangAttribute;
@@ -114,6 +115,7 @@ final class Plugin {
 		// Frontend (switcher, hreflang, html lang, locale override, sitemap).
 		LanguageSwitcher::register();
 		FloatingSwitcher::register();
+		AjaxLangParam::register();
 		NavMenuSwitcher::register();
 		SwitcherBlock::register();
 		Hreflang::register();

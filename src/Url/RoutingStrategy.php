@@ -18,6 +18,14 @@ interface RoutingStrategy {
 	public function detect(): ?string;
 
 	/**
+	 * Detect the language encoded in an arbitrary URL — the Referer of an AJAX
+	 * call, say — rather than in the current request. Unlike detect() this
+	 * reports the default language too, because the caller is asking what the
+	 * URL says, not whether routing needs to act on it.
+	 */
+	public function detect_in_url( string $url ): ?string;
+
+	/**
 	 * Mutate $_SERVER['REQUEST_URI'] so WordPress routes the remaining path as if
 	 * the language marker were never present. Idempotent — safe to call once.
 	 */

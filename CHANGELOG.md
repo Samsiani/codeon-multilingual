@@ -4,6 +4,19 @@ All notable changes to CodeOn Multilingual are documented here. The format follo
 
 ## Unreleased
 
+## [0.9.4] — 2026-09-20
+
+### Fixed
+- AJAX requests now render in the language of the page that made them, instead of always falling back to the site default. The router skips AJAX — `/wp-admin/admin-ajax.php` carries no language segment, so there is nothing to parse — and `CurrentLanguage::code()` then answered with the default for every AJAX call. A visitor reading `/en/` who opened a modal, paged a listing or refreshed cart fragments got the response rendered in the default language, and callers had no way to tell "unknown" from "default". `CurrentLanguage::code()` now asks the request itself, in order of how explicit the answer is: a `cml_lang` (or `lang`) parameter, the `X-CodeOn-Language` header, the request's own URL — which is how `?wc-ajax=` calls carry `/en/` — and finally the Referer's language prefix.
+
+  A Referer only counts when it points at this site's own front end. Another host has no say in our language, and a `wp-admin` Referer means a genuine back-end call, which keeps the previous behaviour. `$_GET` and `$_POST` are read directly rather than through `$_REQUEST`, which WordPress does not rebuild until after `plugins_loaded`. An explicitly `set()` language still wins, so REST and Store API detection are unaffected.
+
+  Query scoping is unchanged for `admin-ajax.php`: `PostsClauses` and `TermsClauses` already skip in `is_admin()` context, which `admin-ajax.php` is, so no AJAX handler starts returning a different set of posts. `?wc-ajax=` calls are not `is_admin()` and were already scoped — to the default language rather than the page's, which is precisely the bug; they now match what the same page returns.
+
+### Added
+- Front-end `admin-ajax.php` calls made through jQuery now carry a `cml_lang` parameter, so the language survives a strict `Referrer-Policy` that strips the path. The prefilter is deliberately narrow: front end only, only when the page is not in the default language, only for same-origin `admin-ajax.php` URLs, and only when jQuery is already on the page — it is never enqueued for this. Turn it off with the `cml_ajax_language_param_enabled` filter.
+- `RoutingStrategy::detect_in_url()` reports the language encoded in an arbitrary URL, rather than in the current request. Unlike `detect()` it reports the default language too, because the caller is asking what the URL says, not whether routing needs to act on it.
+
 ## [0.9.3] — 2026-08-31
 
 ### Fixed

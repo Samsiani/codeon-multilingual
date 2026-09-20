@@ -22,7 +22,34 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 
 	public function detect(): ?string {
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash,WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- REQUEST_URI is parsed only; no output or filesystem use.
-		$path = (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH );
+		$code = $this->detect_in_path( (string) wp_parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ) );
+
+		if ( null === $code ) {
+			return null;
+		}
+		// The default language lives at the root, so a prefix naming it is not
+		// a routing instruction — Router leaves CurrentLanguage alone and the
+		// default applies anyway.
+		if ( Languages::is_default( $code ) ) {
+			return null;
+		}
+
+		return $code;
+	}
+
+	public function detect_in_url( string $url ): ?string {
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+		if ( ! is_string( $path ) || '' === $path ) {
+			return null;
+		}
+
+		return $this->detect_in_path( $path );
+	}
+
+	/**
+	 * The active language named by a path's first segment, default included.
+	 */
+	private function detect_in_path( string $path ): ?string {
 		$path = $this->strip_install_path( $path );
 
 		if ( ! preg_match( self::LANG_REGEX, $path, $m ) ) {
@@ -31,14 +58,7 @@ final class SubdirectoryStrategy implements RoutingStrategy {
 
 		$code = strtolower( $m[1] );
 
-		if ( ! Languages::exists_and_active( $code ) ) {
-			return null;
-		}
-		if ( Languages::is_default( $code ) ) {
-			return null;
-		}
-
-		return $code;
+		return Languages::exists_and_active( $code ) ? $code : null;
 	}
 
 	public function strip_from_request(): void {

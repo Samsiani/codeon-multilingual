@@ -18,6 +18,7 @@ final class HtmlLangAttributeTest extends TestCase {
 		Monkey\setUp();
 
 		Functions\when( 'is_admin' )->justReturn( false );
+		Functions\when( 'wp_doing_ajax' )->justReturn( false );
 		Functions\when( 'esc_attr' )->returnArg( 1 );
 		Functions\when( 'wp_cache_get' )->justReturn( false );
 		Functions\when( 'wp_cache_set' )->justReturn( true );

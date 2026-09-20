@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Samsiani\CodeonMultilingual\Core;
 
+use Samsiani\CodeonMultilingual\Url\AjaxLanguage;
+
 /**
  * Request-scoped current language holder.
  *
@@ -16,6 +18,11 @@ namespace Samsiani\CodeonMultilingual\Core;
  * language is English, while WordPress itself rendered the rest of the admin
  * in English. Admin screens now follow the user's own profile language, which
  * is WordPress's own answer to that question (get_user_locale()).
+ *
+ * AJAX has the same gap for the opposite reason: admin-ajax.php serves the
+ * FRONT end too, so the answer is neither the URL (there is no prefix on
+ * /wp-admin/admin-ajax.php) nor the user's admin profile — it is whatever the
+ * calling page was reading. AjaxLanguage recovers that from the request.
  */
 final class CurrentLanguage {
 
@@ -28,6 +35,14 @@ final class CurrentLanguage {
 	public static function code(): string {
 		if ( null !== self::$code ) {
 			return self::$code;
+		}
+
+		if ( self::is_ajax_request() ) {
+			$ajax_code = AjaxLanguage::detect();
+			if ( null !== $ajax_code ) {
+				self::$code = $ajax_code;
+				return self::$code;
+			}
 		}
 
 		if ( self::is_admin_screen() ) {
@@ -69,13 +84,17 @@ final class CurrentLanguage {
 		if ( ! function_exists( 'is_admin' ) || ! is_admin() ) {
 			return false;
 		}
-		if ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+		if ( self::is_ajax_request() ) {
 			return false;
 		}
 		if ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
 			return false;
 		}
 		return true;
+	}
+
+	private static function is_ajax_request(): bool {
+		return function_exists( 'wp_doing_ajax' ) && wp_doing_ajax();
 	}
 
 	/**

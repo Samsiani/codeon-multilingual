@@ -75,6 +75,10 @@ codeon-multilingual.php defines constants + requires autoloader
    │   │   └─ add_filter('redirect_canonical', '__return_false')  ← prevents loop
    │   └─ Otherwise: CurrentLanguage stays at default (no filter overhead)
    │
+   ├─ AJAX instead (admin-ajax.php / ?wc-ajax=): Router skipped it, so the
+   │   first CurrentLanguage::code() call asks AjaxLanguage — explicit
+   │   parameter, header, own URL, then the Referer's prefix
+   │
 4. WP fires 'init', 'parse_request', 'wp', 'template_redirect'
    └─ determine_locale() is called for each textdomain load
        └─ LocaleOverride::filter() returns the current language's locale
@@ -300,7 +304,8 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | Deactivator | `Core/Deactivator.php` | deactivation |
 | BuildId | `Core/BuildId.php` | file load |
 | Router | `Url/Router.php` | `plugins_loaded` p1, `home_url`, archive link filters |
-| RoutingStrategy / SubdirectoryStrategy | `Url/*` | invoked by Router |
+| RoutingStrategy / SubdirectoryStrategy | `Url/*` | invoked by Router; `detect_in_url()` reads the language out of an arbitrary URL (an AJAX Referer, say) rather than the current request |
+| AjaxLanguage | `Url/AjaxLanguage.php` | consulted by `CurrentLanguage::code()` while `wp_doing_ajax()`. Router skips AJAX, so the language comes from the request: `cml_lang`/`lang` parameter (read from `$_GET`/`$_POST` directly — `$_REQUEST` is not rebuilt until after `plugins_loaded`), then the `X-CodeOn-Language` header, then the request's own URL (how `?wc-ajax=` calls carry `/en/`), then the Referer's prefix. Same host only; a `wp-admin` Referer keeps the default. |
 | PostLinkFilter | `Url/PostLinkFilter.php` | `post_link`, `page_link`, `post_type_link`, `attachment_link` — applies in admin too so the "Permalink:" preview on the edit screen reflects the post's own language |
 | TermLinkFilter | `Url/TermLinkFilter.php` | `term_link` |
 | PostsClauses | `Query/PostsClauses.php` | `posts_clauses` (language-filter every WP_Query) + `request` (rewrite `pagename=<slug>` to `page_id=<sibling>` so URL resolution doesn't pick the wrong-language sibling and trigger a 404; falls back to default-language sibling when no translation exists) |
@@ -320,6 +325,7 @@ Plus one autoloaded option `cml_settings`, and tracking options: `cml_db_version
 | LanguageSwitcher | `Frontend/LanguageSwitcher.php` | `cml_language_switcher` shortcode, `widgets_init` |
 | LanguageSwitcherWidget | `Frontend/LanguageSwitcherWidget.php` | classic widget API |
 | FloatingSwitcher | `Frontend/FloatingSwitcher.php` | `wp_footer`, `wp_enqueue_scripts` |
+| AjaxLangParam | `Frontend/AjaxLangParam.php` | `wp_enqueue_scripts` p20 — inline jQuery `ajaxPrefilter` that appends `cml_lang` to same-origin `admin-ajax.php` calls so the language survives a strict `Referrer-Policy`. Front end only, non-default languages only, and only when jQuery is already enqueued. Filter: `cml_ajax_language_param_enabled`. |
 | NavMenuSwitcher | `Frontend/NavMenuSwitcher.php` | `admin_init` (meta-box), `wp_nav_menu_item_custom_fields` (per-item settings), `wp_update_nav_menu_item` (save), `wp_get_nav_menu_items` (frontend expansion) |
 | SwitcherBlock | `Frontend/SwitcherBlock.php` | `init` — registers `codeon-multilingual/switcher` block from `assets/blocks/switcher/block.json` |
 | Hreflang | `Frontend/Hreflang.php` | `wp_head` p1 |
